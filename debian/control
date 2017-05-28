@@ -1,0 +1,15 @@
+Source: airgeddon
+Section: security
+Priority: extra
+Maintainer: Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.8
+Homepage: https://dev.parrotsec.org/parrot/airgeddon
+
+Package: airgeddon
+Architecture: all
+Multi-Arch: foreign
+Depends: net-tools, iw, aircrack-ng, wireles-tools, gawk | awk, ${misc:Depends}, ${shlibs:Depends}
+Recommends: xterm, crunch, mdk3, hashcat, hostapd, lighttpd, iptables, bettercap, beef-xss, ettercap-graphical | ettercap | ettercap-text-only, sslstrip, isc-dhcp-server | dhcp-server | dhcp, dsniff, reaver, bully, pixiewps, expect | expect-dev, curl
+Description: a multi-use bash script to audit wireless networks
+ a multi-use bash script to audit wireless networks

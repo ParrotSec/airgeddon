@@ -1,0 +1,173 @@
+#airgeddon Dockerfile
+
+#Base image
+FROM kalilinux/kali-linux-docker:latest
+
+#Credits & Data
+LABEL \
+	name="airgeddon" \
+	author="v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>" \
+	maintainer="OscarAkaElvis <oscar.alfonso.diaz@gmail.com>" \
+	description="This is a multi-use bash script for Linux systems to audit wireless networks."
+
+#Url env vars
+ENV AIRGEDDON_URL="https://github.com/v1s1t0r1sh3r3/airgeddon.git"
+ENV BULLY_URL="https://github.com/v1s1t0r1sh3r3/bully.git"
+ENV HASHCAT2_URL="https://github.com/v1s1t0r1sh3r3/hashcat2.0.git"
+
+#Update system
+RUN \
+	apt-get update
+
+#Set locales
+RUN \
+	apt-get -y install \
+	locales && \
+	locale-gen en_US.UTF-8 && \
+	sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+	echo 'LANG="en_US.UTF-8"' > /etc/default/locale && \
+	dpkg-reconfigure --frontend=noninteractive locales && \
+	update-locale LANG=en_US.UTF-8
+
+#Env vars for locales
+ENV LANG="en_US.UTF-8"
+ENV LANGUAGE="en_US:en"
+ENV LC_ALL="en_US.UTF-8"
+
+#Install airgeddon essential tools
+RUN \
+	apt-get -y install \
+	gawk \
+	net-tools \
+	wireless-tools \
+	iw \
+	aircrack-ng \
+	xterm
+
+#Install airgeddon internal tools
+RUN \
+	apt-get -y install \
+	ethtool \
+	pciutils \
+	rfkill \
+	x11-utils \
+	wget
+
+#Install update tools
+RUN \
+	apt-get -y install \
+	curl \
+	git
+
+#Install airgeddon optional tools
+RUN \
+	apt-get -y install \
+	crunch \
+	hashcat \
+	mdk3 \
+	hostapd \
+	lighttpd \
+	iptables \
+	ettercap-text-only \
+	sslstrip \
+	isc-dhcp-server \
+	dsniff \
+	reaver \
+	bully \
+	pixiewps \
+	expect
+
+#Install needed Ruby gems
+RUN \
+	apt-get -y install \
+	beef-xss \
+	bettercap
+
+#Env var for display
+ENV DISPLAY=":0"
+
+#Create dir for external files
+RUN \
+	mkdir /io
+
+#Set workdir
+WORKDIR /opt/
+
+#airgeddon install method 1 (only one method can be used, other must be commented)
+#Install airgeddon (Dockerhub automated build process)
+RUN \
+	mkdir airgeddon
+COPY \
+	. /opt/airgeddon
+
+#airgeddon install method 2 (only one method can be used, other must be commented)
+#Install airgeddon (manual image build)
+#Uncomment one of them to select branch (master->latest, dev->beta)
+#ENV BRANCH="master"
+#ENV BRANCH="dev"
+#RUN \
+#	git clone -b ${BRANCH} ${AIRGEDDON_URL}
+
+#Remove auto update
+RUN \
+	sed -i 's|auto_update=1|auto_update=0|' airgeddon/airgeddon.sh
+
+#Make bash script files executable
+RUN \
+	chmod +x airgeddon/*.sh
+
+#Prepare packages to upgrade Bully
+RUN \
+	apt-get -y install \
+	build-essential \
+	libpcap-dev
+
+#Upgrade Bully
+RUN \
+	git clone ${BULLY_URL} && \
+	cd /opt/bully/src && \
+	make && \
+	make install && \
+	cp /usr/local/bin/bully /usr/bin/ && \
+	chmod +x /usr/bin/bully
+
+#Downgrade Hashcat
+RUN \
+	git clone ${HASHCAT2_URL} && \
+	cp /opt/hashcat2.0/hashcat /usr/bin/ && \
+	chmod +x /usr/bin/hashcat
+
+#Install wireless drivers
+RUN \
+	apt-get -y install \
+	firmware-brcm80211 \
+	firmware-libertas \
+	firmware-realtek \
+	firmware-samsung \
+	firmware-iwlwifi \
+	firmware-linux \
+	firmware-linux-nonfree \
+	firmware-linux-free
+
+#Clean packages
+RUN \
+	apt-get autoremove && \
+	apt-get clean && \
+	apt-get autoclean
+
+#Clean files
+RUN rm -rf /opt/airgeddon/imgs > /dev/null 2>&1 && \
+	rm -rf /opt/airgeddon/.github > /dev/null 2>&1 && \
+	rm -rf /opt/airgeddon/CONTRIBUTING.md > /dev/null 2>&1 && \
+	rm -rf /opt/airgeddon/pindb_checksum.txt > /dev/null 2>&1 && \
+	rm -rf /opt/airgeddon/Dockerfile > /dev/null 2>&1 && \
+	rm -rf /opt/airgeddon/binaries > /dev/null 2>&1 && \
+	rm -rf /opt/bully > /dev/null 2>&1 && \
+	rm -rf /opt/hashcat2.0 > /dev/null 2>&1 && \
+	rm -rf /tmp/* > /dev/null 2>&1
+
+#Expose BeEF control panel port
+EXPOSE 3000
+
+#Entrypoint
+CMD ["bash", "-c", "/opt/airgeddon/airgeddon.sh"]
