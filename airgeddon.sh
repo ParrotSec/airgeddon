@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20170515
-#Version......: 7.02
+#Date.........: 20170525
+#Version......: 7.1
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -11,7 +11,7 @@
 debug_mode=0
 
 #Enabled 1 / Disabled 0 - Auto update feature (it has no effect on debug mode) - Default value 1
-auto_update=0
+auto_update=1
 
 #Enabled 1 / Disabled 0 - Auto change language feature - Default value 1
 auto_change_language=1
@@ -106,8 +106,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="7.02"
-language_strings_expected_version="7.02-1"
+airgeddon_version="7.1"
+language_strings_expected_version="7.1-1"
 standardhandshake_filename="handshake-01.cap"
 tmpdir="/tmp/"
 osversionfile_dir="/etc/"
@@ -351,9 +351,23 @@ function download_language_strings_file() {
 
 	debug_print
 
+	local lang_file_downloaded=0
 	remote_language_strings_file=$(timeout -s SIGTERM 15 curl -L ${urlscript_language_strings_file} 2> /dev/null)
 
-	if [ "${remote_language_strings_file}" != "${curl_404_error}" ]; then
+	if [[ -n "${remote_language_strings_file}" ]] && [[ "${remote_language_strings_file}" != "${curl_404_error}" ]]; then
+		lang_file_downloaded=1
+	else
+		http_proxy_detect
+		if [ "${http_proxy_set}" -eq 1 ]; then
+
+			remote_language_strings_file=$(timeout -s SIGTERM 15 curl --proxy "${http_proxy}" -L ${urlscript_language_strings_file} 2> /dev/null)
+			if [[ -n "${remote_language_strings_file}" ]] && [[ "${remote_language_strings_file}" != "${curl_404_error}" ]]; then
+				lang_file_downloaded=1
+			fi
+		fi
+	fi
+
+	if [ "${lang_file_downloaded}" -eq 1 ]; then
 		echo "${remote_language_strings_file}" > "${scriptfolder}${language_strings_file}"
 		chmod +x "${scriptfolder}${language_strings_file}" > /dev/null 2>&1
 		#shellcheck source=./language_strings.sh
@@ -1371,17 +1385,37 @@ function ask_yesno() {
 
 	debug_print
 
-	yesno=""
-	while [[ ! ${yesno} =~ ^[YyNn]$ ]]; do
+	if [ -z "${2}" ]; then
+		local regexp="^[YN]$|^YES$|^NO$"
+		visual_choice="[y/n]"
+	else
+		local regexp="^[YN]$|^YES$|^NO$|^$"
+		default_choice="${2}"
+		if [[ ${default_choice^^} =~ ^[Y]$|^YES$ ]]; then
+			default_choice="y"
+			visual_choice="[Y/n]"
+		else
+			default_choice="n"
+			visual_choice="[y/N]"
+		fi
+	fi
+
+	yesno="null"
+	while [[ ! ${yesno^^} =~ ${regexp} ]]; do
 		read_yesno "${1}"
 	done
 
-	if [ "${yesno}" = "Y" ]; then
-		yesno="y"
-	fi
-	if [ "${yesno}" = "N" ]; then
-		yesno="n"
-	fi
+	case ${yesno^^} in
+		"Y"|"YES")
+			yesno="y"
+		;;
+		"N"|"NO")
+			yesno="n"
+		;;
+		"")
+			yesno="${default_choice}"
+		;;
+	esac
 }
 
 #Read the user input on channel questions
@@ -3721,7 +3755,7 @@ function manage_asking_for_captured_file() {
 	if [ -n "${enteredpath}" ]; then
 		echo
 		language_strings "${language}" 186 "blue"
-		ask_yesno 187
+		ask_yesno 187 "yes"
 		if [ ${yesno} = "n" ]; then
 			ask_capture_file
 		fi
@@ -3738,7 +3772,7 @@ function manage_asking_for_dictionary_file() {
 	if [ -n "${DICTIONARY}" ]; then
 		echo
 		language_strings "${language}" 183 "blue"
-		ask_yesno 184
+		ask_yesno 184 "yes"
 		if [ ${yesno} = "n" ]; then
 			ask_dictionary
 		fi
@@ -3755,7 +3789,7 @@ function manage_asking_for_rule_file() {
 	if [ -n "${RULES}" ]; then
 		echo
 		language_strings "${language}" 239 "blue"
-		ask_yesno 240
+		ask_yesno 240 "yes"
 		if [ ${yesno} = "n" ]; then
 			ask_rules
 		fi
@@ -3865,7 +3899,7 @@ function select_wpa_bssid_target_from_captured_file() {
 	for targetbssid in "${bssids_detected[@]}"; do
 		if [ "${bssid}" = "${targetbssid}" ]; then
 			language_strings "${language}" 192 "blue"
-			ask_yesno 193
+			ask_yesno 193 "yes"
 
 			if [ ${yesno} = "y" ]; then
 				bssid=${targetbssid}
@@ -4052,7 +4086,7 @@ function manage_hashcat_pot() {
 
 		echo
 		language_strings "${language}" 234 "yellow"
-		ask_yesno 235
+		ask_yesno 235 "yes"
 		if [ ${yesno} = "y" ]; then
 
 			hashcat_potpath="${default_save_path}"
@@ -4082,7 +4116,7 @@ function manage_ettercap_log() {
 	debug_print
 
 	ettercap_log=0
-	ask_yesno 302
+	ask_yesno 302 "yes"
 	if [ ${yesno} = "y" ]; then
 		ettercap_log=1
 		default_ettercap_logpath="${default_save_path}"
@@ -4107,7 +4141,7 @@ function manage_bettercap_log() {
 	debug_print
 
 	bettercap_log=0
-	ask_yesno 302
+	ask_yesno 302 "yes"
 	if [ ${yesno} = "y" ]; then
 		bettercap_log=1
 		default_bettercap_logpath="${default_save_path}"
@@ -4881,13 +4915,13 @@ function set_wps_attack_script() {
 		unbuffer=""
 		case ${wps_attack_mode} in
 			"pindb"|"custompin")
-				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -L -f -N -a -g 1 -d 2 -vvv -p "
+				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -L -f -N -g 1 -d 2 -vvv -p "
 			;;
 			"pixiedust")
 				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -K 1 -N -vvv"
 			;;
 			"bruteforce")
-				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -L -f -N -a -d 2 -vvv"
+				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -L -f -N -d 2 -vvv"
 			;;
 		esac
 	else
@@ -5904,7 +5938,7 @@ function prepare_beef_start() {
 	valid_possible_beef_path=0
 	if [[ ${beef_found} -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[19]}]} -eq 0 ]]; then
 		language_strings "${language}" 405 "blue"
-		ask_yesno 191
+		ask_yesno 191 "yes"
 		if [ ${yesno} = "y" ]; then
 			manual_beef_set
 			search_for_beef
@@ -5926,7 +5960,7 @@ function prepare_beef_start() {
 		language_strings "${language}" 115 "read"
 	elif [[ "${beef_found}" -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[19]}]} -eq 1 ]]; then
 		language_strings "${language}" 405 "blue"
-		ask_yesno 415
+		ask_yesno 415 "yes"
 		if [ ${yesno} = "y" ]; then
 			manual_beef_set
 			search_for_beef
@@ -6288,7 +6322,7 @@ function clean_handshake_file_option() {
 		readpath=1
 	else
 		language_strings "${language}" 151 "blue"
-		ask_yesno 152
+		ask_yesno 152 "yes"
 		if [ ${yesno} = "y" ]; then
 			filetoclean="${enteredpath}"
 		else
@@ -7059,7 +7093,7 @@ function explore_for_wps_targets_option() {
 
 		if [[ ${selected_wps_target_network} -ge 1 ]] && [[ ${selected_wps_target_network} -le ${wash_counter} ]]; then
 			if [ "${wps_lockeds[${selected_wps_target_network}]}" = "Yes" ]; then
-				ask_yesno 350
+				ask_yesno 350 "no"
 				if [ ${yesno} = "y" ]; then
 					break
 				else
@@ -7266,7 +7300,7 @@ function et_prerequisites() {
 		echo
 		language_strings "${language}" 276 "yellow"
 		print_simple_separator
-		ask_yesno 277
+		ask_yesno 277 "yes"
 		if [ ${yesno} = "n" ]; then
 			return_to_et_main_menu=1
 			return_to_et_main_menu_from_beef=1
@@ -7274,7 +7308,7 @@ function et_prerequisites() {
 		fi
 	fi
 
-	ask_yesno 419
+	ask_yesno 419 "no"
 	if [ ${yesno} = "y" ]; then
 		mac_spoofing_desired=1
 	fi
@@ -7286,7 +7320,7 @@ function et_prerequisites() {
 		language_strings "${language}" 286 "pink"
 		print_simple_separator
 		if [ ${retrying_handshake_capture} -eq 0 ]; then
-			ask_yesno 321
+			ask_yesno 321 "no"
 		fi
 
 		if [[ ${yesno} = "n" ]] || [[ ${retrying_handshake_capture} -eq 1 ]]; then
@@ -7385,13 +7419,13 @@ function ask_et_handshake_file() {
 		readpath=1
 	elif [[ -z "${enteredpath}" ]] && [[ -n "${et_handshake}" ]]; then
 		language_strings "${language}" 313 "blue"
-		ask_yesno 187
+		ask_yesno 187 "yes"
 		if [ ${yesno} = "n" ]; then
 			readpath=1
 		fi
 	elif [[ -n "${enteredpath}" ]] && [[ -z "${et_handshake}" ]]; then
 		language_strings "${language}" 151 "blue"
-		ask_yesno 187
+		ask_yesno 187 "yes"
 		if [ ${yesno} = "y" ]; then
 			et_handshake="${enteredpath}"
 		else
@@ -7399,7 +7433,7 @@ function ask_et_handshake_file() {
 		fi
 	elif [[ -n "${enteredpath}" ]] && [[ -n "${et_handshake}" ]]; then
 		language_strings "${language}" 313 "blue"
-		ask_yesno 187
+		ask_yesno 187 "yes"
 		if [ ${yesno} = "n" ]; then
 			readpath=1
 		fi
@@ -7447,7 +7481,7 @@ function et_dos_menu() {
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
-						ask_yesno 326
+						ask_yesno 326 "no"
 						if [ ${yesno} = "n" ]; then
 							check_et_without_internet_compatibility
 							if [ "$?" = "0" ]; then
@@ -7494,7 +7528,7 @@ function et_dos_menu() {
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
-						ask_yesno 326
+						ask_yesno 326 "no"
 						if [ ${yesno} = "n" ]; then
 							check_et_without_internet_compatibility
 							if [ "$?" = "0" ]; then
@@ -7541,7 +7575,7 @@ function et_dos_menu() {
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
-						ask_yesno 326
+						ask_yesno 326 "no"
 						if [ ${yesno} = "n" ]; then
 							check_et_without_internet_compatibility
 							if [ "$?" = "0" ]; then
@@ -7603,7 +7637,7 @@ function detect_internet_interface() {
 	if [ -n "${internet_interface}" ]; then
 		echo
 		language_strings "${language}" 285 "blue"
-		ask_yesno 284
+		ask_yesno 284 "yes"
 		if [ ${yesno} = "n" ]; then
 			select_internet_interface
 		fi
@@ -7734,7 +7768,7 @@ function capture_traps() {
 						exit_script_option
 					;;
 					*)
-						ask_yesno 12
+						ask_yesno 12 "yes"
 						if [ ${yesno} = "y" ]; then
 							exit_code=1
 							exit_script_option
@@ -7773,7 +7807,7 @@ function exit_script_option() {
 	language_strings "${language}" 165 "blue"
 
 	if [ "${ifacemode}" = "Monitor" ]; then
-		ask_yesno 166
+		ask_yesno 166 "no"
 		if [ ${yesno} = "n" ]; then
 			action_on_exit_taken=1
 			language_strings "${language}" 167 "multiline"
@@ -8088,9 +8122,23 @@ function download_pins_database_file() {
 
 	debug_print
 
+	local pindb_file_downloaded=0
 	remote_pindb_file=$(timeout -s SIGTERM 15 curl -L ${urlscript_pins_dbfile} 2> /dev/null)
 
-	if [ "${remote_pindb_file}" != "${curl_404_error}" ]; then
+	if [[ -n "${remote_pindb_file}" ]] && [[ "${remote_pindb_file}" != "${curl_404_error}" ]]; then
+		pindb_file_downloaded=1
+	else
+		http_proxy_detect
+		if [ "${http_proxy_set}" -eq 1 ]; then
+
+			remote_pindb_file=$(timeout -s SIGTERM 15 curl --proxy "${http_proxy}" -L ${urlscript_pins_dbfile} 2> /dev/null)
+			if [[ -n "${remote_pindb_file}" ]] && [[ "${remote_pindb_file}" != "${curl_404_error}" ]]; then
+				pindb_file_downloaded=1
+			fi
+		fi
+	fi
+
+	if [ "${pindb_file_downloaded}" -eq 1 ]; then
 		echo "${remote_pindb_file}" > "${scriptfolder}${known_pins_dbfile}"
 		return 0
 	else
@@ -8103,7 +8151,7 @@ function ask_for_pin_dbfile_download_retry() {
 
 	debug_print
 
-	ask_yesno 380
+	ask_yesno 380 "no"
 	if [ ${yesno} = "n" ]; then
 		pin_dbfile_checked=1
 	fi
@@ -8124,8 +8172,17 @@ function get_remote_pin_dbfile_checksum() {
 
 	remote_pin_dbfile_checksum=$(timeout -s SIGTERM 15 curl -L ${urlscript_pins_dbfile_checksum} 2> /dev/null | head -n 1)
 
-	if [ "${remote_pin_dbfile_checksum}" != "${curl_404_error}" ]; then
+	if [[ -n "${remote_pin_dbfile_checksum}" ]] && [[ "${remote_pin_dbfile_checksum}" != "${curl_404_error}" ]]; then
 		return 0
+	else
+		http_proxy_detect
+		if [ "${http_proxy_set}" -eq 1 ]; then
+
+			remote_pin_dbfile_checksum=$(timeout -s SIGTERM 15 curl --proxy "${http_proxy}" -L ${urlscript_pins_dbfile_checksum} 2> /dev/null | head -n 1)
+			if [[ -n "${remote_pin_dbfile_checksum}" ]] && [[ "${remote_pin_dbfile_checksum}" != "${curl_404_error}" ]]; then
+				return 0
+			fi
+		fi
 	fi
 	return 1
 }
@@ -8724,6 +8781,7 @@ function initialize_script_settings() {
 	beef_found=0
 	fake_beef_found=0
 	set_script_folder_and_name
+	http_proxy_set=0
 }
 
 #Detect screen resolution if possible
@@ -8985,9 +9043,28 @@ function download_last_version() {
 	debug_print
 
 	rewrite_script_with_custom_beef "search"
-	download_language_strings_file && timeout -s SIGTERM 15 curl -L ${urlscript_directlink} -s -o "${0}"
 
+	local script_file_downloaded=0
+
+	download_language_strings_file
 	if [ "$?" = "0" ]; then
+		timeout -s SIGTERM 15 curl -L ${urlscript_directlink} -s -o "${0}"
+
+		if [ "$?" = "0" ]; then
+			script_file_downloaded=1
+		else
+			http_proxy_detect
+			if [ "${http_proxy_set}" -eq 1 ]; then
+
+				timeout -s SIGTERM 15 curl --proxy "${http_proxy}" -L ${urlscript_directlink} -s -o "${0}"
+				if [ "$?" = "0" ]; then
+					script_file_downloaded=1
+				fi
+			fi
+		fi
+	fi
+
+	if [ "${script_file_downloaded}" -eq 1 ]; then
 		echo
 		language_strings "${language}" 214 "yellow"
 
@@ -9039,7 +9116,7 @@ function check_repository_access() {
 	debug_print
 
 	if hash curl 2> /dev/null; then
-		check_url_curl ${repository_hostname}
+		check_url_curl "https://${repository_hostname}"
 		if [ "$?" = "0" ]; then
 			return 0
 		fi
@@ -9060,14 +9137,14 @@ function check_internet_access() {
 	done
 
 	if hash curl 2> /dev/null; then
-		check_url_curl ${repository_hostname}
+		check_url_curl "https://${repository_hostname}"
 		if [ "$?" = "0" ]; then
 			return 0
 		fi
 	fi
 
 	if hash wget 2> /dev/null; then
-		check_url_wget ${repository_hostname}
+		check_url_wget "https://${repository_hostname}"
 		if [ "$?" = "0" ]; then
 			return 0
 		fi
@@ -9081,8 +9158,17 @@ function check_url_curl() {
 
 	debug_print
 
-	timeout -s SIGTERM 15 curl -s "http://${1}" > /dev/null 2>&1
-	return $?
+	timeout -s SIGTERM 15 curl -s "${1}" > /dev/null 2>&1
+	if [ "$?" = "0" ]; then
+		return 0
+	fi
+
+	http_proxy_detect
+	if [ "${http_proxy_set}" -eq 1 ]; then
+		timeout -s SIGTERM 15 curl -s --proxy "${http_proxy}" "${1}" > /dev/null 2>&1
+		return $?
+	fi
+	return 1
 }
 
 #Check for access to an url using wget
@@ -9090,8 +9176,31 @@ function check_url_wget() {
 
 	debug_print
 
-	timeout -s SIGTERM 15 wget -q --spider "http://${1}" > /dev/null 2>&1
-	return $?
+	timeout -s SIGTERM 15 wget -q --spider "${1}" > /dev/null 2>&1
+	if [ "$?" = "0" ]; then
+		return 0
+	fi
+
+	http_proxy_detect
+	if [ "${http_proxy_set}" -eq 1 ]; then
+		timeout -s SIGTERM 15 wget -q --spider -e "use_proxy=yes" -e "http_proxy=${http_proxy}" "${1}" > /dev/null 2>&1
+		return $?
+	fi
+	return 1
+}
+
+#Detect if there is a http proxy configured on system
+function http_proxy_detect() {
+
+	debug_print
+
+	http_proxy=$(env | grep -i HTTP_PROXY | head -n 1 | awk -F "=" '{print $2}')
+
+	if [ -n "${http_proxy}" ]; then
+		http_proxy_set=1
+	else
+		http_proxy_set=0
+	fi
 }
 
 #Check for default route on an interface
@@ -9114,17 +9223,33 @@ function autoupdate_check() {
 
 	check_repository_access
 	if [ "$?" = "0" ]; then
+		local version_checked=0
 		airgeddon_last_version=$(timeout -s SIGTERM 15 curl -L ${urlscript_directlink} 2> /dev/null | grep "airgeddon_version=" | head -n 1 | cut -d "\"" -f 2)
 
-		if [ "${airgeddon_last_version}" != "" ]; then
+		if [ -n "${airgeddon_last_version}" ]; then
+			version_checked=1
+		else
+			http_proxy_detect
+			if [ "${http_proxy_set}" -eq 1 ]; then
+
+				airgeddon_last_version=$(timeout -s SIGTERM 15 curl --proxy "${http_proxy}" -L ${urlscript_directlink} 2> /dev/null | grep "airgeddon_version=" | head -n 1 | cut -d "\"" -f 2)
+				if [ -n "${airgeddon_last_version}" ]; then
+					version_checked=1
+				else
+					language_strings "${language}" 5 "yellow"
+				fi
+			else
+				language_strings "${language}" 5 "yellow"
+			fi
+		fi
+
+		if [ "${version_checked}" -eq 1 ]; then
 			if compare_floats_greater_than "${airgeddon_last_version}" "${airgeddon_version}"; then
 				language_strings "${language}" 213 "yellow"
 				download_last_version
 			else
 				language_strings "${language}" 212 "yellow"
 			fi
-		else
-			language_strings "${language}" 5 "yellow"
 		fi
 	else
 		language_strings "${language}" 211 "yellow"

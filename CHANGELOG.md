@@ -1,9 +1,16 @@
+### 7.1
+ - Added default choice for some yes/no question. Regexp improved
+ - Tested compatibility with Backbox 4.7 and Parrot 3.6
+ - Improved curl and wget methods. Now autodetect if http proxy is set and needed
+ - WPS Reaver attacks modified. Removed --auto (-a) argument causing problems on some Reaver versions
+ - Dockerfile updated
+
 ### 7.02
  - Improved internet checking. Now ip address and host based methods
  - Internet checking function splitted. Now separated from repository access
  - Fixed error shown when handling interfaces without MAC address
  - Tested compatibility with Ubuntu 17.04
- 
+
 ### 7.01
  - Fixed bug while changing interface mode if the destination interface name is in use
  - Removed util-linux dependency for rev use
