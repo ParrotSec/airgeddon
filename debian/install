@@ -6,3 +6,4 @@ known_pins.db /usr/share/airgeddon/
 language_strings.sh /usr/share/airgeddon/
 LICENSE.md /usr/share/airgeddon/
 README.md /usr/share/airgeddon/
+airgeddon /usr/bin/
