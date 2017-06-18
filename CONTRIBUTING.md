@@ -16,6 +16,7 @@ Please note we have a code of conduct, please follow it in all your interactions
 2. Translate the strings located in `language_strings.sh`.
 3. Ask by mail [v1s1t0r.1s.h3r3@gmail.com] if you have any doubt. You'll be informed about how to proceed.
 4. You can be added as a collaborator on the project.
+5. Knowledge about `git` is not mandatory but is really appreciated to push directly into the project repository.
 
 ## Collaborating Developers
 
@@ -40,9 +41,10 @@ To be added on it you must prove first you are a *trusted collaborator* with you
 
 ## WPS PIN Database Collaborators
 
-1. Add PINs ordered by the key in the associative array located in the `known_pins.db` file. (Keys are the first 6 BSSID digits).
-2. Update the `pindb_checksum.txt` file with the calculated checksum of the database file using `md5sum` tool.
-3. Update the date under shebang.
+1. Send MAC of the BSSID and the default PIN to [v1s1t0r.1s.h3r3@gmail.com]. If you are going to push directly into the repository, keep reading the next points.
+2. Add PINs ordered by the key in the associative array located in the `known_pins.db` file. (Keys are the first 6 BSSID digits).
+3. Update the `pindb_checksum.txt` file with the calculated checksum of the database file using `md5sum` tool.
+4. Update the date under shebang.
 
 *PINs should be from devices that generate generic ones.*
 
@@ -144,6 +146,10 @@ If you enjoyed the script, feel free to donate. Support the project through Payp
 &nbsp;
 [![Bitcoin][Bitcoin]](https://blockchain.info/address/1AKnTXbomtwUzrm81FRzi5acSSXxGteGTH)
 
+Bitcoin QR code:
+
+[![BitcoinQR][BitcoinQR]](https://blockchain.info/address/1AKnTXbomtwUzrm81FRzi5acSSXxGteGTH)
+
 <!-- MDs -->
 [Readme]: README.md
 [Changelog]: CHANGELOG.md
@@ -162,3 +168,4 @@ If you enjoyed the script, feel free to donate. Support the project through Payp
 <!-- Images -->
 [Paypal]: /imgs/banners/paypal_donate.png "Show me the money!"
 [Bitcoin]: /imgs/banners/bitcoin_donate.png "Show me the money!"
+[BitcoinQR]: /imgs/banners/bitcoin_qr.png "Show me the money!"

@@ -2,7 +2,7 @@
 #Title........: language_strings.sh
 #Description..: All the translated strings that airgeddon uses are located here.
 #Author.......: v1s1t0r
-#Date.........: 20170525
+#Date.........: 20170615
 #Bash Version.: 4.2 or later
 
 #Set language_strings file version
@@ -11,7 +11,7 @@ function set_language_strings_version() {
 
 	debug_print
 
-	language_strings_version="7.1-1"
+	language_strings_version="7.11-1"
 }
 
 #Set different language text strings
@@ -359,6 +359,33 @@ function language_strings() {
 	wep_texts["PORTUGUESE",8]="Pressione [Enter] na janela principal do script para continuar e esta janela será fechada"
 	wep_texts["RUSSIAN",8]="Нажмите [Enter] в главном окне для продолжения, это окно будет закрыто"
 	wep_texts["GREEK",8]="Πατήστε [Enter] στο κύριο παράθυρο του script για να συνεχίσετε, το παράθυρο αυτό θα κλείσει"
+
+	declare -gA hashcat_texts
+	hashcat_texts["ENGLISH",1]="airgeddon. Decrypted password using hashcat"
+	hashcat_texts["SPANISH",1]="airgeddon. Contraseña desencriptada con hashcat"
+	hashcat_texts["FRENCH",1]="airgeddon. Mot de passe déchiffré avec hashcat"
+	hashcat_texts["CATALAN",1]="airgeddon. Contrasenya desencriptada amb hashcat"
+	hashcat_texts["PORTUGUESE",1]="airgeddon descriptografou a senha usando hashcat"
+	hashcat_texts["RUSSIAN",1]="airgeddon. Пароль расшифрован с использованием hashcat"
+	hashcat_texts["GREEK",1]="airgeddon. Αποκρυπτογραφημένος κωδικός πρόσβασης με χρήση hashcat"
+
+	declare -gA aircrack_texts
+	aircrack_texts["ENGLISH",1]="airgeddon. Decrypted password using aircrack"
+	aircrack_texts["SPANISH",1]="airgeddon. Contraseña desencriptada con aircrack"
+	aircrack_texts["FRENCH",1]="airgeddon. Mot de passe déchiffré avec aircrack"
+	aircrack_texts["CATALAN",1]="airgeddon. Contrasenya desencriptada amb aircrack"
+	aircrack_texts["PORTUGUESE",1]="airgeddon descriptografou a senha usando aircrack"
+	aircrack_texts["RUSSIAN",1]="airgeddon. Пароль расшифрован с использованием aircrack"
+	aircrack_texts["GREEK",1]="airgeddon. Αποκρυπτογραφημένος κωδικός πρόσβασης με χρήση aircrack"
+
+	declare -gA footer_texts
+	footer_texts["ENGLISH",1]="If you enjoyed the script and found it useful, you can support the project by making a donation. Through Paypal (${mail}) or sending a fraction of a bitcoin (${bitcoin}). Any amount, no matter how small (1, 2, 5 $/€) is welcome. More information and direct links to do it at: ${urlgithub_wiki}/Contributing"
+	footer_texts["SPANISH",1]="Si te gustó el script y te pareció útil, puedes apoyar el proyecto haciendo una donación. A través de Paypal (${mail}) o enviando una fracción de bitcoin (${bitcoin}). Cualquier cantidad por pequeña que sea (1, 2, 5 $/€) es bien recibida. Más información y enlaces directos para realizarla en: ${urlgithub_wiki}/Contributing"
+	footer_texts["FRENCH",1]="Si le script vous a plus et que vous l'avez trouvé utile; vous pouvez soutenir le projet en faisant un don PayPal (${mail}) ou en envoyant une fraction de bitcoin (${bitcoin}). Toute contribution  (1, 2, 5 $/€) est bienvenue. Pour faire un don allez à: ${urlgithub_wiki}/Contributing"
+	footer_texts["CATALAN",1]="Si et va agradar el script i et va semblar útil, pots donar suport al projecte fent una donació. A través de Paypal (${mail}) o enviant una fracció bitcoin (${bitcoin}). Qualsevol quantitat per petita que sigui (1, 2, 5 $/€) és ben rebuda. Més informació i enllaços directes per a realitzar-la en: ${urlgithub_wiki}/Contributing"
+	footer_texts["PORTUGUESE",1]="Se você gostou do script e o achou útil, apoie o projeto fazendo uma doação, através: do PayPal (${mail}) ou enviando uma fração de bitcoin (${bitcoin}). Qualquer quantidade, mesmo pequena (1, 2, 5 $/€) é bem-vinda. Links diretos e de com realizar em: ${urlgithub_wiki}/Contributing"
+	footer_texts["RUSSIAN",1]="Если вам понравилась эта программа и она оказался для вас полезной, вы можете поддержать проект, сделав пожертвование. Через PayPal (${mail}) или отправив часть биткойна на (${bitcoin}). Приветствуется любая сумма, даже небольшая (1, 2, 5 $/€). Более подробную информацию и прямые ссылки можно получить по адресу: ${urlgithub_wiki}/Contributing"
+	footer_texts["GREEK",1]="Εαν ευχαριστηθήκατε το script και το βρήκατε χρήσιμο, μπορείτε να υποστηρίξετε το project κάνοντας κάποια δωρεά. Μέσω του Paypal (${mail}) ή στέλνοντας κάποιο ποσοστό bitcoin (${bitcoin}). Είναι καλοδεχούμενο οποιοδήποτε ποσό (1, 2, 5 $/€), δεν έχει σημασία το πόσο λίγο μπορεί να είναι. Δίνονται περισσότερες πληροφορίες και links για να κάνετε δωρεά στη διεύθυνση: ${urlgithub_wiki}/Contributing"
 
 	declare -A arr
 	arr["ENGLISH",0]="This interface ${interface} is already in managed mode"
@@ -3212,7 +3239,7 @@ function language_strings() {
 	arr["ENGLISH",356]="Some combinations don't work well. Such as reaver and Ralink chipset cards. If your card has this chipset is recommended to use bully"
 	arr["SPANISH",356]="Algunas combinaciones no funcionan bien. Como por ejemplo reaver y las tarjetas con chipset Ralink. Si tu tarjeta tiene este chipset es mejor utilizar bully"
 	arr["FRENCH",356]="Il existe certains problèmes spécifiques de compatibilité. L’exemple le plus marquant est sans aucun doute celui des chipsets Ralink qui ne fonctionnent pas bien avec reaver. Il est donc conseillé d'utiliser bully avec ces chipsets"
-	arr["CATALAN",356]="Algunes combinacions no funcionan bé. Com per exemple Reaver i les targetes amb chipset Ralink. Si la teva targeta té aquest chipset és millor utilitzar bully"
+	arr["CATALAN",356]="Algunes combinacions no funcionan bé. Com per exemple reaver i les targetes amb chipset Ralink. Si la teva targeta té aquest chipset és millor utilitzar bully"
 	arr["PORTUGUESE",356]="Algumas combinações não funcionam bem. Tais como reaver e placas de rede com chipset Ralink. Se o sua placa de rede tem este chipset é melhor usar bully"
 	arr["RUSSIAN",356]="Некоторые комбинации не работают нормально. К примеру reaver и карты с чипсетом Ralink. Если ваша карта имеет этот чипсет, то рекомендуется использовать bully"
 	arr["GREEK",356]="Μερικοί συνδυασμοί δεν λειτουργούν καλά. Όπως για παράδειγμα το reaver με κάρτες που έχουν Ralink chipset. Αν η κάρτα σας έχει αυτό το chipset είναι προτιμότερο να χρησιμοποιήσετε το bully"
@@ -3265,13 +3292,13 @@ function language_strings() {
 	arr["RUSSIAN",362]="Пользовательский PIN установлен на ${normal_color}${custom_pin}"
 	arr["GREEK",362]="Το εξατομικευμένο PIN τέθηκε σε ${normal_color}${custom_pin}"
 
-	arr["ENGLISH",363]="Type custom PIN :"
-	arr["SPANISH",363]="Escribe el PIN personalizado :"
-	arr["FRENCH",363]="Rentrez PIN personnalisé :"
-	arr["CATALAN",363]="Escriu el PIN personalitzat :"
-	arr["PORTUGUESE",363]="Escreva o ESSID do alvo :"
-	arr["RUSSIAN",363]="Напишите пользовательский PIN :"
-	arr["GREEK",363]="Πληκτρολογήστε εξατομικευμένο PIN :"
+	arr["ENGLISH",363]="Type custom PIN (8 digits):"
+	arr["SPANISH",363]="Escribe el PIN personalizado (8 dígitos):"
+	arr["FRENCH",363]="Rentrez PIN personnalisé (8 chiffres):"
+	arr["CATALAN",363]="Escriu el PIN personalitzat (8 dígits):"
+	arr["PORTUGUESE",363]="Digite o PIN personalizado (8 dígitos):"
+	arr["RUSSIAN",363]="Введите пользовательский PIN (8 цифр):"
+	arr["GREEK",363]="Πληκτρολογήστε εξατομικευμένο PIN (8 ψηφία):"
 
 	arr["ENGLISH",364]="BSSID set to ${normal_color}${wps_bssid}"
 	arr["SPANISH",364]="BSSID elegido ${normal_color}${wps_bssid}"
@@ -3721,7 +3748,7 @@ function language_strings() {
 	arr["RUSSIAN",419]="Вы хотите подменить свой MAC-адрес во время этой атаки? ${normal_color}${visual_choice}"
 	arr["GREEK",419]="Θέλετε να κρύψετε την αληθινή διεύθυνση MAC, δημιουργώντας μία ψεύτικη κατά την διάρκεια αυτής της επίθεσης; ${normal_color}${visual_choice}"
 
-	arr["ENGLISH",420]="It has been detected that you are running airgeddon inside a Docker container. During this attack hostapd is used to create a fake AP. This component often conflicts with network-manager. From inside the container, airgeddon can't handle it. If you have network-manager installed on your host machine, close it or kill the conflicting processes or you'll get an error. For more information, see the Docker section of the Wiki: ${normal_color} ${urlgithub_wiki}/Docker"
+	arr["ENGLISH",420]="It has been detected that you are running airgeddon inside a Docker container. During this attack hostapd is used to create a fake AP. This component often conflicts with network-manager. From inside the container, airgeddon can't handle it. If you have network-manager installed on your host machine, close it or kill the conflicting processes or you'll get an error. For more information, see the Docker section of the Wiki: ${normal_color}${urlgithub_wiki}/Docker"
 	arr["SPANISH",420]="Se ha detectado que estás ejecutando airgeddon en un contenedor de Docker. En este ataque se utiliza hostapd para crear un falso AP. Este componente suele dar conflicto con network-manager. Desde el contenedor, airgeddon no puede gestionarlo. Si tienes network-manager instalado en tu máquina host, ciérralo o mata los procesos en conflicto u obtendrás un error. Para más información consulta la sección Docker del Wiki: ${normal_color}${urlgithub_wiki}/Docker"
 	arr["FRENCH",420]="Il a été détecté qu'airgeddon a été lancé depuis un conteneur Docker. Cette attaque à besoin d'hostapd pour créer un Point d'Accès piège. Hostapd a tendance à entrer en conflit avec network-manager et airgeddon ne peut pas le gérer depuis le conteneur. Si network-manager est installé sur votre machine host, arrêtez ou tuez les processus conflictuels. Dans le cas contraire vous obtiendrez une erreur. Pour plus d'informations, consultez la section Docker de notre Wiki: ${normal_color}${urlgithub_wiki}/Docker"
 	arr["CATALAN",420]="S'ha detectat que estàs executant airgeddon en un contenidor de Docker. En aquest atac s'utilitza hostapd per crear un fals AP. Aquest component sol donar conflicte amb network-manager. Des del contenidor, airgeddon no pot gestionar-lo. Si tens network-manager instal·lat a la teua màquina host, tanca'l o mata els processos en conflicte u obtindràs un error. Per a més informació consulta la secció Docker del Wiki: ${normal_color}${urlgithub_wiki}/Docker"
@@ -3848,6 +3875,62 @@ function language_strings() {
 	arr["PORTUGUESE",435]="Erro ao tentar alterar o modo da interface. No processo o nome da interface muda, mas parece que já há uma interface ocupando o mesmo nome (${normal_color}${desired_interface_name}${red_color})"
 	arr["RUSSIAN",435]="Ошибка при попытке изменить режим интерфейса. Во время этого процесса имя интерфейса должно быть изменено, но похоже, что у вас уже есть интерфейс, занимающий нужное имя (${normal_color}${desired_interface_name}${red_color})"
 	arr["GREEK",435]="Προέκυψε σφάλμα καθώς άλλαζε η κατάσταση της διεπαφής. Κατά τη διάρκεια της διαδικασίας, το όνομα της διεπαφής πρέπει να αλλάξει, αλλά φαίνεται ότι έχετε ήδη μια διεπαφή που έχει το όνομα που θα χρειαζόταν (${normal_color}${desired_interface_name}${red_color})"
+
+	arr["ENGLISH",436]="The hashcat version you have installed (${hashcat_version}) is greater or equal than ${hashcat_hccapx_version} so you need to convert the capture files to \"hccapx\" format, airgeddon will do this automatically. To do this you need a converter that is not present on your system (hashcat-utils package), install it to be able to perform this attack"
+	arr["SPANISH",436]="La versión de hashcat que tienes instalada (${hashcat_version}) es igual o superior a la ${hashcat_hccapx_version} por lo que es necesario convertir los ficheros de captura a formato \"hccapx\", airgeddon lo hará automáticamente. Pero para ello hace falta un conversor que no está presente en tu sistema (paquete hashcat-utils), instálalo para poder realizar este ataque"
+	arr["FRENCH",436]="La Version d'hashcat installée (${hashcat_version}) est égale ou supérieure à la version ${hashcat_hccapx_version}. Il est nécessaire dans ce cas de convertir les captures au format \"hccapx\", ce que fera automatiquement airgeddon. Il faut pour cela un convertisseur qui n'est pas installé dans votre système (paquet hashcat-utils). Veuilez l'installer pour effectuer cette attaque"
+	arr["CATALAN",436]="La versió de hashcat que tens instal·lada (${hashcat_version}) és igual o superior a la ${hashcat_hccapx_version} pel que cal convertir els fitxers de captura a format \"hccapx\", airgeddon ho farà automàticament. Però per a això cal un convertidor que no està present al sistema (paquet hashcat-utils), instal·lal per poder realitzar aquest atac"
+	arr["PORTUGUESE",436]="A versão do hashcat instalada (${hashcat_version}) é maior ou igual a ${hashcat_hccapx_version}, portanto é necessário convertermos o arquivo de captura para o formato \"hccapx\", airgeddon fará isso automaticamente. Mas isso requer um conversor que não está instalado no seu sistema (pacote hashcat-utils), instale-o para realizar este ataque"
+	arr["RUSSIAN",436]="Установленная версия hashcat (${hashcat_version}) больше или равна ${hashcat_hccapx_version}, поэтому вам нужно конвертировать файлы захвата в формат \"hccapx\", airgeddon сделает это автоматически. Для этого вам нужен конвертер, которого нет в вашей системе (пакет hashcat-utils), установите его, чтобы иметь возможность выполнить эту атаку"
+	arr["GREEK",436]="Η έκδοση του hashcat που έχετε εγκαταστήσει (${hashcat_version}) είναι ίδια ή νεότερη από την έκδοση ${hashcat_hccapx_version}, άρα το airgeddon θα μετατρέψει τα αρχεία καταγραφής σε \"hccapx\" για να συνεχιστεί η διαδικασία. Για να επιτευχθεί αυτό χρειάζεστε ένα μετατροπέα που δεν υπάρχει στο σύστημά σας (περιέχεται στο πακέτο hashcat-utils), εγκαταστήστε το για να εκτελέσετε αυτήν την επίθεση"
+
+	arr["ENGLISH",437]="If you enjoyed the script and found it useful, you can support the project by making a donation. Through Paypal (${mail}) or sending a fraction of a bitcoin (${bitcoin}). Any amount, no matter how small (1, 2, 5 $/€) is welcome. More information and direct links to do it at: ${urlgithub_wiki}/Contributing"
+	arr["SPANISH",437]="Si te gustó el script y te pareció útil, puedes apoyar el proyecto haciendo una donación. A través de Paypal (${normal_color}${mail}${pink_color}) o enviando una fracción de bitcoin (${normal_color}${bitcoin}${pink_color}). Cualquier cantidad por pequeña que sea (1, 2, 5 $/€) es bien recibida. Más información y enlaces directos para realizarla en: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["FRENCH",437]="Si le script vous a plus et que vous l'avez trouvé utile; vous pouvez soutenir le projet en faisant un don PayPal (${normal_color}${mail}${pink_color}) ou en envoyant une fraction de bitcoin (${normal_color}${bitcoin}${pink_color}). Toute contribution  (1, 2, 5 $/€) est bienvenue. Pour faire un don allez à: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["CATALAN",437]="Si et va agradar el script i et va semblar útil, pots donar suport al projecte fent una donació. A través de Paypal (${normal_color}${mail}${pink_color}) o enviant una fracció bitcoin (${normal_color}${bitcoin}${pink_color}). Qualsevol quantitat per petita que sigui (1, 2, 5 $/€) és ben rebuda. Més informació i enllaços directes per a realitzar-la en: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["PORTUGUESE",437]="Se você gostou do script e o achou útil, apoie o projeto fazendo uma doação, através: do PayPal (${normal_color}${mail}${pink_color}) ou enviando uma fração de bitcoin (${normal_color}${bitcoin}${pink_color}). Qualquer quantidade, mesmo pequena (1, 2, 5 $/€) é bem-vinda. Links diretos e de com realizar em: ${urlgithub_wiki}/Contributing"
+	arr["RUSSIAN",437]="Если вам понравилась эта программа и она оказался для вас полезной, вы можете поддержать проект, сделав пожертвование. Через PayPal (${normal_color}${mail}${pink_color}) или отправив часть биткойна на (${normal_color}${bitcoin}${pink_color}). Приветствуется любая сумма, даже небольшая (1, 2, 5 $/€). Более подробную информацию и прямые ссылки можно получить по адресу: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["GREEK",437]="Εαν ευχαριστηθήκατε το script και το βρήκατε χρήσιμο, μπορείτε να υποστηρίξετε το project κάνοντας κάποια δωρεά. Μέσω του Paypal (${normal_color}${mail}${pink_color}) ή στέλνοντας κάποιο ποσοστό bitcoin (${normal_color}${bitcoin}${pink_color}). Είναι καλοδεχούμενο οποιοδήποτε ποσό (1, 2, 5 $/€), δεν έχει σημασία το πόσο λίγο μπορεί να είναι. Δίνονται περισσότερες πληροφορίες και links για να κάνετε δωρεά στη διεύθυνση: ${normal_color}${urlgithub_wiki}/Contributing"
+
+	arr["ENGLISH",438]="We are looking for translators to other languages. If you want to see airgeddon in your native language and you also know english, contact us. More information at: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["SPANISH",438]="Buscamos traductores para otros idiomas. Si quieres ver airgeddon en tu lengua materna y además sabes inglés, contáctanos. Más información en: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["FRENCH",438]="Nous recherchons des traducteurs pour d'autres langues. Si vous voulez voir airgeddon dans votre langue maternelle et que vous connaissez l'anglais contactez-nous: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["CATALAN",438]="Busquem traductors per a altres idiomes. Si vols veure airgeddon en la teva llengua materna i més saps anglès, contacta'ns. Més informació a: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["PORTUGUESE",438]="Procuramos tradutores para outros idiomas. Se você quiser ver airgeddon em sua língua nativa e também sabe inglês, por favor contacte-nos. Mais informações: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["RUSSIAN",438]="Мы ищем переводчиков на другие языки. Если вы хотите увидеть airgeddon на своем родном языке, и вы знаете английский язык, пожалуйста, свяжитесь с нами. Дополнительная информация: ${normal_color}${urlgithub_wiki}/Contributing"
+	arr["GREEK",438]="Ψάχνουμε μεταφραστές για την υποστήριξη περισσότερων γλωσσών. Αν θέλετε να χρησιμοποιείτε το airgeddon στη μητρική σας γλώσσα, αλλά ξέρετε και αγγλικά, παρακαλούμε επικοινωνήστε μαζί μας. Περισσότερες πληροφορίες: ${normal_color}${urlgithub_wiki}/Contributing"
+
+	arr["ENGLISH",439]="${blue_color}You haven't selected any target, you'll be prompted to input data manually. ${green_color}Do you want to continue? ${normal_color}${visual_choice}"
+	arr["SPANISH",439]="${blue_color}Se ha detectado que no tienes seleccionado ningún objetivo, tendrás que introducir los datos manualmente. ${green_color}¿Deseas continuar? ${normal_color}${visual_choice}"
+	arr["FRENCH",439]="${blue_color}Aucun objectif n'a été sélectionnéIl semble que vous avez sélectionné aucun but, vous devez saisir les données manuellement. ${green_color}Voulez-vous continuer? ${normal_color}${visual_choice}"
+	arr["CATALAN",439]="${blue_color}S'ha detectat que no tens seleccionat cap objectiu, hauràs d'introduir les dades manualment. ${green_color}¿Vols continuar? ${normal_color}${visual_choice}"
+	arr["PORTUGUESE",439]="${blue_color}Nenhum alvo foi selecionou, você será direcionado para inserir os dados manualmente. ${green_color}deseja continuar? ${normal_color}${visual_choice}"
+	arr["RUSSIAN",439]="${blue_color}Вы не выбрали какую-либо цель, вам будет предложено ввести данные вручную. ${green_color}Вы хотите продолжить? ${normal_color}${visual_choice}"
+	arr["GREEK",439]="${blue_color}Δεν έχετε επιλέξει κάποιο στόχο, θα σας ζητηθεί να εισάγετε τα δεδομένα χειροκίνητα. ${green_color}Θέλετε να συνεχίσετε; ${normal_color}${visual_choice}"
+
+	arr["ENGLISH",440]="Aircrack trophy file generated successfully at [${normal_color}${aircrackpotenteredpath}${blue_color}]"
+	arr["SPANISH",440]="Fichero de trofeo aircrack generado con éxito en [${normal_color}${aircrackpotenteredpath}${blue_color}]"
+	arr["FRENCH",440]="Le fichier trophée aircrack a bien été crée dans [${normal_color}${aircrackpotenteredpath}${blue_color}]"
+	arr["CATALAN",440]="Fitxer de trofeu aircrack generat amb èxit a [${normal_color}${aircrackpotenteredpath}${blue_color}]"
+	arr["PORTUGUESE",440]="Arquivo de troféu aircrack gerado com sucesso [${normal_color}${aircrackpotenteredpath}${blue_color}]"
+	arr["RUSSIAN",440]="Трофейный файл aircrack был успешно сгенерирован в [${normal_color}${aircrackpotenteredpath}${blue_color}]"
+	arr["GREEK",440]="Το aircrack αρχείο τρόπαιο δημιουργήθηκε επιτυχώς [${normal_color}${aircrackpotenteredpath}${blue_color}]"
+
+	arr["ENGLISH",441]="Type the path to store the file or press [Enter] to accept the default proposal ${normal_color}[${aircrack_potpath}]"
+	arr["SPANISH",441]="Escribe la ruta donde guardaremos el fichero o pulsa [Enter] para aceptar la propuesta por defecto ${normal_color}[${aircrack_potpath}]"
+	arr["FRENCH",441]="Entrez le chemin où vous voulez enregistrer le fichier ou bien appuyez sur [Entrée] pour utiliser le chemin proposé ${normal_color}[${aircrack_potpath}]"
+	arr["CATALAN",441]="Escriu la ruta on guardarem el fitxer o prem [Enter] per acceptar la proposta per defecte ${normal_color}[${aircrack_potpath}]"
+	arr["PORTUGUESE",441]="Digite o caminho onde armazenar o arquivo ou pressione [Enter] para aceitar o padrão ${normal_color}[${aircrack_potpath}]"
+	arr["RUSSIAN",441]="Напечатайте путь к сохранённому файлу или нажмите [Enter] для принятия предложения по умолчанию ${normal_color}[${aircrack_potpath}]"
+	arr["GREEK",441]="Πληκτρολογήστε το μονοπάτι για την αποθήκευση του αρχείου ή πατήστε [Enter] για την προεπιλεγμένη επιλογή ${normal_color}[${aircrack_potpath}]"
+
+	arr["ENGLISH",442]="If you install ccze you'll see some parts of airgeddon in a colorized way with better aspect. It's not a requirement or a dependency, but it will improve the user experience"
+	arr["SPANISH",442]="Si instalas el paquete ccze podrás ver algunas partes de airgeddon colorizadas y con mejor aspecto. No es un requerimiento ni una dependencia, pero mejorará la experiencia de usuario"
+	arr["FRENCH",442]="L'installation du paquet ccze améliore le rendu graphique d'airgeddon. Ce n'est pas un prérequis mais un petit plus pour rendre l’utilisation d'airgeddon plus agréable."
+	arr["CATALAN",442]="Si instal·les el paquet ccze podràs veure algunes parts de airgeddon coloriçades i amb millor aspecte. No és un requeriment ni una dependència, però millorarà l'experiència d'usuari"
+	arr["PORTUGUESE",442]="Se você instalar o pacote ccze poderá ver algumas partes do airgeddon coloridas e mais bonitas. Não é uma exigência nem uma dependência, mas melhora a experiência do usuário"
+	arr["RUSSIAN",442]="Если вы установите ccze, то некоторые цветные элементы airgeddon будут выглядеть лучше. Это не требование или зависимость, но это улучшит работу пользователя"
+	arr["GREEK",442]="Αν εγκαταστήσετε το ccze θα δείτε μερικά κομμάτια του airgeddon, πολύχρωμα με καλύτερη εμφάνιση. Δεν είναι απαραίτητο dependency, αλλά θα βελτιώσει την εμπειρία του χρήστη"
 
 	case "${3}" in
 		"yellow")

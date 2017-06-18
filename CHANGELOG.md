@@ -1,3 +1,10 @@
+### 7.11
+ - Added hccapx support for hashcat 3.40 or higher
+ - Decrypted hashcat trophy files beautified
+ - Added confirm questions before attacks if no target selected
+ - WPA/WPA2 decrypted files using aircrack now have trophy file
+ - Some outputs colorized using ccze
+
 ### 7.1
  - Added default choice for some yes/no question. Regexp improved
  - Tested compatibility with Backbox 4.7 and Parrot 3.6
