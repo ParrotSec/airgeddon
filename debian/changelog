@@ -1,3 +1,14 @@
+airgeddon (7.11+parrot0) testing; urgency=medium
+
+  * import airgeddon 7.11
+  * Added hccapx support for hashcat 3.40 or higher
+  * Decrypted hashcat trophy files beautified
+  * Added confirm questions before attacks if no target selected
+  * WPA/WPA2 decrypted files using aircrack now have trophy file
+  * Some outputs colorized using ccze  * 
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Wed, 05 Jul 2017 13:00:10 +0200
+
 airgeddon (7.1+parrot0) testing; urgency=medium
 
   * New upstream release.
