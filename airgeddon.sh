@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20170614
-#Version......: 7.11
+#Date.........: 20170717
+#Version......: 7.2
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -109,8 +109,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="7.11"
-language_strings_expected_version="7.11-1"
+airgeddon_version="7.2"
+language_strings_expected_version="7.2-1"
 standardhandshake_filename="handshake-01.cap"
 tmpdir="/tmp/"
 osversionfile_dir="/etc/"
@@ -268,13 +268,14 @@ known_arm_compatible_distros=(
 							)
 
 #Hint vars
-declare main_hints=(128 134 163 437 438 442)
+declare main_hints=(128 134 163 437 438 442 445)
 declare dos_hints=(129 131 133)
 declare handshake_hints=(127 130 132 136)
 declare handshake_attack_hints=(142)
 declare decrypt_hints=(171 178 179 208 244)
 declare select_interface_hints=(246)
-declare language_hints=(250)
+declare language_hints=(250 438)
+declare option_hints=(445 250 448 477)
 declare evil_twin_hints=(254 258 264 269 309 328 400)
 declare evil_twin_dos_hints=(267 268)
 declare beef_hints=(408)
@@ -473,6 +474,98 @@ function language_strings_handling_messages() {
 	language_strings_key_to_continue["GREEK"]="Πατήστε το κουμπί [Enter] για να συνεχίσετε..."
 }
 
+#Toggle language auto-detection feature
+function auto_change_language_toggle() {
+
+	debug_print
+
+	if [ "${auto_change_language}" -eq 1 ]; then
+		sed -ri 's:(auto_change_language)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
+		grep -E "auto_[c]hange_language=0" "${scriptfolder}${scriptname}" > /dev/null
+		if [ "$?" != "0" ]; then
+			return 1
+		fi
+		auto_change_language=$((auto_change_language-1))
+	else
+		sed -ri 's:(auto_change_language)=(0):\1=1:' "${scriptfolder}${scriptname}" 2> /dev/null
+		grep -E "auto_[c]hange_language=1" "${scriptfolder}${scriptname}" > /dev/null
+		if [ "$?" != "0" ]; then
+			return 1
+		fi
+		auto_change_language=$((auto_change_language+1))
+	fi
+	return 0
+}
+
+#Toggle allow colorization feature
+function allow_colorization_toggle() {
+
+	debug_print
+
+	if [ "${allow_colorization}" -eq 1 ]; then
+		sed -ri 's:(allow_colorization)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
+		grep -E "allow_[c]olorization=0" "${scriptfolder}${scriptname}" > /dev/null
+		if [ "$?" != "0" ]; then
+			return 1
+		fi
+		allow_colorization=$((allow_colorization-1))
+	else
+		sed -ri 's:(allow_colorization)=(0):\1=1:' "${scriptfolder}${scriptname}" 2> /dev/null
+		grep -E "allow_[c]olorization=1" "${scriptfolder}${scriptname}" > /dev/null
+		if [ "$?" != "0" ]; then
+			return 1
+		fi
+		allow_colorization=$((allow_colorization+1))
+	fi
+	initialize_colorized_output
+	return 0
+}
+
+#Toggle auto-update feature
+function auto_update_toggle() {
+
+	debug_print
+
+	if [ "${auto_update}" -eq 1 ]; then
+		sed -ri 's:(auto_update)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
+		grep -E "auto_[u]pdate=0" "${scriptfolder}${scriptname}" > /dev/null
+		if [ "$?" != "0" ]; then
+			return 1
+		fi
+		auto_update=$((auto_update-1))
+	else
+		sed -ri 's:(auto_update)=(0):\1=1:' "${scriptfolder}${scriptname}" 2> /dev/null
+		grep -E "auto_[u]pdate=1" "${scriptfolder}${scriptname}" > /dev/null
+		if [ "$?" != "0" ]; then
+			return 1
+		fi
+		auto_update=$((auto_update+1))
+	fi
+	return 0
+}
+
+#Get current permanent language
+function get_current_permanent_language() {
+
+	debug_print
+
+	current_permanent_language=$(grep "language=" "${scriptfolder}${scriptname}" | grep -v "auto_change_language" | head -n 1 | awk -F "=" '{print $2}')
+	current_permanent_language=$(echo "${current_permanent_language}" | sed -e 's/^"//;s/"$//')
+}
+
+#Set language as permanent
+function set_permanent_language() {
+
+	debug_print
+
+	sed -ri "s:^([l]anguage)=\"[a-zA-Z]+\":\1=\"${language}\":" "${scriptfolder}${scriptname}" 2> /dev/null
+	grep -E "^[l]anguage=\"${language}\"" "${scriptfolder}${scriptname}" > /dev/null
+	if [ "$?" != "0" ]; then
+		return 1
+	fi
+	return 0
+}
+
 #Print the current line of where this was called and the function's name. Applies to some (which are useful) functions
 function debug_print() {
 
@@ -510,7 +603,6 @@ function debug_print() {
 			return 1
 		fi
 
-		#TODO "${@}" to print parameters
 		echo "Line:${BASH_LINENO[1]}" "${FUNCNAME[1]}"
 		return 0
 	fi
@@ -1113,6 +1205,179 @@ function check_interface_mode() {
 	exit_script_option
 }
 
+#Option menu
+function option_menu() {
+
+	debug_print
+
+	clear
+	language_strings "${language}" 443 "title"
+	current_menu="option_menu"
+	initialize_menu_and_print_selections
+	echo
+	language_strings "${language}" 47 "green"
+	print_simple_separator
+	language_strings "${language}" 78
+	print_simple_separator
+	if [ "${auto_update}" -eq 1 ]; then
+		language_strings "${language}" 455
+	else
+		language_strings "${language}" 449
+	fi
+	if [ "${allow_colorization}" -eq 1 ]; then
+		language_strings "${language}" 456
+	else
+		language_strings "${language}" 450
+	fi
+	if [ "${auto_change_language}" -eq 1 ]; then
+		language_strings "${language}" 468
+	else
+		language_strings "${language}" 467
+	fi
+	language_strings "${language}" 447
+	print_simple_separator
+	language_strings "${language}" 174
+	print_hint ${current_menu}
+
+	read -r option_selected
+	case ${option_selected} in
+		1)
+			language_menu
+		;;
+		2)
+			if [ "${auto_update}" -eq 1 ]; then
+				ask_yesno 457 "no"
+				if [ "${yesno}" = "y" ]; then
+					auto_update_toggle
+					if [ "$?" = "0" ]; then
+						echo
+						language_strings "${language}" 461 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				language_strings "${language}" 459 "yellow"
+				ask_yesno 458 "no"
+				if [ "${yesno}" = "y" ]; then
+					auto_update_toggle
+					if [ "$?" = "0" ]; then
+						echo
+						language_strings "${language}" 460 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		3)
+			if ! hash ccze 2> /dev/null; then
+				echo
+				language_strings "${language}" 464 "yellow"
+			fi
+
+			if [ "${allow_colorization}" -eq 1 ]; then
+				ask_yesno 462 "yes"
+				if [ "${yesno}" = "y" ]; then
+					allow_colorization_toggle
+					if [ "$?" = "0" ]; then
+						echo
+						language_strings "${language}" 466 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				ask_yesno 463 "yes"
+				if [ "${yesno}" = "y" ]; then
+					allow_colorization_toggle
+					if [ "$?" = "0" ]; then
+						echo
+						language_strings "${language}" 465 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		4)
+			if [ "${auto_change_language}" -eq 1 ]; then
+				ask_yesno 469 "no"
+				if [ "${yesno}" = "y" ]; then
+					auto_change_language_toggle
+					if [ "$?" = "0" ]; then
+						echo
+						language_strings "${language}" 473 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				echo
+				language_strings "${language}" 471 "yellow"
+				ask_yesno 470 "no"
+				if [ "${yesno}" = "y" ]; then
+					auto_change_language_toggle
+					if [ "$?" = "0" ]; then
+						echo
+						language_strings "${language}" 472 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		5)
+			ask_yesno 478 "yes"
+			if [ "${yesno}" = "y" ]; then
+				get_current_permanent_language
+				if [ "${language}" = "${current_permanent_language}" ]; then
+					echo
+					language_strings "${language}" 480 "red"
+				else
+					local auto_change_value
+					auto_change_value=$(grep "auto_change_language=" "${scriptfolder}${scriptname}" | head -n 1 | awk -F "=" '{print $2}')
+					if [ "${auto_change_value}" -eq 1 ]; then
+						echo
+						language_strings "${language}" 479 "yellow"
+						auto_change_language_toggle
+					fi
+
+					set_permanent_language
+					if [ "$?" = "0" ]; then
+						echo
+						language_strings "${language}" 481 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+				fi
+				language_strings "${language}" 115 "read"
+			fi
+		;;
+		6)
+			return
+		;;
+		*)
+			invalid_menu_option
+		;;
+	esac
+
+	option_menu
+}
+
 #Language change menu
 function language_menu() {
 
@@ -1132,6 +1397,8 @@ function language_menu() {
 	language_strings "${language}" 249
 	language_strings "${language}" 308
 	language_strings "${language}" 320
+	print_simple_separator
+	language_strings "${language}" 446
 	print_hint ${current_menu}
 
 	read -r language_selected
@@ -1200,10 +1467,15 @@ function language_menu() {
 			fi
 			language_strings "${language}" 115 "read"
 		;;
+		8)
+			return
+		;;
 		*)
 			invalid_language_selected
 		;;
 	esac
+
+	language_menu
 }
 
 #Read the chipset for an interface
@@ -1212,52 +1484,45 @@ function set_chipset() {
 	debug_print
 
 	chipset=""
-	sedrule1="s/^....//"
-	sedrule2="s/ Network Connection//g"
-	sedrule3="s/ Wireless Adapter//"
-	sedrule4="s/Wireless LAN Controller //g"
-	sedrule5="s/ Wireless Adapter//"
-	sedrule6="s/^ //"
-	sedrule7="s/ Gigabit Ethernet.*//"
-	sedrule8="s/ Fast Ethernet.*//"
-	sedrule9="s/ \[.*//"
-	sedrule10="s/ (.*//"
+	sedrule1="s/^[0-9a-f]\{1,4\} \|^ //Ig"
+	sedrule2="s/ Network Connection.*//Ig"
+	sedrule3="s/ Wireless.*//Ig"
+	sedrule4="s/ PCI Express.*//Ig"
+	sedrule5="s/ \(Gigabit\|Fast\) Ethernet.*//Ig"
+	sedrule6="s/ \[.*//"
+	sedrule7="s/ (.*//"
 
-	sedrulewifi="${sedrule1};${sedrule2};${sedrule3};${sedrule6}"
-	sedrulegeneric="${sedrule4};${sedrule2};${sedrule5};${sedrule6};${sedrule7};${sedrule8};${sedrule9};${sedrule10}"
-	sedruleall="${sedrule1};${sedrule2};${sedrule3};${sedrule6};${sedrule7};${sedrule8};${sedrule9};${sedrule10}"
+	sedruleall="${sedrule1};${sedrule2};${sedrule3};${sedrule4};${sedrule5};${sedrule6};${sedrule7}"
 
 	if [ -f "/sys/class/net/${1}/device/modalias" ]; then
-
-		bus_type=$(cut -d ":" -f 1 < "/sys/class/net/${1}/device/modalias")
+		bus_type=$(cut -f 1 -d ":" < "/sys/class/net/${1}/device/modalias")
 
 		if [ "${bus_type}" = "usb" ]; then
 			vendor_and_device=$(cut -b 6-14 < "/sys/class/net/${1}/device/modalias" | sed 's/^.//;s/p/:/')
 			if hash lsusb 2> /dev/null; then
-				chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n1 - | cut -f3- -d ":" | sed "${sedrulewifi}")
+				chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
 			fi
 
 		elif [[ "${bus_type}" =~ pci|ssb|bcma|pcmcia ]]; then
-
-			if [[ -f /sys/class/net/${1}/device/vendor && -f /sys/class/net/${1}/device/device ]]; then
+			if [[ -f /sys/class/net/${1}/device/vendor ]] && [[ -f /sys/class/net/${1}/device/device ]]; then
 				vendor_and_device=$(cat "/sys/class/net/${1}/device/vendor"):$(cat "/sys/class/net/${1}/device/device")
 				if hash lspci 2> /dev/null; then
-					chipset=$(lspci -d "${vendor_and_device}" | cut -f3- -d ":" | sed "${sedrulegeneric}")
+					chipset=$(lspci -d "${vendor_and_device}" | cut -f 3 -d ":" | sed -e "${sedruleall}")
 				fi
 			else
 				if hash ethtool 2> /dev/null; then
 					ethtool_output=$(ethtool -i "${1}" 2>&1)
-					vendor_and_device=$(printf "%s" "${ethtool_output}" | grep bus-info | cut -d ":" -f "3-" | sed 's/^ //')
+					vendor_and_device=$(printf "%s" "${ethtool_output}" | grep "bus-info" | cut -f 3 -d ":" | sed 's/^ //')
 					if hash lspci 2> /dev/null; then
-						chipset=$(lspci | grep "${vendor_and_device}" | head -n1 - | cut -f3- -d ":" | sed "${sedrulegeneric}")
+						chipset=$(lspci | grep "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
 					fi
 				fi
 			fi
 		fi
-	elif [[ -f /sys/class/net/${1}/device/idVendor && -f /sys/class/net/${1}/device/idProduct ]]; then
+	elif [[ -f /sys/class/net/${1}/device/idVendor ]] && [[ -f /sys/class/net/${1}/device/idProduct ]]; then
 		vendor_and_device=$(cat "/sys/class/net/${1}/device/idVendor"):$(cat "/sys/class/net/${1}/device/idProduct")
 		if hash lsusb 2> /dev/null; then
-			chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n1 - | cut -f3- -d ":" | sed "${sedruleall}")
+			chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
 		fi
 	fi
 }
@@ -1309,7 +1574,7 @@ function select_internet_interface() {
 		fi
 		set_chipset "${item}"
 		echo -ne "${option_counter}.${spaceiface}${item} "
-		if [ "${chipset}" = "" ]; then
+		if [ -z "${chipset}" ]; then
 			language_strings "${language}" 245 "blue"
 		else
 			echo -e "${blue_color}// ${yellow_color}Chipset:${normal_color} ${chipset}"
@@ -1510,7 +1775,7 @@ function ask_bssid() {
 	if [ "${1}" = "wps" ]; then
 		if [ -z "${wps_bssid}" ]; then
 			ask_yesno 439 "no"
-			if [ ${yesno} = "n" ]; then
+			if [ "${yesno}" = "n" ]; then
 				return 1
 			fi
 		fi
@@ -1523,7 +1788,7 @@ function ask_bssid() {
 	else
 		if [ -z "${bssid}" ]; then
 			ask_yesno 439 "no"
-			if [ ${yesno} = "n" ]; then
+			if [ "${yesno}" = "n" ]; then
 				return 1
 			fi
 		fi
@@ -1556,7 +1821,7 @@ function ask_essid() {
 
 		if [ "${1}" = "verify" ]; then
 			ask_yesno 439 "no"
-			if [ ${yesno} = "n" ]; then
+			if [ "${yesno}" = "n" ]; then
 				return 1
 			fi
 		fi
@@ -2643,6 +2908,30 @@ function wps_attacks_parameters() {
 	return 0
 }
 
+#Print selected options
+function print_options() {
+
+	debug_print
+
+	if [ "${auto_update}" -eq 1 ]; then
+		language_strings "${language}" 451 "blue"
+	else
+		language_strings "${language}" 452 "blue"
+	fi
+
+	if [ "${allow_colorization}" -eq 1 ]; then
+		language_strings "${language}" 453 "blue"
+	else
+		language_strings "${language}" 454 "blue"
+	fi
+
+	if [ "${auto_change_language}" -eq 1 ]; then
+		language_strings "${language}" 474 "blue"
+	else
+		language_strings "${language}" 475 "blue"
+	fi
+}
+
 #Print selected interface
 function print_iface_selected() {
 
@@ -2947,6 +3236,9 @@ function initialize_menu_and_print_selections() {
 			print_iface_selected
 			print_all_target_vars_et
 		;;
+		"option_menu")
+			print_options
+		;;
 		*)
 			print_iface_selected
 			print_all_target_vars
@@ -3117,6 +3409,13 @@ function print_hint() {
 			randomhint=$(shuf -i 0-"${hintlength}" -n 1)
 			strtoprint=${hints[language_hints|${randomhint}]}
 		;;
+		"option_menu")
+			store_array hints option_hints "${option_hints[@]}"
+			hintlength=${#option_hints[@]}
+			((hintlength--))
+			randomhint=$(shuf -i 0-"${hintlength}" -n 1)
+			strtoprint=${hints[option_hints|${randomhint}]}
+		;;
 		"evil_twin_attacks_menu")
 			store_array hints evil_twin_hints "${evil_twin_hints[@]}"
 			hintlength=${#evil_twin_hints[@]}
@@ -3183,7 +3482,7 @@ function main_menu() {
 	language_strings "${language}" 426
 	print_simple_separator
 	language_strings "${language}" 60
-	language_strings "${language}" 78
+	language_strings "${language}" 444
 	language_strings "${language}" 61
 	print_hint ${current_menu}
 
@@ -3220,7 +3519,7 @@ function main_menu() {
 			credits_option
 		;;
 		11)
-			language_menu
+			option_menu
 		;;
 		12)
 			exit_script_option
@@ -3841,7 +4140,7 @@ function manage_asking_for_captured_file() {
 		echo
 		language_strings "${language}" 186 "blue"
 		ask_yesno 187 "yes"
-		if [ ${yesno} = "n" ]; then
+		if [ "${yesno}" = "n" ]; then
 			ask_capture_file
 		fi
 	else
@@ -3858,7 +4157,7 @@ function manage_asking_for_dictionary_file() {
 		echo
 		language_strings "${language}" 183 "blue"
 		ask_yesno 184 "yes"
-		if [ ${yesno} = "n" ]; then
+		if [ "${yesno}" = "n" ]; then
 			ask_dictionary
 		fi
 	else
@@ -3875,7 +4174,7 @@ function manage_asking_for_rule_file() {
 		echo
 		language_strings "${language}" 239 "blue"
 		ask_yesno 240 "yes"
-		if [ ${yesno} = "n" ]; then
+		if [ "${yesno}" = "n" ]; then
 			ask_rules
 		fi
 	else
@@ -3986,7 +4285,7 @@ function select_wpa_bssid_target_from_captured_file() {
 			language_strings "${language}" 192 "blue"
 			ask_yesno 193 "yes"
 
-			if [ ${yesno} = "y" ]; then
+			if [ "${yesno}" = "y" ]; then
 				bssid=${targetbssid}
 				return 0
 			fi
@@ -4204,7 +4503,7 @@ function manage_hashcat_pot() {
 		echo
 		language_strings "${language}" 234 "yellow"
 		ask_yesno 235 "yes"
-		if [ ${yesno} = "y" ]; then
+		if [ "${yesno}" = "y" ]; then
 
 			hashcat_potpath="${default_save_path}"
 			lastcharhashcat_potpath=${hashcat_potpath: -1}
@@ -4256,7 +4555,7 @@ function manage_aircrack_pot() {
 		echo
 		language_strings "${language}" 234 "yellow"
 		ask_yesno 235 "yes"
-		if [ ${yesno} = "y" ]; then
+		if [ "${yesno}" = "y" ]; then
 			aircrack_potpath="${default_save_path}"
 			lastcharaircrack_potpath=${aircrack_potpath: -1}
 			if [ "${lastcharaircrack_potpath}" != "/" ]; then
@@ -4299,7 +4598,7 @@ function manage_ettercap_log() {
 
 	ettercap_log=0
 	ask_yesno 302 "yes"
-	if [ ${yesno} = "y" ]; then
+	if [ "${yesno}" = "y" ]; then
 		ettercap_log=1
 		default_ettercap_logpath="${default_save_path}"
 		lastcharettercaplogpath=${default_ettercap_logpath: -1}
@@ -4324,7 +4623,7 @@ function manage_bettercap_log() {
 
 	bettercap_log=0
 	ask_yesno 302 "yes"
-	if [ ${yesno} = "y" ]; then
+	if [ "${yesno}" = "y" ]; then
 		bettercap_log=1
 		default_bettercap_logpath="${default_save_path}"
 		lastcharbettercaplogpath=${default_bettercap_logpath: -1}
@@ -4801,7 +5100,7 @@ function set_hostapd_config() {
 	tmpfiles_toclean=1
 	rm -rf "${tmpdir}${hostapd_file}" > /dev/null 2>&1
 
-	different_mac_digit=$(tr -dc A-F0-9 < /dev/urandom | fold -w2 | head -n100 | grep -v "${bssid:10:1}" | head -c 1)
+	different_mac_digit=$(tr -dc A-F0-9 < /dev/urandom | fold -w2 | head -n 100 | grep -v "${bssid:10:1}" | head -c 1)
 	et_bssid=${bssid::10}${different_mac_digit}${bssid:11:6}
 
 	{
@@ -6126,7 +6425,7 @@ function prepare_beef_start() {
 	if [[ ${beef_found} -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[19]}]} -eq 0 ]]; then
 		language_strings "${language}" 405 "blue"
 		ask_yesno 191 "yes"
-		if [ ${yesno} = "y" ]; then
+		if [ "${yesno}" = "y" ]; then
 			manual_beef_set
 			search_for_beef
 		fi
@@ -6148,7 +6447,7 @@ function prepare_beef_start() {
 	elif [[ "${beef_found}" -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[19]}]} -eq 1 ]]; then
 		language_strings "${language}" 405 "blue"
 		ask_yesno 415 "yes"
-		if [ ${yesno} = "y" ]; then
+		if [ "${yesno}" = "y" ]; then
 			manual_beef_set
 			search_for_beef
 			if [[ ${beef_found} -eq 1 ]] && [[ ${valid_possible_beef_path} -eq 1 ]]; then
@@ -6320,6 +6619,8 @@ function parse_ettercap_log() {
 		pass_counter=$((pass_counter + 1))
 	done
 
+	add_contributing_footer_to_file "${tmpdir}parsed_file"
+
 	if [ ${pass_counter} -eq 0 ]; then
 		language_strings "${language}" 305 "yellow"
 	else
@@ -6377,6 +6678,8 @@ function parse_bettercap_log() {
 			pass_counter=$((pass_counter + 1))
 		fi
 	done
+
+	add_contributing_footer_to_file "${tmpdir}parsed_file"
 
 	if [ ${pass_counter} -eq 0 ]; then
 		language_strings "${language}" 305 "yellow"
@@ -6538,7 +6841,7 @@ function clean_handshake_file_option() {
 	else
 		language_strings "${language}" 151 "blue"
 		ask_yesno 152 "yes"
-		if [ ${yesno} = "y" ]; then
+		if [ "${yesno}" = "y" ]; then
 			filetoclean="${enteredpath}"
 		else
 			readpath=1
@@ -7321,7 +7624,7 @@ function explore_for_wps_targets_option() {
 		if [[ ${selected_wps_target_network} -ge 1 ]] && [[ ${selected_wps_target_network} -le ${wash_counter} ]]; then
 			if [ "${wps_lockeds[${selected_wps_target_network}]}" = "Yes" ]; then
 				ask_yesno 350 "no"
-				if [ ${yesno} = "y" ]; then
+				if [ "${yesno}" = "y" ]; then
 					break
 				else
 					echo
@@ -7528,7 +7831,7 @@ function et_prerequisites() {
 		language_strings "${language}" 276 "yellow"
 		print_simple_separator
 		ask_yesno 277 "yes"
-		if [ ${yesno} = "n" ]; then
+		if [ "${yesno}" = "n" ]; then
 			return_to_et_main_menu=1
 			return_to_et_main_menu_from_beef=1
 			return
@@ -7536,7 +7839,7 @@ function et_prerequisites() {
 	fi
 
 	ask_yesno 419 "no"
-	if [ ${yesno} = "y" ]; then
+	if [ "${yesno}" = "y" ]; then
 		mac_spoofing_desired=1
 	fi
 
@@ -7651,13 +7954,13 @@ function ask_et_handshake_file() {
 	elif [[ -z "${enteredpath}" ]] && [[ -n "${et_handshake}" ]]; then
 		language_strings "${language}" 313 "blue"
 		ask_yesno 187 "yes"
-		if [ ${yesno} = "n" ]; then
+		if [ "${yesno}" = "n" ]; then
 			readpath=1
 		fi
 	elif [[ -n "${enteredpath}" ]] && [[ -z "${et_handshake}" ]]; then
 		language_strings "${language}" 151 "blue"
 		ask_yesno 187 "yes"
-		if [ ${yesno} = "y" ]; then
+		if [ "${yesno}" = "y" ]; then
 			et_handshake="${enteredpath}"
 		else
 			readpath=1
@@ -7665,7 +7968,7 @@ function ask_et_handshake_file() {
 	elif [[ -n "${enteredpath}" ]] && [[ -n "${et_handshake}" ]]; then
 		language_strings "${language}" 313 "blue"
 		ask_yesno 187 "yes"
-		if [ ${yesno} = "n" ]; then
+		if [ "${yesno}" = "n" ]; then
 			readpath=1
 		fi
 	fi
@@ -7713,7 +8016,7 @@ function et_dos_menu() {
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
 						ask_yesno 326 "no"
-						if [ ${yesno} = "n" ]; then
+						if [ "${yesno}" = "n" ]; then
 							check_et_without_internet_compatibility
 							if [ "$?" = "0" ]; then
 								captive_portal_mode="dnsblackhole"
@@ -7760,7 +8063,7 @@ function et_dos_menu() {
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
 						ask_yesno 326 "no"
-						if [ ${yesno} = "n" ]; then
+						if [ "${yesno}" = "n" ]; then
 							check_et_without_internet_compatibility
 							if [ "$?" = "0" ]; then
 								captive_portal_mode="dnsblackhole"
@@ -7807,7 +8110,7 @@ function et_dos_menu() {
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
 						ask_yesno 326 "no"
-						if [ ${yesno} = "n" ]; then
+						if [ "${yesno}" = "n" ]; then
 							check_et_without_internet_compatibility
 							if [ "$?" = "0" ]; then
 								captive_portal_mode="dnsblackhole"
@@ -7869,7 +8172,7 @@ function detect_internet_interface() {
 		echo
 		language_strings "${language}" 285 "blue"
 		ask_yesno 284 "yes"
-		if [ ${yesno} = "n" ]; then
+		if [ "${yesno}" = "n" ]; then
 			select_internet_interface
 		fi
 	else
@@ -7924,8 +8227,6 @@ function invalid_language_selected() {
 	language_strings "${language}" 82 "red"
 	echo
 	language_strings "${language}" 115 "read"
-	echo
-	language_menu
 }
 
 #Show message for captive portal invalid selected language
@@ -8000,7 +8301,7 @@ function capture_traps() {
 					;;
 					*)
 						ask_yesno 12 "yes"
-						if [ ${yesno} = "y" ]; then
+						if [ "${yesno}" = "y" ]; then
 							exit_code=1
 							exit_script_option
 						else
@@ -8039,7 +8340,7 @@ function exit_script_option() {
 
 	if [ "${ifacemode}" = "Monitor" ]; then
 		ask_yesno 166 "no"
-		if [ ${yesno} = "n" ]; then
+		if [ "${yesno}" = "n" ]; then
 			action_on_exit_taken=1
 			language_strings "${language}" 167 "multiline"
 			${airmon} stop "${interface}" > /dev/null 2>&1
@@ -8386,7 +8687,7 @@ function ask_for_pin_dbfile_download_retry() {
 	debug_print
 
 	ask_yesno 380 "no"
-	if [ ${yesno} = "n" ]; then
+	if [ "${yesno}" = "n" ]; then
 		pin_dbfile_checked=1
 	fi
 }
@@ -8807,7 +9108,7 @@ function check_compatibility() {
 	done
 
 	update_toolsok=1
-	if [ ${auto_update} -eq 1 ]; then
+	if [ "${auto_update}" -eq 1 ]; then
 
 		echo
 		language_strings "${language}" 226 "blue"
@@ -8871,7 +9172,7 @@ function check_update_tools() {
 
 	debug_print
 
-	if [ ${auto_update} -eq 1 ]; then
+	if [ "${auto_update}" -eq 1 ]; then
 		if [ ${update_toolsok} -eq 1 ]; then
 			autoupdate_check
 		else
@@ -9017,6 +9318,20 @@ function initialize_script_settings() {
 	set_script_folder_and_name
 	http_proxy_set=0
 	hccapx_needed=0
+	xterm_ok=1
+}
+
+#Detect if there is a working X window system
+function check_xwindow_system() {
+
+	debug_print
+
+	if hash xset 2> /dev/null; then
+		xset -q > /dev/null 2>&1
+		if [ "$?" != "0" ]; then
+			xterm_ok=0
+		fi
+	fi
 }
 
 #Detect screen resolution if possible
@@ -9027,7 +9342,6 @@ function detect_screen_resolution() {
 	resolution_detected=0
 	if hash xdpyinfo 2> /dev/null; then
 		resolution=$(xdpyinfo 2> /dev/null | grep -A 3 "screen #0" | grep "dimensions" | tr -s " " | cut -d " " -f 3 | grep "x")
-
 		if [ "$?" = "0" ]; then
 			resolution_detected=1
 		fi
@@ -9187,6 +9501,7 @@ function welcome() {
 
 	check_language_strings
 
+	check_xwindow_system
 	detect_screen_resolution
 	set_possible_aliases
 	initialize_optional_tools_values
@@ -9218,12 +9533,18 @@ function welcome() {
 		check_bash_version
 
 		echo
-		if [ ${resolution_detected} -eq 1 ]; then
+		if [[ ${resolution_detected} -eq 1 ]] && [[ "${xterm_ok}" -eq 1 ]]; then
 			language_strings "${language}" 294 "blue"
 		else
-			language_strings "${language}" 295 "red"
-			echo
-			language_strings "${language}" 300 "yellow"
+			if [ "${xterm_ok}" -eq 0 ]; then
+				language_strings "${language}" 476 "red"
+				exit_code=1
+				exit_script_option
+			else
+				language_strings "${language}" 295 "red"
+				echo
+				language_strings "${language}" 300 "yellow"
+			fi
 		fi
 
 		echo
@@ -9297,6 +9618,8 @@ function download_last_version() {
 
 	download_language_strings_file
 	if [ "$?" = "0" ]; then
+
+		get_current_permanent_language
 		timeout -s SIGTERM 15 curl -L ${urlscript_directlink} -s -o "${0}"
 
 		if [ "$?" = "0" ]; then
@@ -9320,6 +9643,17 @@ function download_last_version() {
 		if [ -n "${beef_custom_path}" ]; then
 			rewrite_script_with_custom_beef "set" "${beef_custom_path}"
 		fi
+
+		if [ "${allow_colorization}" -ne 1 ]; then
+			sed -ri 's:(allow_colorization)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
+		fi
+
+		if [ "${auto_change_language}" -ne 1 ]; then
+			sed -ri 's:(auto_change_language)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
+		fi
+
+		sed -ri "s:^([l]anguage)=\"[a-zA-Z]+\":\1=\"${current_permanent_language}\":" "${scriptfolder}${scriptname}" 2> /dev/null
+
 		language_strings "${language}" 115 "read"
 		chmod +x "${scriptfolder}${scriptname}" > /dev/null 2>&1
 		exec "${scriptfolder}${scriptname}"

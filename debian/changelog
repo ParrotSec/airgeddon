@@ -1,3 +1,14 @@
+airgeddon (7.2+parrot0) testing; urgency=medium
+
+  * import airgeddon 7.2
+  * Improved chipset detection
+  * New language and options menu
+  * Colorization, auto-update and startup language autodetection now can be enabled/disabled persistently from menu
+  * Language can be set permanently from menu even for next startup after an update
+  * New check using xset internal tool to check for a working X window system in order to avoid uncontrolled xterm errors
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Fri, 11 Aug 2017 16:06:40 +0400
+
 airgeddon (7.11+parrot0) testing; urgency=medium
 
   * import airgeddon 7.11

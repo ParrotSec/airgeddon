@@ -1,3 +1,10 @@
+### 7.2
+ - Improved chipset detection
+ - New language and options menu
+ - Colorization, auto-update and startup language autodetection now can be enabled/disabled persistently from menu
+ - Language can be set permanently from menu even for next startup after an update
+ - New check using xset internal tool to check for a working X window system in order to avoid uncontrolled xterm errors
+
 ### 7.11
  - Added hccapx support for hashcat 3.40 or higher
  - Decrypted hashcat trophy files beautified
@@ -34,7 +41,7 @@
 ### 6.21
  - Improved chipset detection, lsusb added to internal tools
  - Improved internet checking. Now more methods, not only icmp
- - Fixed error executing airgeddon after auto update on some distros
+ - Fixed error executing airgeddon after auto-update on some distros
  - Added LICENSE.md and README.md files to Kali package
 
 ### 6.2
