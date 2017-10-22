@@ -1,3 +1,10 @@
+### 7.22
+ - Fixed error caused by Bettercap. Bug: https://github.com/evilsocket/bettercap/issues/356
+ - Arcadyan WPS PIN generation algorithm integrated
+ - Tested compatibility with Kali 2017.2 and Parrot 3.8
+ - WPS Bully bruteforce attack modified to use --sequential (-S) argument
+ - Added WPS offline PIN generation and database menu option
+
 ### 7.21
  - Italian language translation added (Thank you to "salu90")
  - Tested compatibility with Parrot 3.7, Fedora 26 and Wifislax 64-1.1
@@ -110,8 +117,8 @@
 
 ### 5.1
  - Integrated online PIN database for "known WPS PINs attack" (reaver and bully)
- - Zhao Chunsheng algorithm integrated (computepin)
- - Stefan Viehböck algorithm integrated (easybox)
+ - Zhao Chunsheng WPS PIN generation algorithm integrated (ComputePIN)
+ - Stefan Viehböck WPS PIN generation algorithm integrated (EasyBox)
  - Some language strings changed
  - Fixed bug showing selected charset for hashcat v3.0 on bruteforce offline decrypt attack
 
@@ -311,7 +318,7 @@
  - Some language strings changed
 
 ### 2.31
- - French language translation added (Thank you to "Kcdtv")
+ - French language translation added (Thank you to "kcdtv")
  - Only one network autoselect bug fixed
 
 ### 2.3
