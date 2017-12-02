@@ -1,3 +1,10 @@
+### 7.23
+ - Fixed error in Docker container on some host O.S.
+ - Fixed error message on offline Arcadyan PIN algorithm calculation
+ - Polish language translation added (Thank you to "dodg3rmaq")
+ - Added "DoS pursuit mode" on DoS attacks (including DoS used on Evil Twin attacks) to avoid AP channel hopping
+ - Tested compatibility with Parrot 3.9, BlackArch 2017.08.30 and Kali 2017.3
+
 ### 7.22
  - Fixed error caused by Bettercap. Bug: https://github.com/evilsocket/bettercap/issues/356
  - Arcadyan WPS PIN generation algorithm integrated

