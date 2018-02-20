@@ -1,3 +1,12 @@
+airgeddon (8.0+parrot0) testing; urgency=medium
+
+ * Added 5Ghz full support (scans, attacks, card detection, etc.)
+ * Tested compatibility with Kali 2018.1, BlackArch 2017.12.11, Fedora 27, Gentoo 20180206, OpenSUSE 42.3 and Parrot 3.10
+ * Fixed error setting ESSID on some wash versions while scanning
+ * Fixed error on secondary interface selection menu for "DoS pursuit mode"
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Tue, 20 Feb 2018 22:47:16 +0800
+
 airgeddon (7.23+parrot0) testing; urgency=medium
 
  * Fixed error in Docker container on some host O.S.

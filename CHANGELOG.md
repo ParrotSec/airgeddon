@@ -1,3 +1,9 @@
+### 8.0
+ - Added 5Ghz full support (scans, attacks, card detection, etc.)
+ - Tested compatibility with Kali 2018.1, BlackArch 2017.12.11, Fedora 27, Gentoo 20180206, OpenSUSE 42.3 and Parrot 3.10
+ - Fixed error setting ESSID on some wash versions while scanning
+ - Fixed error on secondary interface selection menu for "DoS pursuit mode"
+
 ### 7.23
  - Fixed error in Docker container on some host O.S.
  - Fixed error message on offline Arcadyan PIN algorithm calculation

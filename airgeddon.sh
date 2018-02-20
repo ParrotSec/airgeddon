@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20171110
-#Version......: 7.23
+#Date.........: 20180215
+#Version......: 8.0
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -111,8 +111,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="7.23"
-language_strings_expected_version="7.23-1"
+airgeddon_version="8.0"
+language_strings_expected_version="8.0-1"
 standardhandshake_filename="handshake-01.cap"
 tmpdir="/tmp/"
 osversionfile_dir="/etc/"
@@ -125,6 +125,14 @@ standard_resolution="1024x768"
 curl_404_error="404: Not Found"
 language_strings_file="language_strings.sh"
 broadcast_mac="FF:FF:FF:FF:FF:FF"
+
+#5Ghz vars
+ghz="Ghz"
+band_24ghz="2.4${ghz}"
+band_5ghz="5${ghz}"
+valid_channels_24_ghz_regexp="([1-9]|1[0-4])"
+valid_channels_24_and_5_ghz_regexp="([1-9]|1[0-4]|3[68]|4[0468]|5[246]|6[024]|10[0248]|11[02])"
+minimum_wash_dualscan_version="1.6.5"
 
 #aircrack vars
 aircrack_tmp_simple_name_file="aircrack"
@@ -157,6 +165,7 @@ docker_io_dir="/io"
 minimum_reaver_pixiewps_version="1.5.2"
 minimum_bully_pixiewps_version="1.1"
 minimum_bully_verbosity4_version="1.1"
+minimum_wash_json_version="1.6.2"
 known_pins_dbfile="known_pins.db"
 pins_dbfile_checksum="pindb_checksum.txt"
 wps_default_generic_pin="12345670"
@@ -272,7 +281,7 @@ known_arm_compatible_distros=(
 							)
 
 #Hint vars
-declare main_hints=(128 134 163 437 438 442 445)
+declare main_hints=(128 134 163 437 438 442 445 516)
 declare dos_hints=(129 131 133)
 declare handshake_hints=(127 130 132 136)
 declare handshake_attack_hints=(142)
@@ -600,6 +609,7 @@ function debug_print() {
 								"interrupt_checkpoint"
 								"language_strings"
 								"last_echo"
+								"physical_interface_finder"
 								"print_hint"
 								"print_large_separator"
 								"print_simple_separator"
@@ -615,8 +625,9 @@ function debug_print() {
 		fi
 
 		echo "Line:${BASH_LINENO[1]}" "${FUNCNAME[1]}"
-		return 0
 	fi
+
+	return 0
 }
 
 #Set the message to show again after an interrupt ([Ctrl+C] or [Ctrl+Z]) without exiting
@@ -785,7 +796,6 @@ function execute_iwconfig_fix() {
 	debug_print
 
 	iwconfig_fix
-	current_iface_on_messages="${1}"
 	iwcmd="iwconfig ${1} ${iwcmdfix} > /dev/null 2> /dev/null"
 	eval "${iwcmd}"
 
@@ -835,6 +845,8 @@ function check_interface_coherence() {
 			interface_mac_tmp=${interface_mac:0:15}
 			if [ "${iface_mac_tmp}" = "${interface_mac_tmp}" ]; then
 				interface=${ifaces_and_macs_switched[${iface_mac}]}
+				phy_interface=$(physical_interface_finder "${interface}")
+				check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
 				interface_auto_change=1
 				break
 			fi
@@ -875,7 +887,16 @@ function check_json_option_on_wash() {
 
 	debug_print
 
-	wash 2>&1 | grep "\-j" > /dev/null
+	wash -h 2>&1 | grep "\-j" > /dev/null
+	return $?
+}
+
+#Check if wash has dual scan option
+function check_dual_scan_on_wash() {
+
+	debug_print
+
+	wash -h 2>&1 | grep "2ghz" > /dev/null
 	return $?
 }
 
@@ -889,7 +910,20 @@ function wash_json_scan() {
 	rm -rf "${tmpdir}wps_fifo" > /dev/null 2>&1
 
 	mkfifo "${tmpdir}wps_fifo"
-	timeout -s SIGTERM 240 wash -i "${interface}" --scan -n 100 -j 2> /dev/null > "${tmpdir}wps_fifo" &
+
+	wash_band_modifier=""
+	if [ "${wps_channel}" -gt 14 ]; then
+		if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+			echo
+			language_strings "${language}" 515 "red"
+			language_strings "${language}" 115 "read"
+			return 1
+		else
+			wash_band_modifier="-5"
+		fi
+	fi
+
+	timeout -s SIGTERM 240 wash -i "${interface}" --scan -n 100 -j "${wash_band_modifier}" 2> /dev/null > "${tmpdir}wps_fifo" &
 	wash_json_pid=$!
 	tee "${tmpdir}wps_json_data.txt"< <(cat < "${tmpdir}wps_fifo") > /dev/null 2>&1 &
 
@@ -907,6 +941,8 @@ function wash_json_scan() {
 			break
 		fi
 	done
+
+	return 0
 }
 
 #Calculate pin based on Zhao Chunsheng algorithm (ComputePIN), step 1
@@ -1050,26 +1086,26 @@ function check_and_set_common_algorithms() {
 					language_strings "${language}" 489 "blue"
 
 					serial=""
-					wash_json_scan "${wps_bssid}"
-
-					if [ -n "${serial}" ]; then
-						if [[ "${serial}" =~ ^[0-9]{4}$ ]]; then
-							calculate_arcadyan_algorithm
-							pin_checksum_rule "${arcadyan_pin}"
-							arcadyan_pin="${arcadyan_pin}${checksum_digit}"
-							calculated_pins=("${arcadyan_pin}" "${calculated_pins[@]}")
-							fill_wps_data_array "${wps_bssid}" "Arcadyan" "${arcadyan_pin}"
+					if wash_json_scan "${wps_bssid}"; then
+						if [ -n "${serial}" ]; then
+							if [[ "${serial}" =~ ^[0-9]{4}$ ]]; then
+								calculate_arcadyan_algorithm
+								pin_checksum_rule "${arcadyan_pin}"
+								arcadyan_pin="${arcadyan_pin}${checksum_digit}"
+								calculated_pins=("${arcadyan_pin}" "${calculated_pins[@]}")
+								fill_wps_data_array "${wps_bssid}" "Arcadyan" "${arcadyan_pin}"
+								echo
+								language_strings "${language}" 487 "yellow"
+							else
+								echo
+								language_strings "${language}" 491 "yellow"
+							fi
 							echo
-							language_strings "${language}" 487 "yellow"
 						else
 							echo
-							language_strings "${language}" 491 "yellow"
+							language_strings "${language}" 488 "yellow"
+							echo
 						fi
-						echo
-					else
-						echo
-						language_strings "${language}" 488 "yellow"
-						echo
 					fi
 				fi
 			else
@@ -1140,6 +1176,49 @@ function search_in_pin_database() {
 	done
 }
 
+#Find the physical interface for a card
+function physical_interface_finder() {
+
+	debug_print
+
+	local phy_iface
+	phy_iface=$(basename "$(readlink "/sys/class/net/${1}/phy80211")" 2> /dev/null)
+	echo "${phy_iface}"
+}
+
+#Check the bands supported by a given physical card
+function check_interface_supported_bands() {
+
+	debug_print
+
+	case "${2}" in
+		"main_wifi_interface")
+			interface_supported_bands="${band_24ghz}"
+			if get_5ghz_band_info_from_phy_interface "${1}"; then
+				interface_supported_bands+=", ${band_5ghz}"
+			fi
+		;;
+		"secondary_wifi_interface")
+			secondary_interface_supported_bands="${band_24ghz}"
+			if get_5ghz_band_info_from_phy_interface "${1}"; then
+				secondary_interface_supported_bands+=", ${band_5ghz}"
+			fi
+		;;
+	esac
+}
+
+#Check 5Ghz band info from a given physical interface
+function get_5ghz_band_info_from_phy_interface() {
+
+	debug_print
+
+	if iw phy "${1}" info 2> /dev/null | grep "5200 MHz" > /dev/null; then
+		return 0
+	fi
+
+	return 1
+}
+
 #Prepare monitor mode avoiding the use of airmon-ng or airmon-zc generating two interfaces from one
 function prepare_et_monitor() {
 
@@ -1147,11 +1226,10 @@ function prepare_et_monitor() {
 
 	disable_rfkill
 
-	phy_iface=$(basename "$(readlink "/sys/class/net/${interface}/phy80211")")
-	iface_phy_number=${phy_iface:3:1}
+	iface_phy_number=${phy_interface:3:1}
 	iface_monitor_et_deauth="mon${iface_phy_number}"
 
-	iw phy "${phy_iface}" interface add "${iface_monitor_et_deauth}" type monitor 2> /dev/null
+	iw phy "${phy_interface}" interface add "${iface_monitor_et_deauth}" type monitor 2> /dev/null
 	ifconfig "${iface_monitor_et_deauth}" up > /dev/null 2>&1
 	iwconfig "${iface_monitor_et_deauth}" channel "${channel}" > /dev/null 2>&1
 }
@@ -1170,6 +1248,8 @@ function prepare_et_interface() {
 		if [ "${interface}" != "${new_interface}" ]; then
 			if check_interface_coherence; then
 				interface=${new_interface}
+				phy_interface=$(physical_interface_finder "${interface}")
+				check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
 				current_iface_on_messages="${interface}"
 			fi
 			echo
@@ -1211,6 +1291,8 @@ function restore_et_interface() {
 		[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
 		if [ "${interface}" != "${new_interface}" ]; then
 			interface=${new_interface}
+			phy_interface=$(physical_interface_finder "${interface}")
+			check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
 			current_iface_on_messages="${interface}"
 		fi
 	fi
@@ -1248,6 +1330,8 @@ function managed_option() {
 		if [ "${interface}" != "${new_interface}" ]; then
 			if check_interface_coherence; then
 				interface=${new_interface}
+				phy_interface=$(physical_interface_finder "${interface}")
+				check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
 				current_iface_on_messages="${interface}"
 			fi
 			echo
@@ -1322,6 +1406,8 @@ function monitor_option() {
 		if [ "${interface}" != "${new_interface}" ]; then
 			if check_interface_coherence; then
 				interface="${new_interface}"
+				phy_interface=$(physical_interface_finder "${interface}")
+				check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
 				current_iface_on_messages="${interface}"
 			fi
 			echo
@@ -1726,6 +1812,15 @@ function dos_pursuit_mode_et_handler() {
 		fi
 
 		if select_secondary_et_interface "dos_pursuit_mode"; then
+
+			if [[ "${dos_pursuit_mode}" -eq 1 ]] && [[ -n "${channel}" ]] && [[ "${channel}" -gt 14 ]] && [[ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]]; then
+				echo
+				language_strings "${language}" 519 "red"
+				language_strings "${language}" 115 "read"
+				return_to_et_main_menu=1
+				return 1
+			fi
+
 			if ! check_monitor_enabled "${secondary_wifi_interface}"; then
 				echo
 				language_strings "${language}" 14 "yellow"
@@ -1735,7 +1830,7 @@ function dos_pursuit_mode_et_handler() {
 				echo
 				if ! monitor_option "${secondary_wifi_interface}"; then
 					return_to_et_main_menu=1
-					return
+					return 1
 				else
 					echo
 					language_strings "${language}" 34 "yellow"
@@ -1747,9 +1842,11 @@ function dos_pursuit_mode_et_handler() {
 				language_strings "${language}" 115 "read"
 			fi
 		else
-			return
+			return 1
 		fi
 	fi
+
+	return 0
 }
 
 #Secondary interface selection menu for Evil Twin attacks
@@ -1841,7 +1938,11 @@ function select_secondary_et_interface() {
 
 	read -r secondary_iface
 	if [[ ! ${secondary_iface} =~ ^[[:digit:]]+$ ]] || (( secondary_iface < 1 || secondary_iface > option_counter_back )); then
-		invalid_secondary_iface_selected "dos_pursuit_mode"
+		if [ "${1}" = "dos_pursuit_mode" ]; then
+			invalid_secondary_iface_selected "dos_pursuit_mode"
+		else
+			invalid_secondary_iface_selected "internet"
+		fi
 	elif [ "${secondary_iface}" -eq ${option_counter_back} ]; then
 		return_to_et_main_menu=1
 		return_to_et_main_menu_from_beef=1
@@ -1853,6 +1954,8 @@ function select_secondary_et_interface() {
 			if [[ "${secondary_iface}" = "${option_counter2}" ]]; then
 				if [ "${1}" = "dos_pursuit_mode" ]; then
 					secondary_wifi_interface=${item2}
+					secondary_phy_interface=$(physical_interface_finder "${secondary_wifi_interface}")
+					check_interface_supported_bands "${secondary_phy_interface}" "secondary_wifi_interface"
 				elif [ "${1}" = "internet" ]; then
 					internet_interface=${item2}
 				fi
@@ -1868,6 +1971,8 @@ function select_interface() {
 
 	debug_print
 
+	local interface_menu_band
+
 	clear
 	language_strings "${language}" 88 "title"
 	current_menu="select_interface_menu"
@@ -1882,12 +1987,21 @@ function select_interface() {
 		else
 			spaceiface=" "
 		fi
-		set_chipset "${item}"
 		echo -ne "${option_counter}.${spaceiface}${item} "
+		set_chipset "${item}"
 		if [ "${chipset}" = "" ]; then
 			language_strings "${language}" 245 "blue"
 		else
-			echo -e "${blue_color}// ${yellow_color}Chipset:${normal_color} ${chipset}"
+			interface_menu_band=""
+			if check_interface_wifi "${item}"; then
+				interface_menu_band+="${blue_color}// ${pink_color}"
+				if get_5ghz_band_info_from_phy_interface "$(physical_interface_finder "${item}")"; then
+					interface_menu_band+="${band_24ghz}, ${band_5ghz}"
+				else
+					interface_menu_band+="${band_24ghz}"
+				fi
+			fi
+			echo -e "${interface_menu_band} ${blue_color}// ${yellow_color}Chipset:${normal_color} ${chipset}"
 		fi
 	done
 	print_hint ${current_menu}
@@ -1901,6 +2015,8 @@ function select_interface() {
 			option_counter2=$((option_counter2 + 1))
 			if [[ "${iface}" = "${option_counter2}" ]]; then
 				interface=${item2}
+				phy_interface=$(physical_interface_finder "${interface}")
+				check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
 				interface_mac=$(ip link show "${interface}" | awk '/ether/ {print $2}')
 				break
 			fi
@@ -1962,7 +2078,12 @@ function read_channel() {
 	debug_print
 
 	echo
-	language_strings "${language}" 25 "green"
+	if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+		language_strings "${language}" 25 "green"
+	else
+		language_strings "${language}" 517 "green"
+	fi
+
 	if [ "${1}" = "wps" ]; then
 		read -r wps_channel
 	else
@@ -1975,21 +2096,46 @@ function ask_channel() {
 
 	debug_print
 
-	local regexp="^([1-9]|1[0-4])$"
+	local regexp
+	if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+		regexp="^${valid_channels_24_ghz_regexp}$"
+	else
+		regexp="^${valid_channels_24_and_5_ghz_regexp}$"
+	fi
 
 	if [ "${1}" = "wps" ]; then
+		if [[ -n "${wps_channel}" ]] && [[ "${wps_channel}" -gt 14 ]]; then
+			if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+				echo
+				language_strings "${language}" 515 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
+		fi
+
 		while [[ ! ${wps_channel} =~ ${regexp} ]]; do
 			read_channel "wps"
 		done
 		echo
 		language_strings "${language}" 365 "blue"
 	else
+		if [[ -n "${channel}" ]] && [[ "${channel}" -gt 14 ]]; then
+			if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+				echo
+				language_strings "${language}" 515 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
+		fi
+
 		while [[ ! ${channel} =~ ${regexp} ]]; do
 			read_channel
 		done
 		echo
 		language_strings "${language}" 26 "blue"
 	fi
+
+	return 0
 }
 
 #Read the user input on bssid questions
@@ -2308,7 +2454,7 @@ function set_wep_key_script() {
 
 	cat >&8 <<-EOF
 				} >> "${weppotenteredpath}"
-				
+
 				{
 				echo ""
 				echo "---------------"
@@ -2906,8 +3052,46 @@ function launch_dos_pursuit_mode_attack() {
 	dos_pursuit_mode_attack_pid=$!
 	dos_pursuit_mode_pids+=("${dos_pursuit_mode_attack_pid}")
 
+	if [ "${channel}" -gt 14 ]; then
+		if [ "${interface_pursuit_mode_scan}" = "${interface}" ]; then
+			if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+				echo
+				language_strings "${language}" 515 "red"
+				kill_dos_pursuit_mode_processes
+				language_strings "${language}" 115 "read"
+				return 1
+			else
+				airodump_band_modifier="abg"
+			fi
+		else
+			if [ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]; then
+				echo
+				language_strings "${language}" 515 "red"
+				kill_dos_pursuit_mode_processes
+				language_strings "${language}" 115 "read"
+				return 1
+			else
+				airodump_band_modifier="abg"
+			fi
+		fi
+	else
+		if [ "${interface_pursuit_mode_scan}" = "${interface}" ]; then
+			if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+				airodump_band_modifier="bg"
+			else
+				airodump_band_modifier="abg"
+			fi
+		else
+			if [ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]; then
+				airodump_band_modifier="bg"
+			else
+				airodump_band_modifier="abg"
+			fi
+		fi
+	fi
+
 	sleep ${dos_delay}
-	airodump-ng -w "${tmpdir}dos_pm" "${interface_pursuit_mode_scan}" > /dev/null 2>&1 &
+	airodump-ng -w "${tmpdir}dos_pm" "${interface_pursuit_mode_scan}" --band "${airodump_band_modifier}" > /dev/null 2>&1 &
 	dos_pursuit_mode_scan_pid=$!
 	dos_pursuit_mode_pids+=("${dos_pursuit_mode_scan_pid}")
 }
@@ -3142,7 +3326,10 @@ function mdk3_deauth_option() {
 	if ! ask_bssid; then
 		return
 	fi
-	ask_channel
+
+	if ! ask_channel; then
+		return
+	fi
 
 	ask_yesno 505 "yes"
 	if [ "${yesno}" = "y" ]; then
@@ -3174,7 +3361,10 @@ function aireplay_deauth_option() {
 	if ! ask_bssid; then
 		return
 	fi
-	ask_channel
+
+	if ! ask_channel; then
+		return
+	fi
 
 	ask_yesno 505 "yes"
 	if [ "${yesno}" = "y" ]; then
@@ -3206,7 +3396,10 @@ function wds_confusion_option() {
 	if ! ask_essid "verify"; then
 		return
 	fi
-	ask_channel
+
+	if ! ask_channel; then
+		return
+	fi
 
 	ask_yesno 505 "yes"
 	if [ "${yesno}" = "y" ]; then
@@ -3241,7 +3434,10 @@ function beacon_flood_option() {
 	if ! ask_essid "verify"; then
 		return
 	fi
-	ask_channel
+
+	if ! ask_channel; then
+		return
+	fi
 
 	ask_yesno 505 "yes"
 	if [ "${yesno}" = "y" ]; then
@@ -3371,7 +3567,10 @@ function wps_attacks_parameters() {
 	if ! ask_bssid "wps"; then
 		return 1
 	fi
-	ask_channel "wps"
+
+	if ! ask_channel "wps"; then
+		return 1
+	fi
 
 	if [ "${1}" != "no_monitor_check" ]; then
 		case ${wps_attack} in
@@ -3427,7 +3626,11 @@ function print_iface_selected() {
 		select_interface
 	else
 		check_interface_mode "${interface}"
-		language_strings "${language}" 42 "blue"
+		if [ "${ifacemode}" = "(Non wifi card)" ]; then
+			language_strings "${language}" 42 "blue"
+		else
+			language_strings "${language}" 514 "blue"
+		fi
 	fi
 }
 
@@ -4071,6 +4274,7 @@ function evil_twin_attacks_menu() {
 			if contains_element "${et_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
+				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
 					et_mode="et_onlyap"
 					et_dos_menu
@@ -4085,6 +4289,7 @@ function evil_twin_attacks_menu() {
 			if contains_element "${et_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
+				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
 					et_mode="et_sniffing"
 					et_dos_menu
@@ -4099,6 +4304,7 @@ function evil_twin_attacks_menu() {
 			if contains_element "${et_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
+				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
 					et_mode="et_sniffing_sslstrip"
 					et_dos_menu
@@ -4116,6 +4322,7 @@ function evil_twin_attacks_menu() {
 			if contains_element "${et_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
+				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
 					et_mode="et_captive_portal"
 					echo
@@ -4185,6 +4392,7 @@ function beef_pre_menu() {
 			if contains_element "${beef_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
+				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
 					et_mode="et_sniffing_sslstrip2"
 					get_bettercap_version
@@ -4262,6 +4470,7 @@ function wps_attacks_menu() {
 			if contains_element "${wps_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
+				get_reaver_version
 				explore_for_wps_targets_option
 			fi
 		;;
@@ -4465,6 +4674,7 @@ function offline_pin_generation_menu() {
 			if contains_element "${wps_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
+				get_reaver_version
 				explore_for_wps_targets_option
 			fi
 		;;
@@ -4548,25 +4758,26 @@ function offline_pin_generation_menu() {
 									language_strings "${language}" 489 "blue"
 
 									serial=""
-									wash_json_scan "${wps_bssid}"
-									if [ -n "${serial}" ]; then
-										if [[ "${serial}" =~ ^[0-9]{4}$ ]]; then
-											set_wps_mac_parameters
-											calculate_arcadyan_algorithm
-											pin_checksum_rule "${arcadyan_pin}"
-											arcadyan_pin="${arcadyan_pin}${checksum_digit}"
-											fill_wps_data_array "${wps_bssid}" "Arcadyan" "${arcadyan_pin}"
-											offline_arcadyan_pin_can_be_shown=1
+									if wash_json_scan "${wps_bssid}"; then
+										if [ -n "${serial}" ]; then
+											if [[ "${serial}" =~ ^[0-9]{4}$ ]]; then
+												set_wps_mac_parameters
+												calculate_arcadyan_algorithm
+												pin_checksum_rule "${arcadyan_pin}"
+												arcadyan_pin="${arcadyan_pin}${checksum_digit}"
+												fill_wps_data_array "${wps_bssid}" "Arcadyan" "${arcadyan_pin}"
+												offline_arcadyan_pin_can_be_shown=1
+											else
+												echo
+												language_strings "${language}" 491 "yellow"
+												language_strings "${language}" 115 "read"
+											fi
+											echo
 										else
 											echo
-											language_strings "${language}" 491 "yellow"
+											language_strings "${language}" 488 "red"
 											language_strings "${language}" 115 "read"
 										fi
-										echo
-									else
-										echo
-										language_strings "${language}" 488 "red"
-										language_strings "${language}" 115 "read"
 									fi
 								else
 									echo
@@ -5767,8 +5978,17 @@ function set_hostapd_config() {
 	echo -e "interface=${interface}"
 	echo -e "driver=nl80211"
 	echo -e "ssid=${essid}"
-	echo -e "channel=${channel}"
 	echo -e "bssid=${et_bssid}"
+	} >> "${tmpdir}${hostapd_file}"
+
+	if [[ "${channel}" -gt 14 ]]; then
+		et_channel=$(shuf -i 1-11 -n 1)
+	else
+		et_channel="${channel}"
+	fi
+
+	{
+	echo -e "channel=${et_channel}"
 	} >> "${tmpdir}${hostapd_file}"
 }
 
@@ -6050,6 +6270,11 @@ function set_wps_attack_script() {
 	rm -rf "${tmpdir}${wps_attack_script_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${wps_out_file}" > /dev/null 2>&1
 
+	bully_reaver_band_modifier=""
+	if [[ "${wps_channel}" -gt 14 ]] && [[ "${interface_supported_bands}" != "${band_24ghz}" ]]; then
+		bully_reaver_band_modifier="-5"
+	fi
+
 	exec 7>"${tmpdir}${wps_attack_script_file}"
 
 	wps_attack_tool="${1}"
@@ -6058,26 +6283,26 @@ function set_wps_attack_script() {
 		unbuffer=""
 		case ${wps_attack_mode} in
 			"pindb"|"custompin")
-				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -L -f -N -g 1 -d 2 -vvv -p "
+				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} \${script_bully_reaver_band_modifier} -L -f -N -g 1 -d 2 -vvv -p "
 			;;
 			"pixiedust")
-				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -K 1 -N -vvv"
+				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} \${script_bully_reaver_band_modifier} -K 1 -N -vvv"
 			;;
 			"bruteforce")
-				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -L -f -N -d 2 -vvv"
+				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} \${script_bully_reaver_band_modifier} -L -f -N -d 2 -vvv"
 			;;
 		esac
 	else
 		unbuffer="unbuffer "
 		case ${wps_attack_mode} in
 			"pindb"|"custompin")
-				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -L -F -B -v ${bully_verbosity} -p "
+				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} \${script_bully_reaver_band_modifier} -L -F -B -v ${bully_verbosity} -p "
 			;;
 			"pixiedust")
-				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -d -v ${bully_verbosity}"
+				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} \${script_bully_reaver_band_modifier} -d -v ${bully_verbosity}"
 			;;
 			"bruteforce")
-				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} -S -L -F -B -v ${bully_verbosity}"
+				attack_cmd1="bully \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} \${script_bully_reaver_band_modifier} -S -L -F -B -v ${bully_verbosity}"
 			;;
 		esac
 	fi
@@ -6092,6 +6317,7 @@ function set_wps_attack_script() {
 		script_interface="${interface}"
 		script_wps_bssid="${wps_bssid}"
 		script_wps_channel="${wps_channel}"
+		script_bully_reaver_band_modifier="${bully_reaver_band_modifier}"
 		colorize="${colorize}"
 	EOF
 
@@ -6501,7 +6727,7 @@ function set_control_script() {
 						"${et_captive_portal_logpath}"
 					done
 				fi
-				
+
 				{
 				echo ""
 				echo "---------------"
@@ -6541,7 +6767,12 @@ function set_control_script() {
 	esac
 
 	cat >&7 <<-EOF
-			echo -e "\t${yellow_color}${et_misc_texts[${language},0]} ${white_color}// ${blue_color}BSSID: ${normal_color}${bssid} ${yellow_color}// ${blue_color}${et_misc_texts[${language},1]}: ${normal_color}${channel} ${yellow_color}// ${blue_color}ESSID: ${normal_color}${essid}"
+			if [ "${channel}" != "${et_channel}" ]; then
+				et_control_window_channel="${et_channel} (5Ghz: ${channel})"
+			else
+				et_control_window_channel="${channel}"
+			fi
+			echo -e "\t${yellow_color}${et_misc_texts[${language},0]} ${white_color}// ${blue_color}BSSID: ${normal_color}${bssid} ${yellow_color}// ${blue_color}${et_misc_texts[${language},1]}: ${normal_color}\${et_control_window_channel} ${yellow_color}// ${blue_color}ESSID: ${normal_color}${essid}"
 			echo
 			echo -e "\t${green_color}${et_misc_texts[${language},2]}${normal_color}"
 	EOF
@@ -7402,6 +7633,11 @@ function kill_dos_pursuit_mode_processes() {
 		kill -9 "${item}" &> /dev/null
 		wait "${item}" 2>/dev/null
 	done
+
+	if ! stty sane > /dev/null 2>&1; then
+		reset > /dev/null 2>&1
+	fi
+	sleep 1
 }
 
 #Set current channel reading it from file
@@ -7650,7 +7886,7 @@ function dos_attacks_menu() {
 			invalid_menu_option
 		;;
 	esac
-	
+
 	dos_attacks_menu
 }
 
@@ -8106,8 +8342,15 @@ function explore_for_targets_option() {
 	tmpfiles_toclean=1
 	rm -rf "${tmpdir}nws"* > /dev/null 2>&1
 	rm -rf "${tmpdir}clts.csv" > /dev/null 2>&1
+
+	if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+		airodump_band_modifier="bg"
+	else
+		airodump_band_modifier="abg"
+	fi
+
 	recalculate_windows_sizes
-	xterm +j -bg black -fg white -geometry "${g1_topright_window}" -T "Exploring for targets" -e airodump-ng -w "${tmpdir}nws" "${interface}" > /dev/null 2>&1
+	xterm +j -bg black -fg white -geometry "${g1_topright_window}" -T "Exploring for targets" -e airodump-ng -w "${tmpdir}nws" "${interface}" --band "${airodump_band_modifier}" > /dev/null 2>&1
 	targetline=$(awk '/(^Station[s]?|^Client[es]?)/{print NR}' < "${tmpdir}nws-01.csv")
 	targetline=$((targetline - 1))
 
@@ -8140,10 +8383,11 @@ function explore_for_targets_option() {
 
 			exp_power=$(echo "${exp_power}" | awk '{gsub(/ /,""); print}')
 			exp_essid=${exp_essid:1:${exp_idlength}}
-			if [[ "${exp_channel}" -gt 14 ]] || [[ "${exp_channel}" -lt 1 ]]; then
-				exp_channel=0
-			else
+
+			if [[ ${exp_channel} =~ ${valid_channels_24_and_5_ghz_regexp} ]]; then
 				exp_channel=$(echo "${exp_channel}" | awk '{gsub(/ /,""); print}')
+			else
+				exp_channel=0
 			fi
 
 			if [[ "${exp_essid}" = "" ]] || [[ "${exp_channel}" = "-1" ]]; then
@@ -8185,14 +8429,28 @@ function explore_for_wps_targets_option() {
 	else
 		language_strings "${language}" 355 "blue"
 	fi
+
+	wash_band_modifier=""
+	if [ "${interface_supported_bands}" != "${band_24ghz}" ]; then
+		if check_dual_scan_on_wash; then
+			wash_band_modifier="-2 -5"
+		else
+			ask_yesno 518 "no"
+			if [ "${yesno}" = "y" ]; then
+				wash_band_modifier="-5"
+			fi
+		fi
+	fi
+
 	echo
 	language_strings "${language}" 67 "yellow"
 	language_strings "${language}" 115 "read"
 
 	tmpfiles_toclean=1
 	rm -rf "${tmpdir}wps"* > /dev/null 2>&1
+
 	recalculate_windows_sizes
-	xterm +j -bg black -fg white -geometry "${g1_topright_window}" -T "Exploring for WPS targets" -e "wash -i \"${interface}\" ${wash_ifaces_already_set[${interface}]} | tee \"${tmpdir}wps.txt\"" > /dev/null 2>&1
+	xterm +j -bg black -fg white -geometry "${g1_topright_window}" -T "Exploring for WPS targets" -e "wash -i \"${interface}\" ${wash_ifaces_already_set[${interface}]} ${wash_band_modifier} | tee \"${tmpdir}wps.txt\"" > /dev/null 2>&1
 
 	readarray -t WASH_PREVIEW < <(cat < "${tmpdir}wps.txt" 2> /dev/null)
 
@@ -8252,13 +8510,15 @@ function explore_for_wps_targets_option() {
 			expwps_channel=$(echo "${expwps_line}" | awk '{print $2}')
 			expwps_power=$(echo "${expwps_line}" | awk '{print $3}')
 			expwps_locked=$(echo "${expwps_line}" | awk '{print $5}')
-			expwps_essid=$(echo "${expwps_line}" | awk '{$1=$2=$3=$4=$5=""; print $0}' | sed -e 's/^[ \t]*//')
+			expwps_essid=$(echo "${expwps_line}" | awk '{print $NF}' | sed -e 's/^[ \t]*//')
 
 			if [[ ${expwps_channel} -le 9 ]]; then
-				wpssp2=" "
+				wpssp2="  "
 				if [[ ${expwps_channel} -eq 0 ]]; then
 					expwps_channel="-"
 				fi
+			elif [[ ${expwps_channel} -ge 10 ]] && [[ ${expwps_channel} -lt 99 ]]; then
+				wpssp2=" "
 			else
 				wpssp2=""
 			fi
@@ -8297,7 +8557,7 @@ function explore_for_wps_targets_option() {
 			wps_channels[$wash_counter]=${expwps_channel}
 			wps_macs[$wash_counter]=${expwps_bssid}
 			wps_lockeds[$wash_counter]=${expwps_locked}
-			echo -e "${wash_color} ${wpssp1}${wash_counter})   ${expwps_bssid}   ${wpssp2}${expwps_channel}    ${wpssp4}${expwps_power}%     ${expwps_locked}${wpssp3}   ${expwps_essid}"
+			echo -e "${wash_color} ${wpssp1}${wash_counter})   ${expwps_bssid}  ${wpssp2}${expwps_channel}    ${wpssp4}${expwps_power}%     ${expwps_locked}${wpssp3}   ${expwps_essid}"
 		fi
 	done < "${tmpdir}wps.txt"
 
@@ -8363,10 +8623,12 @@ function select_target() {
 		fi
 
 		if [[ ${exp_channel} -le 9 ]]; then
-			sp2=" "
+			sp2="  "
 			if [[ ${exp_channel} -eq 0 ]]; then
 				exp_channel="-"
 			fi
+		elif [[ ${exp_channel} -ge 10 ]] && [[ ${exp_channel} -lt 99 ]]; then
+			sp2=" "
 		else
 			sp2=""
 		fi
@@ -8404,7 +8666,7 @@ function select_target() {
 		channels[$i]=${exp_channel}
 		macs[$i]=${exp_mac}
 		encs[$i]=${exp_enc}
-		echo -e "${airodump_color} ${sp1}${i})${client}  ${sp5}${exp_mac}   ${sp2}${exp_channel}    ${sp4}${exp_power}%   ${exp_enc}${sp6}   ${exp_essid}"
+		echo -e "${airodump_color} ${sp1}${i})${client}  ${sp5}${exp_mac}  ${sp2}${exp_channel}    ${sp4}${exp_power}%   ${exp_enc}${sp6}   ${exp_essid}"
 	done < "${tmpdir}wnws.txt"
 
 	echo
@@ -8623,7 +8885,19 @@ function et_prerequisites() {
 			return_to_et_main_menu=1
 			return
 		fi
-		ask_channel
+
+		if ! ask_channel; then
+			return_to_et_main_menu=1
+			return
+		else
+			if [[ "${dos_pursuit_mode}" -eq 1 ]] && [[ "${channel}" -gt 14 ]] && [[ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]]; then
+				echo
+				language_strings "${language}" 519 "red"
+				language_strings "${language}" 115 "read"
+				return_to_et_main_menu=1
+				return
+			fi
+		fi
 		ask_essid "noverify"
 	fi
 
@@ -8645,6 +8919,11 @@ function et_prerequisites() {
 		echo
 		language_strings "${language}" 420 "pink"
 		language_strings "${language}" 115 "read"
+	fi
+
+	if [[ "${channel}" -gt 14 ]]; then
+		echo
+		language_strings "${language}" 520 "blue"
 	fi
 
 	echo
@@ -8747,7 +9026,9 @@ function et_dos_menu() {
 				echo
 				language_strings "${language}" 509 "yellow"
 
-				dos_pursuit_mode_et_handler
+				if ! dos_pursuit_mode_et_handler; then
+					return
+				fi
 
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
@@ -8796,7 +9077,9 @@ function et_dos_menu() {
 				echo
 				language_strings "${language}" 509 "yellow"
 
-				dos_pursuit_mode_et_handler
+				if ! dos_pursuit_mode_et_handler; then
+					return
+				fi
 
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
@@ -8845,7 +9128,9 @@ function et_dos_menu() {
 				echo
 				language_strings "${language}" 509 "yellow"
 
-				dos_pursuit_mode_et_handler
+				if ! dos_pursuit_mode_et_handler; then
+					return
+				fi
 
 				if [ "${et_mode}" = "et_captive_portal" ]; then
 					if [ ${internet_interface_selected} -eq 0 ]; then
@@ -9197,6 +9482,7 @@ function iwconfig_fix() {
 
 	debug_print
 
+	local iwversion
 	iwversion=$(iwconfig --version 2> /dev/null | grep version | awk '{print $4}')
 	iwcmdfix=""
 	if [ "${iwversion}" -lt 30 ]; then
@@ -9287,6 +9573,17 @@ function validate_reaver_pixiewps_version() {
 	debug_print
 
 	if compare_floats_greater_or_equal "${reaver_version}" "${minimum_reaver_pixiewps_version}"; then
+		return 0
+	fi
+	return 1
+}
+
+#Validate if wash version is able to perform 5Ghz dual scan
+function validate_wash_dualscan_version() {
+
+	debug_print
+
+	if compare_floats_greater_or_equal "${reaver_version}" "${minimum_wash_dualscan_version}"; then
 		return 0
 	fi
 	return 1

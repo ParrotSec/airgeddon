@@ -2,6 +2,7 @@ imgs /usr/share/airgeddon/
 airgeddon.sh /usr/share/airgeddon/
 CHANGELOG.md /usr/share/airgeddon/
 CONTRIBUTING.md /usr/share/airgeddon/
+CODE_OF_CONDUCT.md /usr/share/airgeddon/
 known_pins.db /usr/share/airgeddon/
 language_strings.sh /usr/share/airgeddon/
 LICENSE.md /usr/share/airgeddon/
