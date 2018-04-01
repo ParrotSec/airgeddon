@@ -1,3 +1,15 @@
+airgeddon (8.01+parrot0) testing; urgency=medium
+
+ * German language translation added (Thank you to "hamperfait")
+ * Filters enabled on scannings based on menu or kind of attack
+ * WPS PIN database now is updated on startup updates too
+ * Return option now always at position 0 on all menus
+ * Removed --weak--hash-threshold option for hashcat 4.0.0 or higher
+ * Tested compatibility with Parrot 3.11
+ * Fixed aspect of network selection menu when network power is equal to -1
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Mon, 01 Apr 2018 00:24:56 +0900
+
 airgeddon (8.0+parrot0) testing; urgency=medium
 
  * Added 5Ghz full support (scans, attacks, card detection, etc.)
