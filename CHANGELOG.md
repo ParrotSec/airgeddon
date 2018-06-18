@@ -1,3 +1,10 @@
+### 8.10
+ - WPS decrypted networks now have trophy file
+ - Tested compatibility with Kali 2018.2, Ubuntu 18.04 and Parrot 4.x
+ - Controlled error for unsupported bettercap 2.x version
+ - Automatic check added on Handshake capture (Thank you to "IwraStudios")
+ - Fixed card detection bug on some Linux
+
 ### 8.01
  - German language translation added (Thank you to "hamperfait")
  - Filters enabled on scannings based on menu or kind of attack
@@ -166,7 +173,7 @@
 
 ### 4.31
  - Now optionally on Evil Twin captive portal attack you can choose between to have internet access or to use a "dns trick"
- - Fixed bug writing handshake files on some paths
+ - Fixed bug writing Handshake files on some paths
  - Added possibility to get back to Evil Twin main menu from the internet interface selection menu
 
 ### 4.3
@@ -292,7 +299,7 @@
  - README.md beautified
 
 ### 3.22
- - Cleaning handshake files now perform some checks to avoid corruption file problem
+ - Cleaning Handshake files now perform some checks to avoid corruption file problem
  - Capture files are checked before cracking looking for Handshakes and easy targeting
  - Fixed bug checking existence of files
 

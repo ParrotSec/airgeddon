@@ -1,3 +1,13 @@
+airgeddon (8.10+parrot0) testing; urgency=medium
+
+ * WPS decrypted networks now have trophy file
+ * Tested compatibility with Kali 2018.2, Ubuntu 18.04 and Parrot 4.x
+ * Controlled error for unsupported bettercap 2.x version
+ * Automatic check added on Handshake capture (Thank you to "IwraStudios")
+ * Fixed card detection bug on some Linux
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sun, 18 Jun 2018 20:32:53 +0300
+
 airgeddon (8.01+parrot0) testing; urgency=medium
 
  * German language translation added (Thank you to "hamperfait")

@@ -21,6 +21,7 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
   - [Optional Tools]
 	 - [BeEF Tips]
 	 - [Hashcat Tips]
+	 - [Bettercap Tips]
   - [Update Tools]
   - [Internal Tools]
   - [Known incompatibilities]
@@ -59,6 +60,7 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 [Optional Tools]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Optional%20Tools
 [BeEF Tips]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/BeEF%20Tips
 [Hashcat Tips]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Hashcat%20Tips
+[Bettercap Tips]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Bettercap%20Tips
 [Update Tools]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Update%20Tools
 [Internal Tools]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Internal%20Tools
 [Known incompatibilities]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Known%20incompatibilities
@@ -76,7 +78,7 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 [Hat Tip To]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Hat%20Tip%20To
 [Inspiration]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Inspiration
 
-[Version-shield]: https://img.shields.io/badge/version-8.01-blue.svg?style=flat-square&colorA=273133&colorB=0093ee "Latest version"
+[Version-shield]: https://img.shields.io/badge/version-8.10-blue.svg?style=flat-square&colorA=273133&colorB=0093ee "Latest version"
 [Bash4.2-shield]: https://img.shields.io/badge/bash-4.2%2B-blue.svg?style=flat-square&colorA=273133&colorB=00db00 "Bash 4.2 or later"
 [License-shield]: https://img.shields.io/badge/license-GPL%20v3%2B-blue.svg?style=flat-square&colorA=273133&colorB=bd0000 "GPL v3+"
 [Docker-shield]: https://img.shields.io/docker/automated/v1s1t0r1sh3r3/airgeddon.svg?style=flat-square&colorA=273133&colorB=f9ff5a "Docker rules!"

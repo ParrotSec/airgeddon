@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20180319
-#Version......: 8.01
+#Date.........: 20180602
+#Version......: 8.10
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -112,9 +112,10 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="8.01"
-language_strings_expected_version="8.01-1"
+airgeddon_version="8.10"
+language_strings_expected_version="8.10-1"
 standardhandshake_filename="handshake-01.cap"
+timeout_capture_handshake="20"
 tmpdir="/tmp/"
 osversionfile_dir="/etc/"
 minimum_bash_version_required="4.2"
@@ -213,6 +214,7 @@ bettercap_proxy_port="8080"
 bettercap_dns_port="5300"
 minimum_bettercap_advanced_options="1.5.9"
 minimum_bettercap_fixed_beef_iptables_issue="1.6.2"
+maximum_bettercap_supported_version="1.6.2"
 sslstrip_file="ag.sslstrip.log"
 ettercap_file="ag.ettercap.log"
 bettercap_file="ag.bettercap.log"
@@ -816,7 +818,7 @@ function renew_ifaces_and_macs_list() {
 
 	debug_print
 
-	readarray -t IFACES_AND_MACS < <(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep lo -v | grep "${interface}" -v)
+	readarray -t IFACES_AND_MACS < <(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep -E "^lo$" -v | grep "${interface}" -v)
 	declare -gA ifaces_and_macs
 	for iface_name in "${IFACES_AND_MACS[@]}"; do
 		mac_item=$(cat "/sys/class/net/${iface_name}/address" 2> /dev/null)
@@ -1659,7 +1661,7 @@ function language_menu() {
 	language_strings "${language}" 320
 	language_strings "${language}" 482
 	language_strings "${language}" 58
-	language_strings "${language}" 524
+	language_strings "${language}" 331
 	print_hint ${current_menu}
 
 	read -r language_selected
@@ -1754,7 +1756,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="GERMAN"
-				language_strings "${language}" 525 "yellow"
+				language_strings "${language}" 260 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1834,7 +1836,7 @@ function dos_pursuit_mode_et_handler() {
 
 			if [[ "${dos_pursuit_mode}" -eq 1 ]] && [[ -n "${channel}" ]] && [[ "${channel}" -gt 14 ]] && [[ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]]; then
 				echo
-				language_strings "${language}" 519 "red"
+				language_strings "${language}" 394 "red"
 				language_strings "${language}" 115 "read"
 				return_to_et_main_menu=1
 				return 1
@@ -1900,7 +1902,7 @@ function select_secondary_et_interface() {
 	if [ "${1}" = "dos_pursuit_mode" ]; then
 		secondary_ifaces=$(iwconfig 2>&1 | grep "802.11" | grep -v "no wireless extensions" | grep "${interface}" -v | awk '{print $1}')
 	elif [ "${1}" = "internet" ]; then
-		secondary_ifaces=$(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep lo -v | grep "${interface}" -v)
+		secondary_ifaces=$(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep -E "^lo$" -v | grep "${interface}" -v)
 		if [ -n "${secondary_wifi_interface}" ]; then
 			secondary_ifaces=$(echo "${secondary_ifaces}" | grep "${secondary_wifi_interface}" -v)
 		fi
@@ -1996,7 +1998,7 @@ function select_interface() {
 	current_menu="select_interface_menu"
 	language_strings "${language}" 24 "green"
 	print_simple_separator
-	ifaces=$(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep lo -v)
+	ifaces=$(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep -E "^lo$" -v)
 	option_counter=0
 	for item in ${ifaces}; do
 		option_counter=$((option_counter + 1))
@@ -2276,27 +2278,38 @@ function read_timeout() {
 
 	echo
 	case ${1} in
-		"standard")
-			language_strings "${language}" 393 "green"
+		"wps_standard")
+			min_max_timeout="10-100"
+			timeout_shown="${timeout_secs_per_pin}"
 		;;
-		"pixiedust")
-			language_strings "${language}" 394 "green"
+		"wps_pixiedust")
+			min_max_timeout="25-2400"
+			timeout_shown="${timeout_secs_per_pixiedust}"
+		;;
+		"capture_handshake")
+			min_max_timeout="10-100"
+			timeout_shown="${timeout_capture_handshake}"
 		;;
 	esac
+
+	language_strings "${language}" 393 "green"
 	read -r timeout
 }
 
 #Validate the user input for timeouts
-function ask_wps_timeout() {
+function ask_timeout() {
 
 	debug_print
 
 	case ${1} in
-		"standard")
+		"wps_standard")
 			local regexp="^[1-9][0-9]$|^100$|^$"
 		;;
-		"pixiedust")
+		"wps_pixiedust")
 			local regexp="^2[5-9]$|^[3-9][0-9]$|^[1-9][0-9]{2}$|^1[0-9]{3}$|^2[0-3][0-9]{2}$|^2400$|^$"
+		;;
+		"capture_handshake")
+			local regexp="^[1-9][0-9]$|^100$|^$"
 		;;
 	esac
 
@@ -2307,26 +2320,53 @@ function ask_wps_timeout() {
 
 	if [ "${timeout}" = "" ]; then
 		case ${1} in
-			"standard")
+			"wps_standard")
 				timeout=${timeout_secs_per_pin}
 			;;
-			"pixiedust")
+			"wps_pixiedust")
 				timeout=${timeout_secs_per_pixiedust}
+			;;
+			"capture_handshake")
+				timeout=${timeout_capture_handshake}
 			;;
 		esac
 	fi
 
 	echo
 	case ${1} in
-		"standard")
+		"wps_standard")
 			timeout_secs_per_pin=${timeout}
-			language_strings "${language}" 391 "blue"
 		;;
-		"pixiedust")
+		"wps_pixiedust")
 			timeout_secs_per_pixiedust=${timeout}
-			language_strings "${language}" 392 "blue"
+		;;
+		"capture_handshake")
+			timeout_capture_handshake=${timeout}
 		;;
 	esac
+
+	language_strings "${language}" 391 "blue"
+}
+
+#Handle the proccess of checking handshake capture
+function handshake_capture_check() {
+
+	debug_print
+
+	local time_counter=0
+	while true; do
+		sleep 5
+		if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
+			break
+		fi
+
+		time_counter=$((time_counter + 5))
+		if [ ${time_counter} -ge ${timeout_capture_handshake} ]; then
+			break
+		fi
+	done
+
+	kill "${processidcapture}" &> /dev/null
 }
 
 #Validate if selected network has the needed type of encryption
@@ -2870,7 +2910,6 @@ function exec_wps_custom_pin_bully_attack() {
 
 	echo
 	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 366 "blue"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
 	xterm -hold -bg black -fg red -geometry "${g2_stdleft_window}" -T "WPS custom pin bully attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
@@ -2888,7 +2927,6 @@ function exec_wps_custom_pin_reaver_attack() {
 
 	echo
 	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 366 "blue"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
 	xterm -hold -bg black -fg red -geometry "${g2_stdleft_window}" -T "WPS custom pin reaver attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
@@ -2906,7 +2944,6 @@ function exec_bully_pixiewps_attack() {
 
 	echo
 	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 366 "blue"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
 	xterm -hold -bg black -fg red -geometry "${g2_stdright_window}" -T "WPS bully pixie dust attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
@@ -2924,7 +2961,6 @@ function exec_reaver_pixiewps_attack() {
 
 	echo
 	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 366 "blue"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
 	xterm -hold -bg black -fg red -geometry "${g2_stdright_window}" -T "WPS reaver pixie dust attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
@@ -2942,7 +2978,6 @@ function exec_wps_bruteforce_pin_bully_attack() {
 
 	echo
 	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 366 "blue"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
 	xterm -hold -bg black -fg red -geometry "${g2_stdleft_window}" -T "WPS bruteforce pin bully attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
@@ -2960,7 +2995,6 @@ function exec_wps_bruteforce_pin_reaver_attack() {
 
 	echo
 	language_strings "${language}" 33 "yellow"
-	language_strings "${language}" 366 "blue"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
 	xterm -hold -bg black -fg red -geometry "${g2_stdleft_window}" -T "WPS bruteforce pin reaver attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
@@ -3594,13 +3628,13 @@ function wps_attacks_parameters() {
 		case ${wps_attack} in
 			"custompin_bully"|"custompin_reaver")
 				ask_custom_pin
-				ask_wps_timeout "standard"
+				ask_timeout "wps_standard"
 			;;
 			"pixiedust_bully"|"pixiedust_reaver")
-				ask_wps_timeout "pixiedust"
+				ask_timeout "wps_pixiedust"
 			;;
 			"pindb_bully"|"pindb_reaver")
-				ask_wps_timeout "standard"
+				ask_timeout "wps_standard"
 			;;
 		esac
 	fi
@@ -4416,6 +4450,12 @@ function beef_pre_menu() {
 				if check_interface_wifi "${interface}"; then
 					et_mode="et_sniffing_sslstrip2"
 					get_bettercap_version
+					if compare_floats_greater_than "${bettercap_version}" "${maximum_bettercap_supported_version}"; then
+						echo
+						language_strings "${language}" 174 "red"
+						language_strings "${language}" 115 "read"
+						return
+					fi
 					et_dos_menu
 				else
 					echo
@@ -4501,6 +4541,7 @@ function wps_attacks_menu() {
 				get_bully_version
 				set_bully_verbosity
 				if wps_attacks_parameters; then
+					manage_wps_log
 					exec_wps_custom_pin_bully_attack
 				fi
 			fi
@@ -4511,6 +4552,7 @@ function wps_attacks_menu() {
 			else
 				wps_attack="custompin_reaver"
 				if wps_attacks_parameters; then
+					manage_wps_log
 					exec_wps_custom_pin_reaver_attack
 				fi
 			fi
@@ -4527,6 +4569,7 @@ function wps_attacks_menu() {
 					language_strings "${language}" 368 "yellow"
 					language_strings "${language}" 115 "read"
 					if wps_attacks_parameters; then
+						manage_wps_log
 						exec_bully_pixiewps_attack
 					fi
 				else
@@ -4547,6 +4590,7 @@ function wps_attacks_menu() {
 					language_strings "${language}" 370 "yellow"
 					language_strings "${language}" 115 "read"
 					if wps_attacks_parameters; then
+						manage_wps_log
 						exec_reaver_pixiewps_attack
 					fi
 				else
@@ -4564,6 +4608,7 @@ function wps_attacks_menu() {
 				get_bully_version
 				set_bully_verbosity
 				if wps_attacks_parameters; then
+					manage_wps_log
 					exec_wps_bruteforce_pin_bully_attack
 				fi
 			fi
@@ -4575,6 +4620,7 @@ function wps_attacks_menu() {
 				wps_attack="bruteforce_reaver"
 				get_reaver_version
 				if wps_attacks_parameters; then
+					manage_wps_log
 					exec_wps_bruteforce_pin_reaver_attack
 				fi
 			fi
@@ -4605,6 +4651,7 @@ function wps_attacks_menu() {
 
 				if [ "${db_error}" -eq 0 ]; then
 					if wps_attacks_parameters; then
+						manage_wps_log
 						exec_wps_pin_database_bully_attack
 					fi
 				fi
@@ -4634,6 +4681,7 @@ function wps_attacks_menu() {
 				language_strings "${language}" 115 "read"
 				if [ "${db_error}" -eq 0 ]; then
 					if wps_attacks_parameters; then
+						manage_wps_log
 						exec_wps_pin_database_reaver_attack
 					fi
 				fi
@@ -5094,16 +5142,18 @@ function check_bssid_in_captured_file() {
 
 	nets_from_file=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "WPA \([1-9][0-9]? handshake" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
 
-	echo
-	if [ "${nets_from_file}" = "" ]; then
-		if [ ! -f "${1}" ]; then
-			language_strings "${language}" 161 "red"
-			language_strings "${language}" 115 "read"
-		else
-			language_strings "${language}" 216 "red"
-			language_strings "${language}" 115 "read"
+	if [ "${2}" != "silent" ]; then
+		echo
+		if [ "${nets_from_file}" = "" ]; then
+			if [ ! -f "${1}" ]; then
+				language_strings "${language}" 161 "red"
+				language_strings "${language}" 115 "read"
+			else
+				language_strings "${language}" 216 "red"
+				language_strings "${language}" 115 "read"
+			fi
+			return 1
 		fi
-		return 1
 	fi
 
 	declare -A bssids_detected
@@ -5117,13 +5167,17 @@ function check_bssid_in_captured_file() {
 
 	for targetbssid in "${bssids_detected[@]}"; do
 		if [ "${bssid}" = "${targetbssid}" ]; then
-			language_strings "${language}" 322 "yellow"
+			if [ "${2}" != "silent" ]; then
+				language_strings "${language}" 322 "yellow"
+			fi
 			return 0
 		fi
 	done
 
-	language_strings "${language}" 323 "red"
-	language_strings "${language}" 115 "read"
+	if [ "${2}" != "silent" ]; then
+		language_strings "${language}" 323 "red"
+		language_strings "${language}" 115 "read"
+	fi
 	return 1
 }
 
@@ -5503,6 +5557,25 @@ function manage_bettercap_log() {
 	fi
 }
 
+#Check if the passwords were captured using wps attacks and manage to save them on a file
+function manage_wps_log() {
+
+	debug_print
+
+	wps_potpath=$(env | grep ^HOME | awk -F = '{print $2}')
+	lastcharwps_potpath=${wps_potpath: -1}
+	if [ "${lastcharwps_potpath}" != "/" ]; then
+		wps_potpath="${wps_potpath}/"
+	fi
+	wpspot_filename="wps_captured_key-${wps_essid}.txt"
+	wps_potpath="${wps_potpath}${wpspot_filename}"
+
+	validpath=1
+	while [[ "${validpath}" != "0" ]]; do
+		read_path "wpspot"
+	done
+}
+
 #Check if the password was captured using wep all-in-one attack and manage to save it on a file
 function manage_wep_log() {
 
@@ -5564,7 +5637,7 @@ function set_captive_portal_language() {
 	language_strings "${language}" 320
 	language_strings "${language}" 482
 	language_strings "${language}" 58
-	language_strings "${language}" 524
+	language_strings "${language}" 331
 	print_hint ${current_menu}
 
 	read -r captive_portal_language_selected
@@ -5949,7 +6022,6 @@ function exec_et_sniffing_sslstrip2_attack() {
 		recover_current_channel
 	fi
 	restore_et_interface
-
 	if [ ${bettercap_log} -eq 1 ]; then
 		parse_bettercap_log
 	fi
@@ -6376,6 +6448,41 @@ function set_wps_attack_script() {
 		pin_header3="${white_color})${normal_color}"
 		script_attack_cmd2="${attack_cmd2}"
 
+		function manage_wps_pot() {
+			echo "" > "${wpspotenteredpath}"
+			{
+	EOF
+
+	cat >&7 <<-'EOF'
+			date +%Y-%m-%d
+	EOF
+
+	cat >&7 <<-EOF
+			echo -e "${wps_texts[${language},1]}"
+			echo ""
+			echo -e "BSSID: ${wps_bssid}"
+			echo -e "${wps_texts[${language},2]}: ${wps_channel}"
+			echo -e "ESSID: ${wps_essid}"
+			echo ""
+			echo "---------------"
+			echo ""
+	EOF
+
+	cat >&7 <<-'EOF'
+			echo -e "${1}"
+			echo ""
+	EOF
+
+	cat >&7 <<-EOF
+			echo "---------------"
+			echo ""
+			echo "${footer_texts[${language},1]}"
+			} >> "${wpspotenteredpath}"
+
+			echo ""
+			echo -e "${white_color}${wps_texts[${language},3]}: ${yellow_color}${wpspotenteredpath}"
+		}
+
 		#Parse the output file generated by the attack
 		function parse_output() {
 
@@ -6636,6 +6743,7 @@ function set_wps_attack_script() {
 			echo -e "${pin_cracked_msg}${cracked_pin}"
 			if [ -n "${cracked_password}" ]; then
 				echo -e "${password_cracked_msg}${cracked_password}"
+				manage_wps_pot "${cracked_password}"
 			else
 				echo -e "${password_not_cracked_msg}"
 			fi
@@ -7923,6 +8031,7 @@ function capture_handshake_evil_twin() {
 		return 1
 	fi
 
+	ask_timeout "capture_handshake"
 	capture_handshake_window
 
 	case ${et_dos_attack} in
@@ -7948,11 +8057,8 @@ function capture_handshake_evil_twin() {
 
 	processidattack=$!
 	sleep ${sleeptimeattack} && kill ${processidattack} &> /dev/null
-
-	ask_yesno 145
-	handshake_captured=${yesno}
-	kill "${processidcapture}" &> /dev/null
-	if [ "${handshake_captured}" = "y" ]; then
+	handshake_capture_check
+	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
 
 		handshakepath="${default_save_path}"
 		lastcharhandshakepath=${handshakepath: -1}
@@ -8074,6 +8180,10 @@ function validate_path() {
 			"writeethandshake")
 				et_handshake="${pathname}${standardhandshake_filename}"
 				suggested_filename="${standardhandshake_filename}"
+			;;
+			"wpspot")
+				suggested_filename="${wpspot_filename}"
+				wpspotenteredpath+="${wpspot_filename}"
 			;;
 			"weppot")
 				suggested_filename="${weppot_filename}"
@@ -8205,6 +8315,14 @@ function read_path() {
 			fi
 			validate_path "${et_captive_portal_logpath}" "${1}"
 		;;
+		"wpspot")
+			language_strings "${language}" 123 "blue"
+			read_and_clean_path "wpspotenteredpath"
+			if [ -z "${wpspotenteredpath}" ]; then
+				wpspotenteredpath="${wps_potpath}"
+			fi
+			validate_path "${wpspotenteredpath}" "${1}"
+		;;
 		"weppot")
 			language_strings "${language}" 430 "blue"
 			read_and_clean_path "weppotenteredpath"
@@ -8225,10 +8343,8 @@ function attack_handshake_menu() {
 	debug_print
 
 	if [ "${1}" = "handshake" ]; then
-		ask_yesno 145
-		handshake_captured=${yesno}
-		kill "${processidcapture}" &> /dev/null
-		if [ "${handshake_captured}" = "y" ]; then
+		handshake_capture_check
+		if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
 
 			handshakepath="${default_save_path}"
 			lastcharhandshakepath=${handshakepath: -1}
@@ -8280,6 +8396,7 @@ function attack_handshake_menu() {
 				forbidden_menu_option
 				attack_handshake_menu "new"
 			else
+				ask_timeout "capture_handshake"
 				capture_handshake_window
 				rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 				echo "${bssid}" > "${tmpdir}bl.txt"
@@ -8293,6 +8410,7 @@ function attack_handshake_menu() {
 				forbidden_menu_option
 				attack_handshake_menu "new"
 			else
+				ask_timeout "capture_handshake"
 				capture_handshake_window
 				${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
 				recalculate_windows_sizes
@@ -8305,6 +8423,7 @@ function attack_handshake_menu() {
 				forbidden_menu_option
 				attack_handshake_menu "new"
 			else
+				ask_timeout "capture_handshake"
 				capture_handshake_window
 				recalculate_windows_sizes
 				xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "wids / wips / wds confusion attack" -e mdk3 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
@@ -8328,6 +8447,7 @@ function capture_handshake_window() {
 
 	debug_print
 
+	echo
 	language_strings "${language}" 143 "blue"
 	echo
 	language_strings "${language}" 144 "yellow"
@@ -8369,12 +8489,12 @@ function explore_for_targets_option() {
 				language_strings "${language}" 67 "yellow"
 			;;
 			"WPA")
-				language_strings "${language}" 523 "yellow"
+				language_strings "${language}" 361 "yellow"
 			;;
 		esac
 	else
 		cypher_filter=""
-		language_strings "${language}" 522 "yellow"
+		language_strings "${language}" 366 "yellow"
 	fi
 	language_strings "${language}" 115 "read"
 
@@ -8474,7 +8594,7 @@ function explore_for_wps_targets_option() {
 		if check_dual_scan_on_wash; then
 			wash_band_modifier="-2 -5"
 		else
-			ask_yesno 518 "no"
+			ask_yesno 145 "no"
 			if [ "${yesno}" = "y" ]; then
 				wash_band_modifier="-5"
 			fi
@@ -8482,7 +8602,7 @@ function explore_for_wps_targets_option() {
 	fi
 
 	echo
-	language_strings "${language}" 521 "yellow"
+	language_strings "${language}" 411 "yellow"
 	language_strings "${language}" 115 "read"
 
 	tmpfiles_toclean=1
@@ -8818,7 +8938,6 @@ function wps_pin_database_prerequisites() {
 	if [ "${1}" != "no_attack" ]; then
 		check_and_set_common_algorithms
 		echo
-		language_strings "${language}" 366 "blue"
 		language_strings "${language}" 4 "read"
 	fi
 }
@@ -8934,7 +9053,7 @@ function et_prerequisites() {
 		else
 			if [[ "${dos_pursuit_mode}" -eq 1 ]] && [[ "${channel}" -gt 14 ]] && [[ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]]; then
 				echo
-				language_strings "${language}" 519 "red"
+				language_strings "${language}" 394 "red"
 				language_strings "${language}" 115 "read"
 				return_to_et_main_menu=1
 				return
@@ -8968,7 +9087,7 @@ function et_prerequisites() {
 
 	if [[ "${channel}" -gt 14 ]]; then
 		echo
-		language_strings "${language}" 520 "blue"
+		language_strings "${language}" 392 "blue"
 	fi
 
 	echo
@@ -9573,6 +9692,9 @@ function get_bettercap_version() {
 	debug_print
 
 	bettercap_version=$(bettercap -v 2> /dev/null | grep -E "^bettercap [0-9]" | awk '{print $2}')
+	if [ -z "${bettercap_version}" ]; then
+		bettercap_version="2.5"
+	fi
 }
 
 #Determine bully version
