@@ -1,3 +1,10 @@
+### 8.11
+ - Turkish language translation added (Thank you to "UN5T48L3")
+ - Extended cards compatibility. Now airmon non compatible cards can be used
+ - Fixed error on captive portal for some SSID strange chars
+ - Fixed error showing SSIDs containing spaces on WPS network selection menu
+ - Fixed error on chipset detection for some cards
+
 ### 8.10
  - WPS decrypted networks now have trophy file
  - Tested compatibility with Kali 2018.2, Ubuntu 18.04 and Parrot 4.x

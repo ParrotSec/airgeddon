@@ -1,3 +1,13 @@
+airgeddon (8.11+parrot0) testing; urgency=medium
+
+ * Turkish language translation added (Thank you to "UN5T48L3")
+ * Extended cards compatibility. Now airmon non compatible cards can be used
+ * Fixed error on captive portal for some SSID strange chars
+ * Fixed error showing SSIDs containing spaces on WPS network selection menu
+ * Fixed error on chipset detection for some cards
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Thu, 16 Aug 2018 01:15:34 +0200
+
 airgeddon (8.10+parrot0) testing; urgency=medium
 
  * WPS decrypted networks now have trophy file
