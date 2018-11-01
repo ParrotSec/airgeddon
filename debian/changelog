@@ -1,3 +1,16 @@
+airgeddon (8.12+parrot0) testing; urgency=medium
+
+ * Fixed error on WPS attacks for strange chars in some SSIDs
+ * Tested compatibility with Kali 2018.3/4, Fedora 28, Backbox 5.x and BlackArch 2018.06.01
+ * Added prompt symbol for every user interaction
+ * Improved regex for BSSID check
+ * Changes on contributing policies
+ * Github pull request template added and issue templates updated
+ * Added Wayland graphic system support (Thank you to "fr0xk")
+ * Fixed print error on flying saucer intro for some terminals
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Thu, 01 Nov 2018 12:15:12 +0300
+
 airgeddon (8.11+parrot0) testing; urgency=medium
 
  * Turkish language translation added (Thank you to "UN5T48L3")

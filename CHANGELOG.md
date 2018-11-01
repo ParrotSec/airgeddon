@@ -1,3 +1,13 @@
+### 8.12
+ - Fixed error on WPS attacks for strange chars in some SSIDs
+ - Tested compatibility with Kali 2018.3/4, Fedora 28, Backbox 5.x and BlackArch 2018.06.01
+ - Added prompt symbol for every user interaction
+ - Improved regex for BSSID check
+ - Changes on contributing policies
+ - Github pull request template added and issue templates updated
+ - Added Wayland graphic system support (Thank you to "fr0xk")
+ - Fixed print error on flying saucer intro for some terminals
+
 ### 8.11
  - Turkish language translation added (Thank you to "UN5T48L3")
  - Extended cards compatibility. Now airmon non compatible cards can be used

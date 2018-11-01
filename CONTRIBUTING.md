@@ -3,21 +3,29 @@
 Hi there! We are thrilled that you would like to contribute to this project. Your help is essential for keeping it great.
 
 When contributing to this repository, please first discuss the change you wish to make via issue,
-email, or any other method with the owners of this repository before making a change.
-If an issue is opened and more info is needed, `airgeddon` staff will request it. If there is no answer in 7 days, the issue will be closed. Issues must be opened in english.
+email, or any other method with the owners of this repository before making a change. Please read the Issue Creation Policy shown below before creating it.
 
 Please note we have a [Code of Conduct], please follow it in all your interactions with the project.
 
 ---
+
+## Issue Creation Policy
+
+1. Filling the issue template with *ALL* the requested info is mandatory. Otherwise the issue can be marked as "invalid" and closed immediately.
+2. Issues must be opened in English.
+3. If an issue is opened and more info is needed, `airgeddon` staff will request it. If there is no answer in 7 days or the OP is not collaborating, the issue will be closed.
+4. If the issue is not related to airgeddon or the root cause is out of scope, it will be closed. `airgeddon` staff is not a helpdesk support service.
+5. Try to be sure that your problem is related to airgeddon and that is not a driver issue. A good practice is always to try to perform the same operation without using `airgeddon` in order to see if the problem or the behavior can be reproduced. In that case, probably the issue should not be created.
 
 ## Collaborating Translators
 
 1. Update the date under shebang.
 2. Translate the strings located in `language_strings.sh` and the existing phrases _language_strings_handling_messages function_ in `airgeddon.sh`.
 3. Ask by mail [v1s1t0r.1s.h3r3@gmail.com] if you have any doubt. You'll be informed about how to proceed.
-4. You can be added as a collaborator on the project.
-5. Knowledge about `git` is not mandatory but is really appreciated to push directly into the project repository.
-6. If you want to create a pull request with a new language to be added, at least the 80% of the phrases must be translated and the rest must be done with at least _an automatic-translation_ system and marked with PoT (Pending of Translation) mark.
+4. If you want to create a pull request with a new language to be added, at least the 80% of the phrases must be translated and the rest must be done with at least _an automatic-translation_ system and marked with PoT (Pending of Translation) mark.
+5. Remember that pull requests done over master branch will be rejected. Read the git workflow policy first.
+6. After verification of and acceptation of the pull request, you can be added as a collaborator on the project to push directly on the repository instead of making pull requests.
+7. Knowledge about `git` is mandatory (at least basic commands) to push directly into the project repository.
 
 ## Collaborating Developers
 
@@ -31,14 +39,14 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
   - *Z* is a minor release with new bug fixes, small modifications or code improvements
 6. Update the date on `.sh` and `.db` files under shebang, if appropriate.
 7. Split your commits into parts. Each part represents a unique change on files.
-8. Direct push to [Master] is not allowed.
-9. Pull Requests to [Master] are not allowed. Should be done over [Dev] or any other branch. They require revision and approvement.
-10. All the development and coding must be in English.
+8. Direct push to [Master] is not allowed. Pull Requests to [Master] are not allowed. Should be done over [Dev] or any other branch. They require revision and approvement. Read the git workflow policy first. 
+9. All the development and coding must be in English.
 
 *Be sure to merge the latest from "upstream" before making a pull request!*
 
 We also have a private Telegram group for *trusted collaborators* for more agile discussion about developments, improvements, etc. 
 To be added on it you must prove first you are a *trusted collaborator* with your contributions.
+Anything ca be also discussed on the IRC channel. More info on [Wiki Contact Section]
 
 ## WPS PIN Database Collaborators
 
@@ -51,8 +59,17 @@ To be added on it you must prove first you are a *trusted collaborator* with you
 
 ## Beta Testers
 
-1. Download the master version or the beta testing version from the development branch called [Dev]. Temporary branches may be existing for specific features that can be tested too.
-2. Report any issues or bugs by mail [v1s1t0r.1s.h3r3@gmail.com] or submit issue requests [Here].
+1. Download the main version from the [Master] branch or the beta testing version from the development branch called [Dev]. Temporary branches may be existing for specific features that can also be tested.
+2. Report any issues or bugs by mail [v1s1t0r.1s.h3r3@gmail.com] or submit issue requests [Here] reading first the Issue Creation Policy.
+
+## Git Workflow Policy
+
+1. Direct push to [Master] is not allowed.
+2. Pull Requests to [Master] are not allowed.
+3. Usually, commits and pull requests should be done on [Dev] branch. If you have any doubt, don't hesitate to ask first.
+4. Temporary branches may be existing for specific features, be pretty sure that the branch you are going to commit on is the right one. Ask first if you have any doubt.
+5. Any branch will be finally merged to [Dev], there it will be reviewed and tested deeply before being merged to [Master].
+6. All merges from [Dev] to [Master] are a new `airgeddon` version. This merges to [Master] will be performed and reviewed exclusively by [v1s1t0r]/[OscarAkaElvis].
 
 ---
 
@@ -142,3 +159,6 @@ If you enjoyed the script, feel free to donate. Support the project through Payp
 [Master]: https://github.com/v1s1t0r1sh3r3/airgeddon/tree/master
 [Dev]: https://github.com/v1s1t0r1sh3r3/airgeddon/tree/dev
 [xtonousou]: https://github.com/xtonousou "xT"
+[v1s1t0r]: https://github.com/v1s1t0r1sh3r3
+[OscarAkaElvis]: https://github.com/OscarAkaElvis
+[Wiki Contact Section]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Contact
