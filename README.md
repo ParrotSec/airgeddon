@@ -29,6 +29,7 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 
 - *III. Getting started*
   - [Installation & Usage]
+  - [Options]
   - [Docker]
 	 - [Linux]
 	 - [Mac OSX]
@@ -65,6 +66,7 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 [Internal Tools]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Internal%20Tools
 [Known incompatibilities]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Known%20incompatibilities
 [Installation & Usage]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Installation%20&%20Usage
+[Options]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Options
 [Docker]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Docker
 [Linux]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Docker%20Linux
 [Mac OSX]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Docker%20Mac%20OSX
@@ -78,7 +80,7 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 [Hat Tip To]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Hat%20Tip%20To
 [Inspiration]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Inspiration
 
-[Version-shield]: https://img.shields.io/badge/version-8.12-blue.svg?style=flat-square&colorA=273133&colorB=0093ee "Latest version"
+[Version-shield]: https://img.shields.io/badge/version-9.0-blue.svg?style=flat-square&colorA=273133&colorB=0093ee "Latest version"
 [Bash4.2-shield]: https://img.shields.io/badge/bash-4.2%2B-blue.svg?style=flat-square&colorA=273133&colorB=00db00 "Bash 4.2 or later"
 [License-shield]: https://img.shields.io/badge/license-GPL%20v3%2B-blue.svg?style=flat-square&colorA=273133&colorB=bd0000 "GPL v3+"
 [Docker-shield]: https://img.shields.io/docker/automated/v1s1t0r1sh3r3/airgeddon.svg?style=flat-square&colorA=273133&colorB=f9ff5a "Docker rules!"

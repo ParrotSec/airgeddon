@@ -1,3 +1,13 @@
+airgeddon (9.0+parrot0) testing; urgency=medium
+
+ * New WPA/WPA2 enterprise attacks menu
+ * New WPA/WPA2 enterprise offline decryption menu
+ * Compatibility extended to Linux Mint 18.x
+ * Flag system for options based on fallback substitution variables (config file, command line and menus)
+ * Fixed error on hashcat bruteforce decryption attacks regarding length
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Tue, 29 Nov 2019 16:13:43 +0100
+ 
 airgeddon (8.12+parrot0) testing; urgency=medium
 
  * Fixed error on WPS attacks for strange chars in some SSIDs

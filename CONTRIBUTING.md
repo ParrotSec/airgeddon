@@ -19,9 +19,9 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
 
 ## Collaborating Translators
 
-1. Update the date under shebang.
-2. Translate the strings located in `language_strings.sh` and the existing phrases _language_strings_handling_messages function_ in `airgeddon.sh`.
-3. Ask by mail [v1s1t0r.1s.h3r3@gmail.com] if you have any doubt. You'll be informed about how to proceed.
+1. Ask ALWAYS before start a translation to add a new language ([v1s1t0r.1s.h3r3@gmail.com]). Contact to the development team in order to know what are you going to do. You'll be informed about how to proceed.
+2. Once new language is approved or if you are going to update an existing one, update the date under shebang on every commit.
+3. Translate the strings located in `language_strings.sh` and the existing phrases _language_strings_handling_messages function_ in `airgeddon.sh`.
 4. If you want to create a pull request with a new language to be added, at least the 80% of the phrases must be translated and the rest must be done with at least _an automatic-translation_ system and marked with PoT (Pending of Translation) mark.
 5. Remember that pull requests done over master branch will be rejected. Read the git workflow policy first.
 6. After verification of and acceptation of the pull request, you can be added as a collaborator on the project to push directly on the repository instead of making pull requests.
@@ -29,18 +29,19 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
 
 ## Collaborating Developers
 
-1. Tweak *"debug_mode"* variable to "1" for faster development skipping intro and initial checks or to "2" for verbosity and the skips mentioned before.
-2. Respect the **4 width tab indentation**, code style and the **UTF-8 encoding**.
-3. Use **LF** (Unix) line break type (not CR or CRLF).
-4. Use [Shellcheck] to search for errors and warnings on code. (Thanks [xtonousou] for the tip :wink:). To avoid false positive warnings you must launch shellcheck using `-x` argument to follow source files and from the directory where `airgeddon.sh` is. For example: `cd /path/to/airgeddon && shellcheck -x airgeddon.sh`
-5. Increase the version numbers in `airgeddon.sh`, in [Readme] and in [Changelog] to the new version that the script represents. The versioning scheme we use is *X.YZ*. Where:
+1. First of all ask ALWAYS before performing a development. Ask to the developement team to set what is going to be
+2. Tweak *"AIRGEDDON_DEVELOPMENT_MODE"* variable to "true" for faster development skipping intro and initial checks or change *"AIRGEDDON_DEBUG_MODE"* variable for verbosity.
+3. Respect the **4 width tab indentation**, code style and the **UTF-8 encoding**.
+4. Use **LF** (Unix) line break type (not CR or CRLF).
+5. Use [Shellcheck] to search for errors and warnings on code. (Thanks [xtonousou] for the tip :wink:). To avoid false positive warnings you must launch shellcheck using `-x` argument to follow source files and from the directory where `airgeddon.sh` is. For example: `~# cd /path/to/airgeddon && shellcheck -x airgeddon.sh`
+6. Increase the version numbers in `airgeddon.sh`, in [Readme] and in [Changelog] to the new version that the script represents. The versioning scheme we use is *X.YZ*. Where:
   - *X* is a major release with a new menu (e.g. WPS menu)
   - *Y* is a minor release with a new feature for an existing menu or a new submenu for an existing feature
   - *Z* is a minor release with new bug fixes, small modifications or code improvements
-6. Update the date on `.sh` and `.db` files under shebang, if appropriate.
-7. Split your commits into parts. Each part represents a unique change on files.
-8. Direct push to [Master] is not allowed. Pull Requests to [Master] are not allowed. Should be done over [Dev] or any other branch. They require revision and approvement. Read the git workflow policy first. 
-9. All the development and coding must be in English.
+7. Update the date on `.sh` and `.db` files under shebang, if appropriate.
+8. Split your commits into parts. Each part represents a unique change on files.
+9. Direct push to [Master] is not allowed. Pull Requests to [Master] are not allowed. Should be done over [Dev] or any other branch. They require revision and approvement. Read the git workflow policy first. 
+10. All the development and coding must be in English.
 
 *Be sure to merge the latest from "upstream" before making a pull request!*
 
@@ -69,7 +70,7 @@ Anything ca be also discussed on the IRC channel. More info on [Wiki Contact Sec
 3. Usually, commits and pull requests should be done on [Dev] branch. If you have any doubt, don't hesitate to ask first.
 4. Temporary branches may be existing for specific features, be pretty sure that the branch you are going to commit on is the right one. Ask first if you have any doubt.
 5. Any branch will be finally merged to [Dev], there it will be reviewed and tested deeply before being merged to [Master].
-6. All merges from [Dev] to [Master] are a new `airgeddon` version. This merges to [Master] will be performed and reviewed exclusively by [v1s1t0r]/[OscarAkaElvis].
+6. All merges from [Dev] to [Master] are a new `airgeddon` release. This merges to [Master] will be performed and reviewed exclusively by [v1s1t0r]/[OscarAkaElvis].
 
 ---
 
