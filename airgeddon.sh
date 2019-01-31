@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20190119
-#Version......: 9.0
+#Date.........: 20190131
+#Version......: 9.01
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -109,8 +109,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="9.0"
-language_strings_expected_version="9.0-1"
+airgeddon_version="9.01"
+language_strings_expected_version="9.01-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
@@ -521,23 +521,6 @@ function language_strings_handling_messages() {
 	language_strings_key_to_continue["TURKISH"]="Devam etmek için [Enter] tuşuna basın..."
 }
 
-#Set messages for configuration variables handling
-function configuration_variables_handling_messages() {
-
-	declare -gA error_on_configuration_variable
-	error_on_configuration_variable["ENGLISH"]="An error occurred with configuration options variables. Please check ${rc_file} file or command line flags. Invalid value on ${normal_color}${option_var_with_error}${red_color} variable"
-	error_on_configuration_variable["SPANISH"]="Ha habido un error con las variables de configuración de las opciones. Por favor revisa el fichero ${rc_file} o los flags de la línea de comandos. Valor no válido en la variable ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["FRENCH"]="Une erreur s'est produite avec les variables de configuration des options. Veuillez vérifier le fichier ${rc_file} ou les flags de la ligne de commande. Valeur invalide dans la variable ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["CATALAN"]="Hi ha hagut un error amb les variables de configuració de les opcions. Si us plau revisa el fitxer ${rc_file} o els flags de la línia d'ordres. Valor no vàlid en la variable ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["PORTUGUESE"]="Existe um erro com a configuração das variáveis. Por favor, verifique o arquivo ${rc_file} ou os argumentos na linha de comando. Valor inválido na variável: ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["RUSSIAN"]="Произошла ошибка с опциями переменных конфигурации. Пожалуйста, проверьте файл ${rc_file} или флаги командной строки. Неверное значение в переменной ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["GREEK"]="Παρουσιάστηκε σφάλμα στο αρχείο με τις μεταβλητές διαμόρφωσης των επιλογών του script. Ελέγξτε το αρχείο ${rc_file} ή τα flags της γραμμής εντολών. Εμφανίστηκε μη έγκυρη τιμή στη μεταβλητή ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["ITALIAN"]="Si è verificato un errore nelle variabili di configurazione delle opzioni. Controlla il file ${rc_file} o i flag inseriti nel comando. Valore non valido nella variabile ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["POLISH"]="Wystąpił błąd związany ze zmiennymi opcji konfiguracji. Sprawdź plik ${rc_file} lub parametry linii poleceń. Nieprawidłowa wartość zmiennej ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["GERMAN"]="Bei den Konfigurationsvariablen der Optionen ist ein Fehler aufgetreten. Bitte überprüfen Sie die Datei ${rc_file} oder die Befehlszeilenflaggen. Ungültiger Wert in Variable ${normal_color}${option_var_with_error}"
-	error_on_configuration_variable["TURKISH"]="Değişken seçeneklerinin yapılandırılması sırasında bir hata meydana geldi. Lütfen ${rc_file} dosyasını veya komut satırı flags'larını kontrol edin. ${normal_color}${option_var_with_error}${red_color} değişkeninde geçersiz değer"
-}
-
 #Generic toggle option function
 function option_toggle() {
 
@@ -622,7 +605,7 @@ function debug_print() {
 								"echo_white"
 								"echo_yellow"
 								"env_vars_initialization"
-								"env_vars_validation"
+								"env_vars_values_validation"
 								"generate_dynamic_line"
 								"initialize_colors"
 								"initialize_script_settings"
@@ -4361,6 +4344,7 @@ function initialize_menu_and_print_selections() {
 		"evil_twin_attacks_menu")
 			enterprise_mode=""
 			return_to_et_main_menu=0
+			return_to_enterprise_main_menu=0
 			retry_handshake_capture=0
 			return_to_et_main_menu_from_beef=0
 			retrying_handshake_capture=0
@@ -4374,6 +4358,7 @@ function initialize_menu_and_print_selections() {
 		;;
 		"enterprise_attacks_menu")
 			return_to_enterprise_main_menu=0
+			return_to_et_main_menu=0
 			enterprise_mode=""
 			et_processes=()
 			secondary_wifi_interface=""
@@ -4496,7 +4481,7 @@ function save_iptables() {
 
 	debug_print
 
-	if iptables-save > "${tmpdir}ag.iptables" 2> /dev/null; then
+	if "${iptables_cmd}-save" > "${tmpdir}ag.iptables" 2> /dev/null; then
 		iptables_saved=1
 	fi
 }
@@ -4506,7 +4491,7 @@ function restore_iptables() {
 
 	debug_print
 
-	iptables-restore < "${tmpdir}ag.iptables" 2> /dev/null
+	"${iptables_cmd}-restore" < "${tmpdir}ag.iptables" 2> /dev/null
 }
 
 #Clean iptables rules
@@ -4514,10 +4499,10 @@ function clean_iptables() {
 
 	debug_print
 
-	iptables -F
-	iptables -t nat -F
-	iptables -X
-	iptables -t nat -X
+	"${iptables_cmd}" -F
+	"${iptables_cmd}" -t nat -F
+	"${iptables_cmd}" -X
+	"${iptables_cmd}" -t nat -X
 }
 
 #Create an array from parameters
@@ -7585,9 +7570,9 @@ function launch_fake_ap() {
 	debug_print
 
 	if [ -n "${enterprise_mode}" ]; then
-		killall hostapd-wpe > /dev/null 2>&1
+		kill "$(ps -C hostapd-wpe --no-headers -o pid)" &> /dev/null
 	else
-		killall hostapd > /dev/null 2>&1
+		kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
 	fi
 	${airmon} check kill > /dev/null 2>&1
 	nm_processes_killed=1
@@ -7758,37 +7743,37 @@ function set_std_internet_routing_rules() {
 	clean_iptables
 
 	if [[ "${et_mode}" != "et_captive_portal" ]] || [[ ${captive_portal_mode} = "internet" ]]; then
-		iptables -P FORWARD ACCEPT
+		"${iptables_cmd}" -P FORWARD ACCEPT
 		echo "1" > /proc/sys/net/ipv4/ip_forward
 	else
-		iptables -P FORWARD DROP
+		"${iptables_cmd}" -P FORWARD DROP
 		echo "0" > /proc/sys/net/ipv4/ip_forward
 	fi
 
 	if [ "${et_mode}" = "et_captive_portal" ]; then
-		iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination ${et_ip_router}:80
-		iptables -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to-destination ${et_ip_router}:80
-		iptables -A INPUT -p tcp --destination-port 80 -j ACCEPT
-		iptables -A INPUT -p tcp --destination-port 443 -j ACCEPT
+		"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination ${et_ip_router}:80
+		"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to-destination ${et_ip_router}:80
+		"${iptables_cmd}" -A INPUT -p tcp --destination-port 80 -j ACCEPT
+		"${iptables_cmd}" -A INPUT -p tcp --destination-port 443 -j ACCEPT
 		if [ ${captive_portal_mode} = "dnsblackhole" ]; then
-			iptables -A INPUT -p udp --destination-port 53 -j ACCEPT
+			"${iptables_cmd}" -A INPUT -p udp --destination-port 53 -j ACCEPT
 		fi
 	elif [ "${et_mode}" = "et_sniffing_sslstrip" ]; then
-		iptables -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port ${sslstrip_port}
-		iptables -A INPUT -p tcp --destination-port ${sslstrip_port} -j ACCEPT
+		"${iptables_cmd}" -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port ${sslstrip_port}
+		"${iptables_cmd}" -A INPUT -p tcp --destination-port ${sslstrip_port} -j ACCEPT
 	elif [ "${et_mode}" = "et_sniffing_sslstrip2" ]; then
-		iptables -A INPUT -p tcp --destination-port ${bettercap_proxy_port} -j ACCEPT
-		iptables -A INPUT -p udp --destination-port ${bettercap_dns_port} -j ACCEPT
-		iptables -A INPUT -i lo -j ACCEPT
-		iptables -A INPUT -p tcp --destination-port ${beef_port} -j ACCEPT
+		"${iptables_cmd}" -A INPUT -p tcp --destination-port ${bettercap_proxy_port} -j ACCEPT
+		"${iptables_cmd}" -A INPUT -p udp --destination-port ${bettercap_dns_port} -j ACCEPT
+		"${iptables_cmd}" -A INPUT -i lo -j ACCEPT
+		"${iptables_cmd}" -A INPUT -p tcp --destination-port ${beef_port} -j ACCEPT
 	fi
 
 	if [[ "${et_mode}" != "et_captive_portal" ]] || [[ ${captive_portal_mode} = "internet" ]]; then
-		iptables -t nat -A POSTROUTING -o "${internet_interface}" -j MASQUERADE
+		"${iptables_cmd}" -t nat -A POSTROUTING -o "${internet_interface}" -j MASQUERADE
 	fi
 
-	iptables -A INPUT -p icmp --icmp-type 8 -s ${et_ip_range}/${std_c_mask} -d ${et_ip_router}/${ip_mask} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-	iptables -A INPUT -s ${et_ip_range}/${std_c_mask} -d ${et_ip_router}/${ip_mask} -j DROP
+	"${iptables_cmd}" -A INPUT -p icmp --icmp-type 8 -s ${et_ip_range}/${std_c_mask} -d ${et_ip_router}/${ip_mask} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	"${iptables_cmd}" -A INPUT -s ${et_ip_range}/${std_c_mask} -d ${et_ip_router}/${ip_mask} -j DROP
 	sleep 2
 }
 
@@ -7797,7 +7782,7 @@ function launch_dhcp_server() {
 
 	debug_print
 
-	killall dhcpd > /dev/null 2>&1
+	kill "$(ps -C dhcpd --no-headers -o pid)" &> /dev/null
 
 	recalculate_windows_sizes
 	case ${et_mode} in
@@ -7825,17 +7810,17 @@ function exec_et_deauth() {
 
 	case ${et_dos_attack} in
 		"Mdk3")
-			killall mdk3 > /dev/null 2>&1
+			kill "$(ps -C mdk3 --no-headers -o pid)" &> /dev/null
 			rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 			echo "${bssid}" > "${tmpdir}bl.txt"
 			deauth_et_cmd="mdk3 ${iface_monitor_et_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
 		;;
 		"Aireplay")
-			killall aireplay-ng > /dev/null 2>&1
+			kill "$(ps -C aireplay-ng --no-headers -o pid)" &> /dev/null
 			deauth_et_cmd="aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${iface_monitor_et_deauth}"
 		;;
 		"Wds Confusion")
-			killall mdk3 > /dev/null 2>&1
+			kill "$(ps -C mdk3 --no-headers -o pid)" &> /dev/null
 			deauth_et_cmd="mdk3 ${iface_monitor_et_deauth} w -e ${essid} -c ${channel}"
 		;;
 	esac
@@ -8570,10 +8555,10 @@ function set_et_control_script() {
 				} >> "${et_captive_portal_logpath}"
 
 				sleep 2
-				killall hostapd > /dev/null 2>&1
-				killall dhcpd > /dev/null 2>&1
-				killall aireplay-ng > /dev/null 2>&1
-				killall lighttpd > /dev/null 2>&1
+				kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
+				kill "$(ps -C dhcpd --no-headers -o pid)" &> /dev/null
+				kill "$(ps -C aireplay-ng --no-headers -o pid)" &> /dev/null
+				kill "$(ps -C lighttpd --no-headers -o pid)" &> /dev/null
 				kill_et_windows
 				exit 0
 			}
@@ -8985,7 +8970,7 @@ function launch_webserver() {
 
 	debug_print
 
-	killall lighttpd > /dev/null 2>&1
+	kill "$(ps -C lighttpd --no-headers -o pid)" &> /dev/null
 	recalculate_windows_sizes
 	if [ ${captive_portal_mode} = "internet" ]; then
 		lighttpd_window_position=${g3_bottomright_window}
@@ -9120,12 +9105,10 @@ function kill_beef() {
 
 	debug_print
 
-	if ! killall "${optional_tools_names[19]}" > /dev/null 2>&1; then
-		beef_pid=$(ps uax | pgrep -f "${optional_tools_names[19]}")
-		if ! kill "${beef_pid}" &> /dev/null; then
-			beef_pid=$(ps uax | pgrep -f "beef")
-			kill "${beef_pid}" &> /dev/null
-		fi
+	local beef_pid
+	beef_pid="$(ps -C "${optional_tools_names[19]}" --no-headers -o pid  | tr -d ' ')"
+	if ! kill "${beef_pid}" &> /dev/null; then
+		kill "$(ps -C "beef" --no-headers -o pid  | tr -d ' ')" &> /dev/null
 	fi
 }
 
@@ -9463,10 +9446,10 @@ function kill_et_windows() {
 		kill_dos_pursuit_mode_processes
 		case ${et_dos_attack} in
 			"Mdk3"|"Wds Confusion")
-				killall mdk3 > /dev/null 2>&1
+				kill "$(ps -C mdk3 --no-headers -o pid)" &> /dev/null
 			;;
 			"Aireplay")
-				killall aireplay-ng > /dev/null 2>&1
+				kill "$(ps -C aireplay-ng --no-headers -o pid)" &> /dev/null
 			;;
 		esac
 	fi
@@ -9477,10 +9460,10 @@ function kill_et_windows() {
 
 	if [ -n "${enterprise_mode}" ]; then
 		kill ${enterprise_process_control_window} &> /dev/null
-		killall hostapd-wpe > /dev/null 2>&1
+		kill "$(ps -C hostapd-wpe --no-headers -o pid)" &> /dev/null
 	else
 		kill ${et_process_control_window} &> /dev/null
-		killall hostapd > /dev/null 2>&1
+		kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
 	fi
 }
 
@@ -11481,9 +11464,9 @@ function exit_script_option() {
 		action_on_exit_taken=1
 		language_strings "${language}" 297 "multiline"
 		clean_routing_rules
-		killall dhcpd > /dev/null 2>&1
-		killall hostapd > /dev/null 2>&1
-		killall lighttpd > /dev/null 2>&1
+		kill "$(ps -C dhcpd --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C lighttpd --no-headers -o pid)" &> /dev/null
 		kill_beef
 		time_loop
 		echo -e "${green_color} Ok\r${normal_color}"
@@ -11527,9 +11510,9 @@ function hardcore_exit() {
 
 	if [ ${routing_modified} -eq 1 ]; then
 		clean_routing_rules
-		killall dhcpd > /dev/null 2>&1
-		killall hostapd > /dev/null 2>&1
-		killall lighttpd > /dev/null 2>&1
+		kill "$(ps -C dhcpd --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C lighttpd --no-headers -o pid)" &> /dev/null
 		kill_beef
 	fi
 
@@ -11555,6 +11538,18 @@ function time_loop() {
 		echo -ne "."
 		sleep 0.035
 	done
+}
+
+#Fix iptables if needed
+function iptables_fix() {
+
+	debug_print
+
+	iptables_cmd="iptables"
+
+	if hash iptables-legacy 2> /dev/null; then
+		iptables_cmd="iptables-legacy"
+	fi
 }
 
 #Determine which version of airmon to use
@@ -11630,7 +11625,8 @@ function get_bettercap_version() {
 
 	bettercap_version=$(bettercap -v 2> /dev/null | grep -E "^bettercap [0-9]" | awk '{print $2}')
 	if [ -z "${bettercap_version}" ]; then
-		bettercap_version="2.5"
+		bettercap_version=$(bettercap -eval "q" 2>/dev/null | grep -E "bettercap v[0-9\.]*" | awk '{print $2}')
+		bettercap_version=${bettercap_version#"v"}
 	fi
 }
 
@@ -12660,8 +12656,6 @@ function env_vars_initialization() {
 
 	debug_print
 
-	option_var_with_error=""
-
 	ordered_options_env_vars=(
 									"AIRGEDDON_AUTO_UPDATE"
 									"AIRGEDDON_SKIP_INTRO"
@@ -12705,38 +12699,68 @@ function env_vars_initialization() {
 		create_rcfile
 	fi
 
+	env_vars_values_validation
+}
+
+#Validation of env vars. Missing vars, invalid values, etc. are checked
+function env_vars_values_validation() {
+
+	debug_print
+
+	declare -gA errors_on_configuration_vars
+
 	for item in "${ENV_VARS_ELEMENTS[@]}"; do
 		if [ -z "${!item}" ]; then
 			if grep "${item}" "${scriptfolder}${rc_file}" > /dev/null; then
 				eval "export $(grep "${item}" "${scriptfolder}${rc_file}")"
 			else
-				export ${item}=${boolean_options_env_vars[${item},'default_value']}
+				export ${item}=${boolean_options_env_vars["${item}",'default_value']}
+				errors_on_configuration_vars["${item},missing_var"]="${boolean_options_env_vars[${item},'default_value']}"
 			fi
 		fi
 	done
 
-	if ! env_vars_validation; then
-		configuration_variables_handling_messages
-		echo
-		echo_red "${error_on_configuration_variable[${language}]}"
-		echo
-		hardcore_exit
-	fi
+	for item in "${ENV_BOOLEAN_VARS_ELEMENTS[@]}"; do
+		if ! [[ "${!item,,}" =~ ^(true|false)$ ]]; then
+			errors_on_configuration_vars["${item},invalid_value"]="${boolean_options_env_vars[${item},'default_value']}"
+			export ${item}=${boolean_options_env_vars["${item}",'default_value']}
+		fi
+	done
 }
 
-#Validation of env vars. They must contain only right values
-function env_vars_validation() {
+#Print possible issues on configuration vars
+function print_configuration_vars_issues() {
 
 	debug_print
 
-	for item in "${ENV_BOOLEAN_VARS_ELEMENTS[@]}"; do
-		if ! [[ "${!item,,}" =~ ^(true|false)$ ]]; then
-			option_var_with_error="${item}"
-			return 1
+	readarray -t ERRORS_ON_CONFIGURATION_VARS_ELEMENTS < <(printf %s\\n "${!errors_on_configuration_vars[@]}" | cut -d, -f1 | sort -u)
+	ERROR_VARS_ELEMENTS=("${ERRORS_ON_CONFIGURATION_VARS_ELEMENTS[@]}")
+
+	local stop_on_var_errors=0
+
+	local error_var_state
+	for item in "${ERROR_VARS_ELEMENTS[@]}"; do
+		if [ -n "${item}" ]; then
+			error_var_name="${item}"
+			error_var_state=$(printf %s\\n "${!errors_on_configuration_vars[@]}" | tr " " "\n" | grep "${item}" | cut -d, -f2)
+			if [ -z "${!error_var_state}" ]; then
+				error_var_default_value="${errors_on_configuration_vars[${item},"${error_var_state}"]}"
+				stop_on_var_errors=1
+				if [ "${error_var_state}" = "missing_var"  ]; then
+					echo
+					language_strings "${language}" 614 "yellow"
+				else
+					echo
+					language_strings "${language}" 613 "yellow"
+				fi
+			fi
 		fi
 	done
 
-	return 0
+	if [ ${stop_on_var_errors} -eq 1 ]; then
+		echo
+		language_strings "${language}" 115 "read"
+	fi
 }
 
 #Create env vars file and fill it with default values
@@ -12903,6 +12927,8 @@ function main() {
 		check_update_tools
 	fi
 
+	iptables_fix
+	print_configuration_vars_issues
 	initialize_extended_colorized_output
 	set_windows_sizes
 	select_interface
@@ -13120,7 +13146,7 @@ function check_default_route() {
 
 	debug_print
 
-	route | grep "${1}" | grep "default" > /dev/null
+	(set -o pipefail && route | grep "${1}" | grep -E "^default|0\.0\.0\.0" | head -n 1 > /dev/null)
 	return $?
 }
 

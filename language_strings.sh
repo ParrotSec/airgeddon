@@ -2,7 +2,7 @@
 #Title........: language_strings.sh
 #Description..: All the translated strings that airgeddon uses are located here.
 #Author.......: v1s1t0r
-#Date.........: 20190120
+#Date.........: 20190121
 #Bash Version.: 4.2 or later
 
 #Set language_strings file version
@@ -11,7 +11,7 @@ function set_language_strings_version() {
 
 	debug_print
 
-	language_strings_version="9.0-1"
+	language_strings_version="9.01-1"
 }
 
 #Set different language text strings
@@ -8205,6 +8205,30 @@ function language_strings() {
 	arr["POLISH",612]="Nie znaleziono sieci enterprise"
 	arr["GERMAN",612]="Keine Enterprise-Netzwerke wurden gefunden"
 	arr["TURKISH",612]="Herhangi enterprise bir ağ bulunamadı"
+
+	arr["ENGLISH",613]="Warning. Please check ${rc_file} file or command line flags. Invalid value on ${normal_color}${error_var_name}${yellow_color} variable. The default value ${normal_color}${error_var_default_value}${yellow_color} will be used"
+	arr["SPANISH",613]="Atención. Por favor revisa el fichero ${rc_file} . El valor de la variable ${normal_color}${error_var_name}${yellow_color} no es válido. El valor por defecto ${normal_color}${error_var_default_value}${yellow_color} será usado"
+	arr["FRENCH",613]="Attention. Veuillez vérifier le fichier ${rc_file} ou les flags sur ligne de commande. La variable ${normal_color}${error_var_name}${yellow_color} a une valeur non valide. La valeur par défaut ${normal_color}${error_var_default_value}${yellow_color} sera utilisée "
+	arr["CATALAN",613]="${pending_of_translation} Avís. Comproveu els fitxers de ${rc_file} o comanda. Valor no vàlid a la variable ${normal_color}${error_var_name}${yellow_color}. S'utilitzarà el valor predeterminat ${normal_color}${error_var_default_value}${yellow_color}"
+	arr["PORTUGUESE",613]="${pending_of_translation} Aviso. Por favor, verifique o arquivo ${rc_file} ou os sinalizadores de linha de comando. Valor inválido na variável ${normal_color}${error_var_name}${yellow_color}. O valor padrão ${normal_color}${error_var_default_value}${yellow_color} será usado"
+	arr["RUSSIAN",613]="${pending_of_translation} Предупреждение. Пожалуйста, проверьте файл ${rc_file} или флаги командной строки. Недопустимое значение переменной ${normal_color}${error_var_name}${yellow_color}. Будет использовано значение по умолчанию ${normal_color}${error_var_default_value}${yellow_color}"
+	arr["GREEK",613]="${pending_of_translation} Προειδοποίηση. Ελέγξτε το αρχείο ${rc_file} ή τις σημαίες γραμμής εντολών. Μη έγκυρη τιμή για τη μεταβλητή ${normal_color}${error_var_name}${yellow_color}. Η προεπιλεγμένη τιμή ${normal_color}${error_var_default_value}${yellow_color} θα χρησιμοποιηθεί"
+	arr["ITALIAN",613]="${pending_of_translation} Avvertimento. Controlla il file ${rc_file} o i flag della riga di comando. Valore non valido sulla variabile ${normal_color}${error_var_name}${yellow_color}. Verrà utilizzato il valore predefinito ${normal_color}${error_var_default_value}${yellow_color}"
+	arr["POLISH",613]="${pending_of_translation} Ostrzeżenie. Sprawdź plik ${rc_file} lub flagi linii poleceń. Niepoprawna wartość zmiennej ${normal_color}${error_var_name}${yellow_color}. Użyta zostanie wartość domyślna ${normal_color}${error_var_default_value}${yellow_color}"
+	arr["GERMAN",613]="${pending_of_translation} Warnung. Bitte überprüfen Sie ${rc_file}. Ungültiger Wert für die Variable ${normal_color}${error_var_name}${yellow_color}. ${normal_color}${error_var_default_value}${yellow_color} wird verwendet"
+	arr["TURKISH",613]="${pending_of_translation} Uyarı. Lütfen ${rc_file} dosyasını veya komut satırı bayraklarını kontrol edin. ${normal_color}${error_var_name}${yellow_color} değişkeninde geçersiz değer. ${normal_color}${error_var_default_value}${yellow_color} varsayılan değeri kullanılmak istiyor"
+
+	arr["ENGLISH",614]="Warning. Please check ${rc_file} file. Configuration variable ${normal_color}${error_var_name}${yellow_color} not found. The default value ${normal_color}${error_var_default_value}${yellow_color} will be used"
+	arr["SPANISH",614]="Atención. Por favor revisa el fichero ${rc_file} . No se ha encontrado la variable ${normal_color}${error_var_name}${yellow_color} . El valor por defecto ${normal_color}${error_var_default_value}${yellow_color} será usado"
+	arr["FRENCH",614]="Attention. Veuillez vérifier le fichier ${rc_file}. La variable de configuration ${normal_color}${nom_var_erreur}${couleur_jaune} introuvable. ${normal_color}${error_var_default_value}${yellow_color} sera utilisé"
+	arr["CATALAN",614]="${pending_of_translation} Notes. Si us plau, consulteu el fitxer ${rc_file}. No s'ha trobat la variable de configuració ${normal_color}${error_var_name}${yellow_color}. S'utilitzarà ${normal_color}${error_var_default_value}${yellow_color}"
+	arr["PORTUGUESE",614]="${pending_of_translation} Aviso. Por favor, verifique o arquivo ${rc_file}. Variável de configuração ${normal_color}${error_var_name}${yellow_color} não encontrado. ${normal_color}${error_var_default_value}${yellow_color} será usado"
+	arr["RUSSIAN",614]="${pending_of_translation} Предупреждение. Пожалуйста, проверьте файл ${rc_file}. Конфигурационная переменная ${normal_color}${error_var_name}${yellow_color} не найдена. ${normal_color}${error_var_default_value}${yellow_color} будет использоваться"
+	arr["GREEK",614]="${pending_of_translation} Προειδοποίηση. Ελέγξτε το αρχείο ${rc_file}. Η μεταβλητή διαμόρφωσης ${normal_color}${error_var_name}${yellow_color} δεν βρέθηκε. ${normal_color}${error_var_default_value}${yellow_color} θα χρησιμοποιηθεί"
+	arr["ITALIAN",614]="${pending_of_translation} Attenzione. Controlla il file ${rc_file}. Variabile di configurazione ${normal_color}${error_var_name}${yellow_color} non trovata. ${normal_color}${error_var_default_value}${yellow_color} sarà usato"
+	arr["POLISH",614]="${pending_of_translation} "
+	arr["GERMAN",614]="${pending_of_translation} Warnung. Bitte überprüfen Sie die $ {rc_file} -Datei. Konfigurationsvariable $ {normal_color} $ {fehlervariablenname} $ {yellow_color} nicht gefunden. $ {Normal_color} $ {error_var_default_value} $ {yellow_color} wird verwendet"
+	arr["TURKISH",614]="${pending_of_translation} Uyarı. Lütfen ${rc_file} dosyasını kontrol edin. Yapılandırma değişkeni ${normal_color}${error_var_name}${yellow_color} bulunamadı. ${normal_color}${error_var_default_value}${yellow_color} varsayılan değeri kullanılmak istiyor"
 
 	case "${3}" in
 		"yellow")

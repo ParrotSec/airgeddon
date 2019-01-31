@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>
 Build-Depends: debhelper (>=9)
 Standards-Version: 3.9.8
-Homepage: https://dev.parrotsec.org/parrot/airgeddon
+Homepage: https://dev.parrotsec.org/security-tools/airgeddon
 
 Package: airgeddon
 Architecture: all
