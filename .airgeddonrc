@@ -22,6 +22,9 @@ AIRGEDDON_PRINT_HINTS=true
 #Enabled true / Disabled false - Enable 5Ghz support (it has no effect if your cards are not 5Ghz compatible cards) - Default value true
 AIRGEDDON_5GHZ_ENABLED=true
 
+#Enabled true / Disabled false - Force to use iptables instead of nftables (it has no effect if nftables are not present) - Default value false
+AIRGEDDON_FORCE_IPTABLES=false
+
 #Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value false
 AIRGEDDON_DEVELOPMENT_MODE=false
 

@@ -1,3 +1,14 @@
+airgeddon (9.10+parrot0) testing; urgency=medium
+
+ * Mdk3 replaced by Mdk4
+ * Fixed some minor bugs on enterprise plain text captured password process
+ * Fixed minor bug forcing interface mode change after smooth enterprise attack
+ * Tested compatibility with Wifislax 64-2.x and Kali 2019.x
+ * Fixed dependency problem to avoid use of xxd
+ * Routing rules adapted to work with nftables
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sat, 30 Mar 2019 20:20:34 +0900
+
 airgeddon (9.01+parrot0) testing; urgency=medium
 
  * Improvments on options environment var system

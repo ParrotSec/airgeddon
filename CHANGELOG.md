@@ -1,3 +1,11 @@
+### 9.10
+ - Mdk3 replaced by Mdk4
+ - Fixed some minor bugs on enterprise plain text captured password process
+ - Fixed minor bug forcing interface mode change after smooth enterprise attack
+ - Tested compatibility with Wifislax 64-2.x and Kali 2019.x
+ - Fixed dependency problem to avoid use of xxd
+ - Routing rules adapted to work with nftables
+ 
 ### 9.01
  - Improvments on options environment var system
  - Minor fixes for ARM devices
