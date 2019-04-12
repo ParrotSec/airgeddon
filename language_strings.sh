@@ -2,7 +2,7 @@
 #Title........: language_strings.sh
 #Description..: All the translated strings that airgeddon uses are located here.
 #Author.......: v1s1t0r
-#Date.........: 20190309
+#Date.........: 20190403
 #Bash Version.: 4.2 or later
 
 #Set language_strings file version
@@ -11,7 +11,7 @@ function set_language_strings_version() {
 
 	debug_print
 
-	language_strings_version="9.10-1"
+	language_strings_version="9.11-1"
 }
 
 #Set different language text strings
@@ -4414,17 +4414,17 @@ function language_strings() {
 	arr["GERMAN",296]="Alle Parameter und Anforderungen sind bereit. Der Angriff wird beginnen. Mehrere Fenster werden geöffnet, schließen Sie keines. Wenn Sie den Angriff stoppen möchten, drücken Sie [Enter] in diesem Fenster und das Skript wird automatisch alle schließen"
 	arr["TURKISH",296]="Tüm parametreler ayarlandı. Saldırı başlayacak. Birden fazla pencere açılacak, bunların hiçbirini kapatmayın. Saldırıyı durdurmak istediğiniz zaman aman pencereden [Enter] tuşlamanız yeterli. Yazılım tüm pencereleri kapatacaktır"
 
-	arr["ENGLISH",297]="Cleaning iptables and routing rules"
-	arr["SPANISH",297]="Limpiando iptables y reglas de routing"
-	arr["FRENCH",297]="Effacement des règles de routage iptables"
-	arr["CATALAN",297]="Netejant iptables i regles de routing"
-	arr["PORTUGUESE",297]="Limpando iptables e regras de roteamento"
-	arr["RUSSIAN",297]="Очистка iptables и правил маршуртизации"
-	arr["GREEK",297]="Γινεται καθαρισμός των iptables και των κανόνων δρομολόγησης"
-	arr["ITALIAN",297]="Pulendo iptables e le regole di routing"
-	arr["POLISH",297]="Usuwanie iptables i reguł routingu"
-	arr["GERMAN",297]="Reinigung von iptables und Routing-Regeln"
-	arr["TURKISH",297]="Iptables ve routing rules temizleniyor"
+	arr["ENGLISH",297]="Cleaning nftables/iptables and routing rules"
+	arr["SPANISH",297]="Limpiando nftables/iptables y reglas de routing"
+	arr["FRENCH",297]="Effacement des règles de routage nftables/iptables"
+	arr["CATALAN",297]="Netejant nftables/iptables i regles de routing"
+	arr["PORTUGUESE",297]="Limpando nftables/iptables e regras de roteamento"
+	arr["RUSSIAN",297]="Очистка nftables/iptables и правил маршуртизации"
+	arr["GREEK",297]="Γινεται καθαρισμός των nftables/iptables και των κανόνων δρομολόγησης"
+	arr["ITALIAN",297]="Pulendo nftables/iptables e le regole di routing"
+	arr["POLISH",297]="Usuwanie nftables/iptables i reguł routingu"
+	arr["GERMAN",297]="Reinigung von nftables/iptables und Routing-Regeln"
+	arr["TURKISH",297]="Nftables/iptables ve routing rules temizleniyor"
 
 	arr["ENGLISH",298]="Evil Twin attack has been started. Press [Enter] key on this window to stop it"
 	arr["SPANISH",298]="El ataque Evil Twin ha comenzado. Pulse la tecla [Enter] en esta ventana para pararlo"

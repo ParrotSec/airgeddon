@@ -1,3 +1,12 @@
+airgeddon (9.11+parrot0) testing; urgency=medium
+
+ * Fixed error shown on enterprise attacks for some wifi cards
+ * Fixed BeEF error due forced config file changes on BeEF 0.4.7.1 and 0.4.7.2 versions
+ * Added ipv6 support for BeEF
+ * Options .airgeddonrc file now also updated on automatic update keeping user's preferences
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Fri, 12 Apr 2019 10:24:51 +0100
+
 airgeddon (9.10+parrot0) testing; urgency=medium
 
  * Mdk3 replaced by Mdk4

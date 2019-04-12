@@ -1,3 +1,9 @@
+### 9.11
+ - Fixed error shown on enterprise attacks for some wifi cards
+ - Fixed BeEF error due forced config file changes on BeEF 0.4.7.1 and 0.4.7.2 versions
+ - Added ipv6 support for BeEF
+ - Options .airgeddonrc file now also updated on automatic update keeping user's preferences
+
 ### 9.10
  - Mdk3 replaced by Mdk4
  - Fixed some minor bugs on enterprise plain text captured password process

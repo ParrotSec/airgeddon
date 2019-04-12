@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20190317
-#Version......: 9.10
+#Date.........: 20190412
+#Version......: 9.11
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -110,8 +110,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="9.10"
-language_strings_expected_version="9.10-1"
+airgeddon_version="9.11"
+language_strings_expected_version="9.11-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
@@ -165,7 +165,7 @@ wep_key_handler="ag.wep_key_handler.sh"
 wep_processes_file="wep_processes"
 
 #Docker vars
-docker_based_distro="Kali"
+docker_based_distro="Parrot"
 docker_io_dir="/io"
 
 #WPS vars
@@ -192,6 +192,7 @@ urlscript_directlink="https://raw.githubusercontent.com/${github_user}/${github_
 urlscript_pins_dbfile="https://raw.githubusercontent.com/${github_user}/${github_repository}/${branch}/${known_pins_dbfile}"
 urlscript_pins_dbfile_checksum="https://raw.githubusercontent.com/${github_user}/${github_repository}/${branch}/${pins_dbfile_checksum}"
 urlscript_language_strings_file="https://raw.githubusercontent.com/${github_user}/${github_repository}/${branch}/${language_strings_file}"
+urlscript_options_config_file="https://raw.githubusercontent.com/${github_user}/${github_repository}/${branch}/${rc_file}"
 urlgithub_wiki="https://${repository_hostname}/${github_user}/${github_repository}/wiki"
 mail="v1s1t0r.1s.h3r3@gmail.com"
 author="v1s1t0r"
@@ -211,6 +212,11 @@ std_c_mask="255.255.255.0"
 ip_mask="255.255.255.255"
 std_c_mask_cidr="24"
 ip_mask_cidr="32"
+any_mask_cidr="0"
+any_ip="0.0.0.0"
+any_ipv6="::/0"
+loopback_ip="127.0.0.1"
+loopback_ipv6="::1/128"
 routing_tmp_file="ag.iptables_nftables"
 dhcpd_file="ag.dhcpd.conf"
 internet_dns1="8.8.8.8"
@@ -226,11 +232,13 @@ sslstrip_file="ag.sslstrip.log"
 ettercap_file="ag.ettercap.log"
 bettercap_file="ag.bettercap.log"
 beef_port="3000"
-beef_control_panel_url="http://127.0.0.1:${beef_port}/ui/panel"
+beef_control_panel_url="http://${loopback_ip}:${beef_port}/ui/panel"
 jshookfile="hook.js"
 beef_file="ag.beef.conf"
 beef_pass="airgeddon"
 beef_db="beef.db"
+beef_default_cfg_file="config.yaml"
+beef_needed_brackets_version="0.4.7.2"
 beef_installation_url="https://github.com/beefproject/beef/wiki/Installation"
 hostapd_file="ag.hostapd.conf"
 hostapd_wpe_file="ag.hostapd_wpe.conf"
@@ -7279,11 +7287,34 @@ function exec_enterprise_attack() {
 		restore_et_interface
 	else
 		if [ -f "${tmpdir}${enterprisedir}${enterprise_successfile}" ]; then
-			interface=$(grep -E "^interface=" "${tmpdir}${enterprisedir}returning_vars.txt" | awk -F "=" '{print $2}')
-			phy_interface=$(grep -E "^phy_interface=" "${tmpdir}${enterprisedir}returning_vars.txt" | awk -F "=" '{print $2}')
-			current_iface_on_messages=$(grep -E "^current_iface_on_messages=" "${tmpdir}${enterprisedir}returning_vars.txt" | awk -F "=" '{print $2}')
-			ifacemode=$(grep -E "^ifacemode=" "${tmpdir}${enterprisedir}returning_vars.txt" | awk -F "=" '{print $2}')
-			rm -rf "${tmpdir}${enterprisedir}returning_vars.txt" > /dev/null 2>&1
+			if [ -f "${tmpdir}${enterprisedir}returning_vars.txt" ]; then
+
+				local tmp_interface
+				tmp_interface=$(grep -E "^interface=" "${tmpdir}${enterprisedir}returning_vars.txt" 2> /dev/null | awk -F "=" '{print $2}')
+				if [ -n "${tmp_interface}" ]; then
+					interface="${tmp_interface}"
+				fi
+
+				local tmp_phy_interface
+				tmp_phy_interface=$(grep -E "^phy_interface=" "${tmpdir}${enterprisedir}returning_vars.txt" 2> /dev/null | awk -F "=" '{print $2}')
+				if [ -n "${tmp_phy_interface}" ]; then
+					phy_interface="${tmp_phy_interface}"
+				fi
+
+				local tmp_current_iface_on_messages
+				tmp_current_iface_on_messages=$(grep -E "^current_iface_on_messages=" "${tmpdir}${enterprisedir}returning_vars.txt" 2> /dev/null | awk -F "=" '{print $2}')
+				if [ -n "${tmp_current_iface_on_messages}" ]; then
+					current_iface_on_messages="${tmp_current_iface_on_messages}"
+				fi
+
+				local tmp_ifacemode
+				tmp_ifacemode=$(grep -E "^ifacemode=" "${tmpdir}${enterprisedir}returning_vars.txt" 2> /dev/null | awk -F "=" '{print $2}')
+				if [ -n "${tmp_ifacemode}" ]; then
+					ifacemode="${tmp_ifacemode}"
+				fi
+
+				rm -rf "${tmpdir}${enterprisedir}returning_vars.txt" > /dev/null 2>&1
+			fi
 		else
 			restore_et_interface
 		fi
@@ -7479,6 +7510,7 @@ function exec_et_sniffing_sslstrip2_attack() {
 	launch_dhcp_server
 	exec_et_deauth
 	if [ "${beef_found}" -eq 1 ]; then
+		get_beef_version
 		set_beef_config
 	else
 		new_beef_pass="beef"
@@ -9183,10 +9215,24 @@ function set_beef_config() {
 		beef_db_path="${beef_db}"
 	fi
 
+	local permitted_ui_subnet
+	local permitted_ui_ipv6
 	if compare_floats_greater_or_equal "${bettercap_version}" "${minimum_bettercap_fixed_beef_iptables_issue}"; then
-		beef_panel_restriction="        permitted_ui_subnet: \"127.0.0.1/32\""
+		permitted_ui_subnet="${loopback_ip}/${ip_mask_cidr}"
+		permitted_ui_ipv6="${loopback_ipv6}"
 	else
-		beef_panel_restriction="        permitted_ui_subnet: \"0.0.0.0/0\""
+		permitted_ui_subnet="${any_ip}/${any_mask_cidr}"
+		permitted_ui_ipv6="${any_ipv6}"
+	fi
+
+	local permitted_hooking_subnet
+	local beef_panel_restriction
+	if compare_floats_greater_or_equal "${beef_version}" "${beef_needed_brackets_version}"; then
+		permitted_hooking_subnet="        permitted_hooking_subnet: [\"${et_ip_range}/${std_c_mask_cidr}\", \"${any_ipv6}\"]"
+		beef_panel_restriction="        permitted_ui_subnet: [\"${permitted_ui_subnet}\", \"${permitted_ui_ipv6}\"]"
+	else
+		permitted_hooking_subnet="        permitted_hooking_subnet: \"${et_ip_range}/${std_c_mask_cidr}\""
+		beef_panel_restriction="        permitted_ui_subnet: \"${permitted_ui_subnet}\""
 	fi
 
 	{
@@ -9196,11 +9242,11 @@ function set_beef_config() {
 	echo -e "    client_debug: false"
 	echo -e "    crypto_default_value_length: 80"
 	echo -e "    restrictions:"
-	echo -e "        permitted_hooking_subnet: \"${et_ip_range}/24\""
+	echo -e "${permitted_hooking_subnet}"
 	echo -e "${beef_panel_restriction}"
 	echo -e "    http:"
 	echo -e "        debug: false"
-	echo -e "        host: \"0.0.0.0\""
+	echo -e "        host: \"${any_ip}\""
 	echo -e "        port: \"${beef_port}\""
 	echo -e "        dns_host: \"localhost\""
 	echo -e "        dns_port: 53"
@@ -9250,6 +9296,9 @@ function set_beef_config() {
 	echo -e "            enable: false"
 	echo -e "        dns_rebinding:"
 	echo -e "            enable: false"
+	echo -e "        admin_ui:"
+	echo -e "            enable: true"
+	echo -e "            base_path: \"/ui\""
 	} >> "${tmpdir}${beef_file}"
 }
 
@@ -9259,9 +9308,11 @@ function kill_beef() {
 	debug_print
 
 	local beef_pid
-	beef_pid="$(ps -C "${optional_tools_names[19]}" --no-headers -o pid  | tr -d ' ')"
+	beef_pid="$(ps -C "${optional_tools_names[19]}" --no-headers -o pid | tr -d ' ')"
 	if ! kill "${beef_pid}" &> /dev/null; then
-		kill "$(ps -C "beef" --no-headers -o pid | tr -d ' ')" &> /dev/null
+		if ! kill "$(ps -C "beef" --no-headers -o pid | tr -d ' ')" &> /dev/null; then
+			kill "$(ps -C "ruby" --no-headers -o pid,cmd | grep "beef" | awk '{print $1}')" &> /dev/null
+		fi
 	fi
 }
 
@@ -11792,6 +11843,14 @@ function get_hashcat_version() {
 	hashcat_version=${hashcat_version#"v"}
 }
 
+#Determine beef version
+function get_beef_version() {
+
+	debug_print
+
+	beef_version=$(grep "version" "${beef_path}${beef_default_cfg_file}" 2> /dev/null | grep -oE "[0-9.]+")
+}
+
 #Determine bettercap version
 function get_bettercap_version() {
 
@@ -11799,7 +11858,7 @@ function get_bettercap_version() {
 
 	bettercap_version=$(bettercap -v 2> /dev/null | grep -E "^bettercap [0-9]" | awk '{print $2}')
 	if [ -z "${bettercap_version}" ]; then
-		bettercap_version=$(bettercap -eval "q" 2>/dev/null | grep -E "bettercap v[0-9\.]*" | awk '{print $2}')
+		bettercap_version=$(bettercap -eval "q" 2> /dev/null | grep -E "bettercap v[0-9\.]*" | awk '{print $2}')
 		bettercap_version=${bettercap_version#"v"}
 	fi
 }
@@ -11818,9 +11877,9 @@ function get_reaver_version() {
 
 	debug_print
 
-	reaver_version=$(reaver -h 2>&1 > /dev/null | grep -E "^Reaver v[0-9]" | awk '{print $2}')
+	reaver_version=$(reaver -h 2>&1 > /dev/null | grep -E "^Reaver v[0-9]" | awk '{print $2}' | grep -Eo "v[0-9\.]+")
 	if [ -z "${reaver_version}" ]; then
-		reaver_version=$(reaver -h 2> /dev/null | grep -E "^Reaver v[0-9]" | awk '{print $2}')
+		reaver_version=$(reaver -h 2> /dev/null | grep -E "^Reaver v[0-9]" | awk '{print $2}' | grep -Eo "v[0-9\.]+")
 	fi
 	reaver_version=${reaver_version#"v"}
 }
@@ -11960,6 +12019,59 @@ function check_pins_database_file() {
 			language_strings "${language}" 414 "yellow"
 			return 1
 		fi
+	fi
+}
+
+#Get and write options form options config file
+function update_options_config_file() {
+
+	debug_print
+
+	case "${1}" in
+		"getdata")
+			readarray -t OPTION_VARS < <(grep "AIRGEDDON_" "${scriptfolder}${rc_file}" 2> /dev/null)
+		;;
+		"writedata")
+			local option_name
+			local option_value
+			for item in "${OPTION_VARS[@]}"; do
+				option_name="${item%=*}"
+				option_value="${item#*=}"
+				if [[ "${ordered_options_env_vars[@]}" =~ ${option_name} ]]; then
+					sed -ri "s:(${option_name})=(.+):\1=${option_value}:" "${scriptfolder}${rc_file}" 2> /dev/null
+				fi
+			done
+		;;
+	esac
+}
+
+#Download the options config file
+function download_options_config_file() {
+
+	debug_print
+
+	local options_config_file_downloaded=0
+	options_config_file=$(timeout -s SIGTERM 15 curl -L ${urlscript_options_config_file} 2> /dev/null)
+
+	if [[ -n "${options_config_file}" ]] && [[ "${options_config_file}" != "${curl_404_error}" ]]; then
+		options_config_file_downloaded=1
+	else
+		http_proxy_detect
+		if [ "${http_proxy_set}" -eq 1 ]; then
+
+			options_config_file=$(timeout -s SIGTERM 15 curl --proxy "${http_proxy}" -L ${urlscript_options_config_file} 2> /dev/null)
+			if [[ -n "${options_config_file}" ]] && [[ "${options_config_file}" != "${curl_404_error}" ]]; then
+				options_config_file_downloaded=1
+			fi
+		fi
+	fi
+
+	if [ "${options_config_file_downloaded}" -eq 1 ]; then
+		rm -rf "${scriptfolder}${rc_file}" 2> /dev/null
+		echo "${options_config_file}" > "${scriptfolder}${rc_file}"
+		return 0
+	else
+		return 1
 	fi
 }
 
@@ -13183,6 +13295,10 @@ function download_last_version() {
 	if [ "${script_file_downloaded}" -eq 1 ]; then
 
 		download_pins_database_file
+
+		update_options_config_file "getdata"
+		download_options_config_file
+		update_options_config_file "writedata"
 
 		echo
 		language_strings "${language}" 214 "yellow"
