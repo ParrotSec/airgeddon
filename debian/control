@@ -9,7 +9,7 @@ Homepage: https://dev.parrotsec.org/security-tools/airgeddon
 Package: airgeddon
 Architecture: all
 Multi-Arch: foreign
-Depends: net-tools, iw, aircrack-ng, wireless-tools, gawk, xterm, iproute2, bash (>=4.2), ${misc:Depends}, ${shlibs:Depends}
+Depends: net-tools, iw, aircrack-ng, wireless-tools, gawk, xterm, iproute2, bash (>=4.2), tmux, ${misc:Depends}, ${shlibs:Depends}
 Recommends: crunch, mdk4, hashcat, hostapd, lighttpd, iptables, bettercap, beef-xss, ettercap-graphical, sslstrip, isc-dhcp-server, dsniff, reaver, bully, pixiewps, expect, curl, rfkill, wget, pciutils, usbutils, ethtool, x11-utils, ccze, x11-xserver-utils, asleap, hostapd-wpe, john, nftables
 Description: a multi-use bash script to audit wireless networks
  a multi-use bash script to audit wireless networks

@@ -30,3 +30,6 @@ AIRGEDDON_DEVELOPMENT_MODE=false
 
 #Enabled true / Disabled false - Debug mode for development printing debug information - Default value false
 AIRGEDDON_DEBUG_MODE=false
+
+#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value xterm
+AIRGEDDON_WINDOWS_HANDLING=xterm

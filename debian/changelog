@@ -1,3 +1,10 @@
+airgeddon (9.20+parrot0) testing; urgency=medium
+
+ * Added option to use tmux instead of xterm (Thank you to "xpz3")
+ * Added WPS null PIN attack (reaver)
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sat, 25 May 2019 19:39:23 +0200
+
 airgeddon (9.11+parrot0) testing; urgency=medium
 
  * Fixed error shown on enterprise attacks for some wifi cards

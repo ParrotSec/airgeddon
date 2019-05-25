@@ -1,3 +1,7 @@
+### 9.20
+ - Added option to use tmux instead of xterm (Thank you to "xpz3")
+ - Added WPS null PIN attack (reaver)
+
 ### 9.11
  - Fixed error shown on enterprise attacks for some wifi cards
  - Fixed BeEF error due forced config file changes on BeEF 0.4.7.1 and 0.4.7.2 versions
@@ -11,7 +15,7 @@
  - Tested compatibility with Wifislax 64-2.x and Kali 2019.x
  - Fixed dependency problem to avoid use of xxd
  - Routing rules adapted to work with nftables
- 
+
 ### 9.01
  - Improvments on options environment var system
  - Minor fixes for ARM devices

