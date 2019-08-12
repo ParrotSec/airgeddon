@@ -1,3 +1,14 @@
+airgeddon (9.21+parrot0) testing; urgency=medium
+
+ * Fixed non-closing windows on some DoS pursuit mode attacks
+ * Added retrocompatibility for mdk3, added option in .airgeddonrc file to handle it
+ * Fixed bug on WEP all-in-one attack (Fake Auth) for SSIDs containing spaces
+ * Fixed repeated enterprise plain passwords captured on trophy files
+ * Added custom certificates creation for enterprise attacks
+ * Fixed error on BeEF attack using tmux
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Mon, 12 Aug 2019 20:23:15 +0500
+
 airgeddon (9.20+parrot0) testing; urgency=medium
 
  * Added option to use tmux instead of xterm (Thank you to "xpz3")

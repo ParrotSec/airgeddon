@@ -16,6 +16,7 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
 3. If an issue is opened and more info is needed, `airgeddon` staff will request it. If there is no answer in 7 days or the OP is not collaborating, the issue will be closed.
 4. If the issue is not related to airgeddon or the root cause is out of scope, it will be closed. `airgeddon` staff is not a helpdesk support service.
 5. Try to be sure that your problem is related to airgeddon and that is not a driver issue. A good practice is always to try to perform the same operation without using `airgeddon` in order to see if the problem or the behavior can be reproduced. In that case, probably the issue should not be created.
+6. Don't talk or mention references to other tools. If you want to talk about other similar tools you can do it on their pages/github. `airgeddon` issues are to talk about `airgeddon`.
 
 ## Collaborating Translators
 
@@ -95,7 +96,8 @@ If you enjoyed the script, feel free to donate. Support the project through Payp
 <br/>
 
 <div align="center">
-    <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7ELM486P7XKKG"><img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/paypal_donate.png" title="Paypal"/></a>
+    <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7ELM486P7XKKG"><img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/paypal_donate.png" alt="Paypal" title="Paypal"/></a>
+    <a href="https://www.buymeacoffee.com/v1s1t0r"><img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/buymeacoffee.png" alt="Buy me a coffee" title="Buy me a coffee"/></a>
 </div>
 
 <br/>
@@ -115,13 +117,13 @@ If you enjoyed the script, feel free to donate. Support the project through Payp
     </tr>
     <tr>
       <td>
-        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/bitcoin_qr.png" title="Bitcoin"/>
+        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/bitcoin_qr.png" alt="Bitcoin" title="Bitcoin"/>
       </td>
       <td>
-        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/bitcoincash_qr.png" title="Bitcoin Cash"/>
+        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/bitcoincash_qr.png" alt="Bitcoin Cash" title="Bitcoin Cash"/>
       </td>
       <td>
-        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/dash_qr.png" title="Dash"/>
+        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/dash_qr.png" alt="Dash" title="Dash"/>
       </td>
     </tr>
     <tr>
@@ -137,13 +139,13 @@ If you enjoyed the script, feel free to donate. Support the project through Payp
     </tr>
     <tr>
       <td>
-        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/ethereum_qr.png" title="Ethereum"/>
+        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/ethereum_qr.png" alt="Ethereum" title="Ethereum"/>
       </td>
       <td>
-        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/litecoin_qr.png" title="Litecoin"/>
+        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/litecoin_qr.png" alt="Litecoin" title="Litecoin"/>
       </td>
       <td>
-        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/zcash_qr.png" title="ZCash"/>
+        <img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/zcash_qr.png" alt="ZCash" title="ZCash"/>
       </td>
     </tr>
   </table>

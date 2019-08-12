@@ -25,6 +25,9 @@ AIRGEDDON_5GHZ_ENABLED=true
 #Enabled true / Disabled false - Force to use iptables instead of nftables (it has no effect if nftables are not present) - Default value false
 AIRGEDDON_FORCE_IPTABLES=false
 
+#Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value mdk4
+AIRGEDDON_MDK_VERSION=mdk4
+
 #Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value false
 AIRGEDDON_DEVELOPMENT_MODE=false
 
