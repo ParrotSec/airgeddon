@@ -7,7 +7,7 @@ AIRGEDDON_SKIP_INTRO=false
 #Enabled true / Disabled false - Allow colorized output - Default value true
 AIRGEDDON_BASIC_COLORS=true
 
-#Enabled true / Disabled false - Allow extended colorized output (ccze needed, it has no effect on disabled basic colors) - Default value true
+#Enabled true / Disabled false - Allow extended colorized output (ccze tool needed, it has no effect on disabled basic colors) - Default value true
 AIRGEDDON_EXTENDED_COLORS=true
 
 #Enabled true / Disabled false - Auto change language feature - Default value true

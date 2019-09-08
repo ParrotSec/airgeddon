@@ -18,6 +18,10 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 - *II. Requirements*
   - [Requirements]
   - [Compatibility]
+	 - [Cards and Chipsets]
+	 - [Wayland]
+	 - [Consistent Network Device Naming]
+	 - [Kali Nethunter]
   - [Essential Tools]
   - [Optional Tools]
 	 - [BeEF Tips]
@@ -59,6 +63,10 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 [Wallpapers]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Wallpapers
 [Requirements]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Requirements
 [Compatibility]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Compatibility
+[Cards and Chipsets]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Cards%20and%20Chipsets
+[Wayland]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Wayland
+[Consistent Network Device Naming]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Consistent%20Network%20Device%20Naming
+[Kali Nethunter]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Kali%20Nethunter
 [Essential Tools]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Essential%20Tools
 [Optional Tools]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Optional%20Tools
 [BeEF Tips]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/BeEF%20Tips
@@ -82,7 +90,7 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 [Hat Tip To]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Hat%20Tip%20To
 [Inspiration]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Inspiration
 
-[Version-shield]: https://img.shields.io/badge/version-9.21-blue.svg?style=flat-square&colorA=273133&colorB=0093ee "Latest version"
+[Version-shield]: https://img.shields.io/badge/version-9.22-blue.svg?style=flat-square&colorA=273133&colorB=0093ee "Latest version"
 [Bash4.2-shield]: https://img.shields.io/badge/bash-4.2%2B-blue.svg?style=flat-square&colorA=273133&colorB=00db00 "Bash 4.2 or later"
 [License-shield]: https://img.shields.io/badge/license-GPL%20v3%2B-blue.svg?style=flat-square&colorA=273133&colorB=bd0000 "GPL v3+"
 [Docker-shield]: https://img.shields.io/docker/automated/v1s1t0r1sh3r3/airgeddon.svg?style=flat-square&colorA=273133&colorB=f9ff5a "Docker rules!"

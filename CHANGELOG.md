@@ -1,3 +1,14 @@
+### 9.22
+ - Improved certificates validations and error messages
+ - Removed useless internet access DNS resolution method for captive portal Evil Twin, now pure dnsspoof
+ - Fixed exit on tmux launch if tmux not installed
+ - Added more charset combinations for hashcat bruteforce attacks
+ - Fixed length problem on hashcat bruteforce decryption attacks
+ - Fixed handshake capture menu error
+ - Compatibility extended to Pentoo Linux
+ - Removed unneeded expect (unbuffer) dependency
+ - Added tab autocompletion for every path input
+
 ### 9.21
  - Fixed non-closing windows on some DoS pursuit mode attacks
  - Added retrocompatibility for mdk3, added option in .airgeddonrc file to handle it

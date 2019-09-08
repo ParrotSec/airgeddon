@@ -1,3 +1,17 @@
+airgeddon (9.22+parrot0) testing; urgency=medium
+
+ * Improved certificates validations and error messages
+ * Removed useless internet access DNS resolution method for captive portal Evil Twin, now pure dnsspoof
+ * Fixed exit on tmux launch if tmux not installed
+ * Added more charset combinations for hashcat bruteforce attacks
+ * Fixed length problem on hashcat bruteforce decryption attacks
+ * Fixed handshake capture menu error
+ * Compatibility extended to Pentoo Linux
+ * Removed unneeded expect (unbuffer) dependency
+ * Added tab autocompletion for every path input
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sun, 08 Sep 2019 19:22:57 +0100
+
 airgeddon (9.21+parrot0) testing; urgency=medium
 
  * Fixed non-closing windows on some DoS pursuit mode attacks
