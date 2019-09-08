@@ -1,134 +1,134 @@
 airgeddon (9.22+parrot0) testing; urgency=medium
 
- * Improved certificates validations and error messages
- * Removed useless internet access DNS resolution method for captive portal Evil Twin, now pure dnsspoof
- * Fixed exit on tmux launch if tmux not installed
- * Added more charset combinations for hashcat bruteforce attacks
- * Fixed length problem on hashcat bruteforce decryption attacks
- * Fixed handshake capture menu error
- * Compatibility extended to Pentoo Linux
- * Removed unneeded expect (unbuffer) dependency
- * Added tab autocompletion for every path input
+  * Improved certificates validations and error messages
+  * Removed useless internet access DNS resolution method for captive portal Evil Twin, now pure dnsspoof
+  * Fixed exit on tmux launch if tmux not installed
+  * Added more charset combinations for hashcat bruteforce attacks
+  * Fixed length problem on hashcat bruteforce decryption attacks
+  * Fixed handshake capture menu error
+  * Compatibility extended to Pentoo Linux
+  * Removed unneeded expect (unbuffer) dependency
+  * Added tab autocompletion for every path input
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sun, 08 Sep 2019 19:22:57 +0100
 
 airgeddon (9.21+parrot0) testing; urgency=medium
 
- * Fixed non-closing windows on some DoS pursuit mode attacks
- * Added retrocompatibility for mdk3, added option in .airgeddonrc file to handle it
- * Fixed bug on WEP all-in-one attack (Fake Auth) for SSIDs containing spaces
- * Fixed repeated enterprise plain passwords captured on trophy files
- * Added custom certificates creation for enterprise attacks
- * Fixed error on BeEF attack using tmux
+  * Fixed non-closing windows on some DoS pursuit mode attacks
+  * Added retrocompatibility for mdk3, added option in .airgeddonrc file to handle it
+  * Fixed bug on WEP all-in-one attack (Fake Auth) for SSIDs containing spaces
+  * Fixed repeated enterprise plain passwords captured on trophy files
+  * Added custom certificates creation for enterprise attacks
+  * Fixed error on BeEF attack using tmux
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Mon, 12 Aug 2019 20:23:15 +0500
 
 airgeddon (9.20+parrot0) testing; urgency=medium
 
- * Added option to use tmux instead of xterm (Thank you to "xpz3")
- * Added WPS null PIN attack (reaver)
+  * Added option to use tmux instead of xterm (Thank you to "xpz3")
+  * Added WPS null PIN attack (reaver)
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sat, 25 May 2019 19:39:23 +0200
 
 airgeddon (9.11+parrot0) testing; urgency=medium
 
- * Fixed error shown on enterprise attacks for some wifi cards
- * Fixed BeEF error due forced config file changes on BeEF 0.4.7.1 and 0.4.7.2 versions
- * Added ipv6 support for BeEF
- * Options .airgeddonrc file now also updated on automatic update keeping user's preferences
+  * Fixed error shown on enterprise attacks for some wifi cards
+  * Fixed BeEF error due forced config file changes on BeEF 0.4.7.1 and 0.4.7.2 versions
+  * Added ipv6 support for BeEF
+  * Options .airgeddonrc file now also updated on automatic update keeping user's preferences
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Fri, 12 Apr 2019 10:24:51 +0100
 
 airgeddon (9.10+parrot0) testing; urgency=medium
 
- * Mdk3 replaced by Mdk4
- * Fixed some minor bugs on enterprise plain text captured password process
- * Fixed minor bug forcing interface mode change after smooth enterprise attack
- * Tested compatibility with Wifislax 64-2.x and Kali 2019.x
- * Fixed dependency problem to avoid use of xxd
- * Routing rules adapted to work with nftables
+  * Mdk3 replaced by Mdk4
+  * Fixed some minor bugs on enterprise plain text captured password process
+  * Fixed minor bug forcing interface mode change after smooth enterprise attack
+  * Tested compatibility with Wifislax 64-2.x and Kali 2019.x
+  * Fixed dependency problem to avoid use of xxd
+  * Routing rules adapted to work with nftables
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sat, 30 Mar 2019 20:20:34 +0900
 
 airgeddon (9.01+parrot0) testing; urgency=medium
 
- * Improvments on options environment var system
- * Minor fixes for ARM devices
- * Fixed iptables (nf_tables) problem
+  * Improvments on options environment var system
+  * Minor fixes for ARM devices
+  * Fixed iptables (nf_tables) problem
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Thu, 31 Jan 2019 15:22:16 +0700
   
 airgeddon (9.0+parrot0) testing; urgency=medium
 
- * New WPA/WPA2 enterprise attacks menu
- * New WPA/WPA2 enterprise offline decryption menu
- * Compatibility extended to Linux Mint 18.x
- * Flag system for options based on fallback substitution variables (config file, command line and menus)
- * Fixed error on hashcat bruteforce decryption attacks regarding length
+  * New WPA/WPA2 enterprise attacks menu
+  * New WPA/WPA2 enterprise offline decryption menu
+  * Compatibility extended to Linux Mint 18.x
+  * Flag system for options based on fallback substitution variables (config file, command line and menus)
+  * Fixed error on hashcat bruteforce decryption attacks regarding length
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Tue, 29 Jan 2019 16:13:43 +0100
  
 airgeddon (8.12+parrot0) testing; urgency=medium
 
- * Fixed error on WPS attacks for strange chars in some SSIDs
- * Tested compatibility with Kali 2018.3/4, Fedora 28, Backbox 5.x and BlackArch 2018.06.01
- * Added prompt symbol for every user interaction
- * Improved regex for BSSID check
- * Changes on contributing policies
- * Github pull request template added and issue templates updated
- * Added Wayland graphic system support (Thank you to "fr0xk")
- * Fixed print error on flying saucer intro for some terminals
+  * Fixed error on WPS attacks for strange chars in some SSIDs
+  * Tested compatibility with Kali 2018.3/4, Fedora 28, Backbox 5.x and BlackArch 2018.06.01
+  * Added prompt symbol for every user interaction
+  * Improved regex for BSSID check
+  * Changes on contributing policies
+  * Github pull request template added and issue templates updated
+  * Added Wayland graphic system support (Thank you to "fr0xk")
+  * Fixed print error on flying saucer intro for some terminals
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Thu, 01 Nov 2018 12:15:12 +0300
 
 airgeddon (8.11+parrot0) testing; urgency=medium
 
- * Turkish language translation added (Thank you to "UN5T48L3")
- * Extended cards compatibility. Now airmon non compatible cards can be used
- * Fixed error on captive portal for some SSID strange chars
- * Fixed error showing SSIDs containing spaces on WPS network selection menu
- * Fixed error on chipset detection for some cards
+  * Turkish language translation added (Thank you to "UN5T48L3")
+  * Extended cards compatibility. Now airmon non compatible cards can be used
+  * Fixed error on captive portal for some SSID strange chars
+  * Fixed error showing SSIDs containing spaces on WPS network selection menu
+  * Fixed error on chipset detection for some cards
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Thu, 16 Aug 2018 01:15:34 +0200
 
 airgeddon (8.10+parrot0) testing; urgency=medium
 
- * WPS decrypted networks now have trophy file
- * Tested compatibility with Kali 2018.2, Ubuntu 18.04 and Parrot 4.x
- * Controlled error for unsupported bettercap 2.x version
- * Automatic check added on Handshake capture (Thank you to "IwraStudios")
- * Fixed card detection bug on some Linux
+  * WPS decrypted networks now have trophy file
+  * Tested compatibility with Kali 2018.2, Ubuntu 18.04 and Parrot 4.x
+  * Controlled error for unsupported bettercap 2.x version
+  * Automatic check added on Handshake capture (Thank you to "IwraStudios")
+  * Fixed card detection bug on some Linux
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sun, 18 Jun 2018 20:32:53 +0300
 
 airgeddon (8.01+parrot0) testing; urgency=medium
 
- * German language translation added (Thank you to "hamperfait")
- * Filters enabled on scannings based on menu or kind of attack
- * WPS PIN database now is updated on startup updates too
- * Return option now always at position 0 on all menus
- * Removed --weak--hash-threshold option for hashcat 4.0.0 or higher
- * Tested compatibility with Parrot 3.11
- * Fixed aspect of network selection menu when network power is equal to -1
+  * German language translation added (Thank you to "hamperfait")
+  * Filters enabled on scannings based on menu or kind of attack
+  * WPS PIN database now is updated on startup updates too
+  * Return option now always at position 0 on all menus
+  * Removed --weak--hash-threshold option for hashcat 4.0.0 or higher
+  * Tested compatibility with Parrot 3.11
+  * Fixed aspect of network selection menu when network power is equal to -1
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Mon, 01 Apr 2018 00:24:56 +0900
 
 airgeddon (8.0+parrot0) testing; urgency=medium
 
- * Added 5Ghz full support (scans, attacks, card detection, etc.)
- * Tested compatibility with Kali 2018.1, BlackArch 2017.12.11, Fedora 27, Gentoo 20180206, OpenSUSE 42.3 and Parrot 3.10
- * Fixed error setting ESSID on some wash versions while scanning
- * Fixed error on secondary interface selection menu for "DoS pursuit mode"
+  * Added 5Ghz full support (scans, attacks, card detection, etc.)
+  * Tested compatibility with Kali 2018.1, BlackArch 2017.12.11, Fedora 27, Gentoo 20180206, OpenSUSE 42.3 and Parrot 3.10
+  * Fixed error setting ESSID on some wash versions while scanning
+  * Fixed error on secondary interface selection menu for "DoS pursuit mode"
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Tue, 20 Feb 2018 22:47:16 +0800
 
 airgeddon (7.23+parrot0) testing; urgency=medium
 
- * Fixed error in Docker container on some host O.S.
- * Fixed error message on offline Arcadyan PIN algorithm calculation
- * Polish language translation added (Thank you to "dodg3rmaq")
- * Added "DoS pursuit mode" on DoS attacks (including DoS used on Evil Twin attacks) to avoid AP channel hopping
- * Tested compatibility with Parrot 3.9, BlackArch 2017.08.30 and Kali 2017.3
+  * Fixed error in Docker container on some host O.S.
+  * Fixed error message on offline Arcadyan PIN algorithm calculation
+  * Polish language translation added (Thank you to "dodg3rmaq")
+  * Added "DoS pursuit mode" on DoS attacks (including DoS used on Evil Twin attacks) to avoid AP channel hopping
+  * Tested compatibility with Parrot 3.9, BlackArch 2017.08.30 and Kali 2017.3
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sat, 02 Dec 2017 01:47:34 +0200
 
