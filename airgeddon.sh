@@ -2,8 +2,8 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20190908
-#Version......: 9.22
+#Date.........: 20190924
+#Version......: 9.23
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -115,8 +115,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="9.22"
-language_strings_expected_version="9.22-1"
+airgeddon_version="9.23"
+language_strings_expected_version="9.23-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
@@ -323,7 +323,7 @@ known_arm_compatible_distros=(
 declare main_hints=(128 134 163 437 438 442 445 516 590 626)
 declare dos_hints=(129 131 133)
 declare handshake_hints=(127 130 132 136)
-declare handshake_dos_hints=(142)
+declare dos_handshake_hints=(142)
 declare decrypt_hints=(171 179 208 244 163)
 declare personal_decrypt_hints=(171 178 179 208 244 163)
 declare enterprise_decrypt_hints=(171 179 208 244 163 610)
@@ -2891,9 +2891,12 @@ function custom_certificates_integration() {
 				hostapd_wpe_cert_path="${scriptfolder}${hostapd_wpe_cert_path}"
 			fi
 
-			echo
-			language_strings "${language}" 329 "green"
-			read -rp "> " hostapd_wpe_cert_pass
+			hostapd_wpe_cert_pass=""
+			while [[ ! ${hostapd_wpe_cert_pass} =~ ^.{4,1023}$ ]]; do
+				echo
+				language_strings "${language}" 329 "green"
+				read -rp "> " hostapd_wpe_cert_pass
+			done
 		fi
 	else
 		hostapd_wpe_cert_path="${default_certs_path}"
@@ -2905,17 +2908,16 @@ function custom_certificates_integration() {
 	language_strings "${language}" 649 "blue"
 	echo
 
-	local certsresult
-	certsresult=$(validate_certificates "${hostapd_wpe_cert_path}" "${hostapd_wpe_cert_pass}")
-	if [ "${certsresult}" = "0" ]; then
+	validate_certificates "${hostapd_wpe_cert_path}" "${hostapd_wpe_cert_pass}"
+	if [ "$?" = "0" ]; then
 		language_strings "${language}" 650 "yellow"
 		language_strings "${language}" 115 "read"
 		return 0
-	elif [ "${certsresult}" = "1" ]; then
+	elif [ "$?" = "1" ]; then
 		language_strings "${language}" 237 "red"
 		language_strings "${language}" 115 "read"
 		return 1
-	elif [ "${certsresult}" = "2" ]; then
+	elif [ "$?" = "2" ]; then
 		language_strings "${language}" 326 "red"
 		language_strings "${language}" 115 "read"
 		return 1
@@ -2930,20 +2932,18 @@ function custom_certificates_integration() {
 function validate_certificates() {
 
 	debug_print
-	local certsresult
-	certsresult=0
 
 	if ! [ -f "${1}server.pem" ] || ! [ -r "${1}server.pem" ] || ! [ -f "${1}ca.pem" ] || ! [ -r "${1}ca.pem" ] || ! [ -f "${1}server.key" ] || ! [ -r "${1}server.key" ]; then
-		certsresult=1
+		return 1
 	else
 		if ! openssl x509 -in "${1}server.pem" -inform "PEM" -checkend "0" &> "/dev/null" || ! openssl x509 -in "${1}ca.pem" -inform "PEM" -checkend "0" &> "/dev/null"; then
-			certsresult=2
+			return 2
 		elif ! openssl rsa -in "${1}server.key" -passin "pass:${2}" -check &> "/dev/null"; then
-			certsresult=3
+			return 3
 		fi
 	fi
 
-	echo "${certsresult}"
+	return 0
 }
 
 #Create custom certificates
@@ -8743,7 +8743,7 @@ function set_std_internet_routing_rules() {
 	if [ "${et_mode}" = "et_captive_portal" ]; then
 		if [ "${iptables_nftables}" -eq 1 ]; then
 			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 80 counter dnat to ${et_ip_router}:80
-			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 443 counter dnat to ${et_ip_router}:443
+			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 443 counter dnat to ${et_ip_router}:80
 			"${iptables_cmd}" add rule ip filter INPUT tcp dport 80 counter accept
 			"${iptables_cmd}" add rule ip filter INPUT tcp dport 443 counter accept
 		else
@@ -14062,8 +14062,8 @@ function env_vars_initialization() {
 	nonboolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="mdk4"
 	nonboolean_options_env_vars["${ordered_options_env_vars[12]},default_value"]="xterm"
 
-	nonboolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value mdk4"
-	nonboolean_options_env_vars["${ordered_options_env_vars[12]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value xterm"
+	nonboolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
+	nonboolean_options_env_vars["${ordered_options_env_vars[12]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[12]},'default_value']}"
 
 	declare -gA boolean_options_env_vars
 	boolean_options_env_vars["${ordered_options_env_vars[0]},default_value"]="true"
@@ -14087,8 +14087,8 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[6]},rcfile_text"]="#Enabled true / Disabled false - Print help hints on menus - Default value ${boolean_options_env_vars[${ordered_options_env_vars[6]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[7]},rcfile_text"]="#Enabled true / Disabled false - Enable 5Ghz support (it has no effect if your cards are not 5Ghz compatible cards) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[7]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[8]},rcfile_text"]="#Enabled true / Disabled false - Force to use iptables instead of nftables (it has no effect if nftables are not present) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[8]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[11]},'default_value']}"
 
 	readarray -t ENV_VARS_ELEMENTS < <(printf %s\\n "${!nonboolean_options_env_vars[@]} ${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
 	readarray -t ENV_BOOLEAN_VARS_ELEMENTS < <(printf %s\\n "${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)

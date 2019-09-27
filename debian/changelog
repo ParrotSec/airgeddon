@@ -1,3 +1,10 @@
+airgeddon (9.23+parrot0) testing; urgency=medium
+
+ * Fixed error printing hints
+ * Fixed problem with default values on options file creation
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Fri, 27 Sep 2019 07:42:57 +0900
+
 airgeddon (9.22+parrot0) testing; urgency=medium
 
  * Improved certificates validations and error messages

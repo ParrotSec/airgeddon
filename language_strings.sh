@@ -2,7 +2,7 @@
 #Title........: language_strings.sh
 #Description..: All the translated strings that airgeddon uses are located here.
 #Author.......: v1s1t0r
-#Date.........: 20190907
+#Date.........: 20190927
 #Bash Version.: 4.2 or later
 
 #Set language_strings file version
@@ -11,7 +11,7 @@ function set_language_strings_version() {
 
 	debug_print
 
-	language_strings_version="9.22-1"
+	language_strings_version="9.23-1"
 }
 
 #Set different language text strings
@@ -2952,7 +2952,7 @@ function language_strings() {
 	arr["ITALIAN",174]="Sembra che tu abbia una versione di bettercap non supportata da airgeddon. L'ultima versione di bettercap supportata è ${maximum_bettercap_supported_version}. Se vuoi far funzionare questo attacco devi eseguire un downgrade del pacchetto. Per ulteriori informazioni consultare la sezione Bettercap della nostra Wiki: ${normal_color}${urlgithub_wiki}/Bettercap Tips"
 	arr["POLISH",174]="Wygląda na to, że masz nieobsługiwaną przez airgeddon wersję bettercap. Ostatnia obsługiwana wersja bettercap to ${maximum_bettercap_supported_version}. Jeśli chcesz, aby ten atak działał, musisz obniżyć wersje. Aby uzyskać więcej informacji, zobacz sekcję Bettercap Wiki: ${normal_color}${urlgithub_wiki}/Bettercap Tips"
 	arr["GERMAN",174]="Anscheinend ist die benutzte bettercap version von airgeddon nicht unterstützt. Die letzte unterstützte bettercap Version ist ${maximum_bettercap_supported_version}. Wenn Sie diesen Angriff beuntzen wollen, sollten Sie ein Downgrade des bettercap-Pakets durchführen. Weitere Informationen finden Sie im Abschnitt Bettercap des Wiki: ${normal_color}${urlgithub_wiki}/Bettercap Tips"
-	arr["TURKISH",174]="Airgeddon bettercap sürümününüz desteklenmiyor gibi görünüyor. Son çıkan en iyi desteklenen sürüm ${maximum_bettercap_supported_version}. Bu saldırıyı gerçekleştirmek istiyorsanız, paketin bir sürümünün düşürülmesi gerekir. Daha fazla bilgi için, Wiki'nin Bettercap bölümüne bakın: ${normal_color}${urlgithub_wiki}/Bettercap Tips"
+	arr["TURKISH",174]="airgeddon bettercap sürümününüz desteklenmiyor gibi görünüyor. Son çıkan en iyi desteklenen sürüm ${maximum_bettercap_supported_version}. Bu saldırıyı gerçekleştirmek istiyorsanız, paketin bir sürümünün düşürülmesi gerekir. Daha fazla bilgi için, Wiki'nin Bettercap bölümüne bakın: ${normal_color}${urlgithub_wiki}/Bettercap Tips"
 
 	arr["ENGLISH",175]="2.  (aircrack + crunch) Bruteforce attack against capture file"
 	arr["SPANISH",175]="2.  (aircrack + crunch) Ataque de fuerza bruta sobre fichero de captura"
@@ -4471,11 +4471,11 @@ function language_strings() {
 	arr["FRENCH",301]="Pour les attaques d'entreprise, si vous disposez des certificats légitimes du réseau objetive et de le mot de passe, vous pouvez les utiliser. Si vous ne les avez pas, vous pouvez générer avec airgeddon des certificats avec les mêmes données et les utiliser pour que l'attaque soit plus crédible"
 	arr["CATALAN",301]="Per als atacs enterprise, si tens els certificats legítims de la xarxa objectiu i la contrasenya, podràs utilitzar-los. Si no els tens, pots generar amb airgeddon uns certificats amb les mateixes dades i utilitzar-los per que l'atac sigui més creïble"
 	arr["PORTUGUESE",301]="Para ataques corporativos, se você tiver os certificados legítimos da rede e sua senha, poderá usá-los. Se você não tiver, pode gerar os certificados com airgeddon usando os mesmos dados tornando o ataque mais confiável"
-	arr["RUSSIAN",301]="${pending_of_translation} Для корпоративных атак, если у вас есть действительные сертификаты целевой сети и ваш пароль, вы можете использовать их. Если у вас их нет, вы можете создать с помощью сертификатов Airgeddon те же данные и использовать их для повышения вероятности атаки"
+	arr["RUSSIAN",301]="Для enterprise атак, если у вас есть действительные сертификаты целевой сети и пароль для них, вы можете использовать их. Если у вас их нет, вы можете создать сертификаты с помощью airgeddon с такими же данными и использовать их для повышения доверия у жертвы"
 	arr["GREEK",301]="Για enterprise επιθέσεις, εάν έχετε τα νόμιμα πιστοποιητικά του δικτύου προορισμού και τον κωδικό πρόσβασής σας, μπορείτε να τα χρησιμοποιήσετε. Αν δεν τα έχετε, μπορείτε να χρησιμοποιήσετε το airgeddon για να δημιουργήσετε ορισμένα πιστοποιητικά με τα ίδια δεδομένα και να τα χρησιμοποιήσετε για να κάνετε την επίθεση πιο αξιόπιστη"
 	arr["ITALIAN",301]="Per gli attacchi enterprise, se si dispone dei certificati legittimi della rete obiettivo e della sua password, è possibile utilizzarli. Se non li hai, puoi generareli con airgeddon con gli stessi dati e usarli per rendere l'attacco più credibile"
 	arr["POLISH",301]="${pending_of_translation} W przypadku ataków korporacyjnych, jeśli masz prawidłowe certyfikaty sieci docelowej i hasło, możesz ich użyć. Jeśli ich nie masz, możesz wygenerować za pomocą certyfikatów airgeddon z tymi samymi danymi i wykorzystać je, aby atak był bardziej wiarygodny"
-	arr["GERMAN",301]="Wenn Sie bei Unternehmensangriffen über die legitimen Zertifikate des Zielnetzwerks und Ihr Kennwort verfügen, können Sie diese verwenden. Wenn Sie diese nicht haben, können Sie mit Airgeddon-Zertifikaten mit denselben Daten erstellen und sie verwenden, um den Angriff glaubwürdiger zu machen"
+	arr["GERMAN",301]="Wenn Sie bei Unternehmensangriffen über die legitimen Zertifikate des Zielnetzwerks und Ihr Kennwort verfügen, können Sie diese verwenden. Wenn Sie diese nicht haben, können Sie mit airgeddon-Zertifikaten mit denselben Daten erstellen und sie verwenden, um den Angriff glaubwürdiger zu machen"
 	arr["TURKISH",301]="Kurumsal saldırılarda, hedef ağın yasal sertifikalarına ve şifreniz varsa bunları kullanabilirsiniz. Onlara sahip değilseniz, aynı verilere sahip airgeddon sertifikalarıyla oluşturabilir ve saldırıyı daha inanılır hale getirmek için bunları kullanabilirsiniz"
 
 	arr["ENGLISH",302]="Do you want to store in a file the sniffed captured passwords? ${blue_color}If you answer no (\"n\") they will be only shown on screen ${normal_color}${visual_choice}"
@@ -4766,12 +4766,12 @@ function language_strings() {
 	arr["GERMAN",325]="Bitte warten. Wir bitten um ein wenig Geduld..."
 	arr["TURKISH",325]="Bekleyin. Lütfen sabırlı olun..."
 
-	arr["ENGLISH",326]="Certificates are invalid or outdated, so the attack can't be performed"
+	arr["ENGLISH",326]="Certificates are invalid or expired, so the attack can't be performed"
 	arr["SPANISH",326]="Los certificados no son válidos o están caducados, por lo que el ataque no se puede realizar"
 	arr["FRENCH",326]="Les certificats ne sont pas valides ou ont expiré. Donc l'attaque ne peut pas être effectuée"
 	arr["CATALAN",326]="Els certificats no són vàlids o estan caducats, de manera que l'atac no es pot realitzar"
 	arr["PORTUGUESE",326]="Os certificados são inválidos ou expiraram, o ataque não pode ser executado"
-	arr["RUSSIAN",326]="${pending_of_translation} Сертификаты недействительны или устарели, поэтому атака не может быть выполнена"
+	arr["RUSSIAN",326]="Сертификаты недействительны или устарели, поэтому атака не может быть выполнена"
 	arr["GREEK",326]="Τα certificates είναι άκυρα ή έχουν λήξει, οπότε η επίθεση δεν μπορεί να εκτελεστεί"
 	arr["ITALIAN",326]="I certificati non sono validi o sono scaduti, quindi l'attacco non può essere eseguito"
 	arr["POLISH",326]="${pending_of_translation} Certyfikaty są nieprawidłowe lub nieaktualne, więc nie można wykonać ataku"
@@ -4819,7 +4819,7 @@ function language_strings() {
 	arr["FRENCH",330]="La clé privée n'est pas valide ou le mot de passe est incorrect. Donc l'attaque ne peut pas être effectuée"
 	arr["CATALAN",330]="La clau privada no és vàlida o la contrasenya és errònia, de manera que l'atac no es pot realitzar"
 	arr["PORTUGUESE",330]="Sua chave privada não é válida ou a senha está errada, o ataque não pode ser executado"
-	arr["RUSSIAN",330]="${pending_of_translation} Закрытый ключ неверен или пароль неверен, поэтому атака не может быть выполнена"
+	arr["RUSSIAN",330]="Закрытый ключ неверен или пароль неверен, поэтому атака не может быть выполнена"
 	arr["GREEK",330]="Το ιδιωτικό κλειδί δεν είναι έγκυρο ή ο κωδικός πρόσβασης είναι λάθος, επομένως η επίθεση δεν μπορεί να εκτελεστεί"
 	arr["ITALIAN",330]="La chiave privata non è valida o la password è errata, quindi l'attacco non può essere eseguito"
 	arr["POLISH",330]="${pending_of_translation} Klucz prywatny jest nieprawidłowy lub hasło jest nieprawidłowe, więc nie można wykonać ataku"
@@ -5928,7 +5928,7 @@ function language_strings() {
 	arr["ITALIAN",422]="L'aggiornamento automatico viene disattivato quando airgeddon viene eseguito in un contenitore Docker. Se vuoi aggiornarlo scaricare di nuovo l'immagine con il tag \"latest\""
 	arr["POLISH",422]="Automatyczna aktualizacja została wyłączona, gdy airgeddon jest uruchomiony w kontenerze Docker. Jeśli chcesz go zaktualizować, pobierz ponownie obraz oznaczony jako \"latest\""
 	arr["GERMAN",422]="Die automatische Aktualisierung wird deaktiviert, wenn airgeddon in einem Docker-Container ausgeführt wird. Wenn Sie es aktualisieren möchten, laden Sie das Bild erneut mit dem Tag \"latest\""
-	arr["TURKISH",422]="Airgeddon bir Docker konteynerinde çalışırken otomatik güncelleme devre dışı bırakıldı. Güncellemek isterseniz, \"latest\" etiketli görüntüyü tekrar indirin"
+	arr["TURKISH",422]="airgeddon bir Docker konteynerinde çalışırken otomatik güncelleme devre dışı bırakıldı. Güncellemek isterseniz, \"latest\" etiketli görüntüyü tekrar indirin"
 
 	arr["ENGLISH",423]="5.  WEP \"All-in-One\" attack"
 	arr["SPANISH",423]="5.  Ataque WEP \"Todo-en-Uno\""
@@ -6576,7 +6576,7 @@ function language_strings() {
 	arr["ITALIAN",476]="Non è stato rilevato un server X grafico, se è presente controllare il corretto funzionamento. È essenziale per airgeddon. Lo script non può continuare"
 	arr["POLISH",476]="Nie wykryto graficznego systemu X Window. Jeśli go masz, sprawdź czy działa poprawnie. Jest niezbędne dla airgeddon. Skrypt nie może kontynuować"
 	arr["GERMAN",476]="Kein X Window-Grafiksystem wurde erkannt. Wenn Sie es haben, prüfen Sie, ob es richtig funktioniert. Es ist für airgeddon sehr wichtig. Das Skript kann nicht weiterfahren"
-	arr["TURKISH",476]="Bir grafik X pencere sistemi tespit edilmedi. Zaten sahipseniz, düzgün çalıştığını kontrol edin. Airgeddon için şarttır. Komut devam edemiyor"
+	arr["TURKISH",476]="Bir grafik X pencere sistemi tespit edilmedi. Zaten sahipseniz, düzgün çalıştığını kontrol edin. airgeddon için şarttır. Komut devam edemiyor"
 
 	arr["ENGLISH",477]="The options in this menu containing the word \"permanently\" modify airgeddon to save the settings for the next time that is to be launched. However, you can always return to this menu to change the value of the option again"
 	arr["SPANISH",477]="Las opciones de este menú que contienen la palabra \"permanentemente\", modifican airgeddon para que incluso la siguiente vez que sea iniciado siga guardando la configuración. No obstante, siempre puedes volver a este menú a cambiar de nuevo el valor de la opción"
@@ -7939,7 +7939,7 @@ function language_strings() {
 	arr["FRENCH",590]="Vous pouvez modifier manuellement le fichier ${rc_path} pour modifier ses options. Vous pouvez également écrire \"flags\" sur la ligne de commande. Plus d'information sur: ${urlgithub_wiki}/Options"
 	arr["CATALAN",590]="Pots modificar manualment el fitxer ${rc_path} per modificar les seves opcions. També pots llançar \"flags\" a la línia d'ordres. Més informació a: ${urlgithub_wiki}/Options"
 	arr["PORTUGUESE",590]="Você pode modificar manualmente o arquivo ${rc_path} para alterar suas opções ou usar argumentos ao executar airgeddon na linha de comando. Mais informações em: ${urlgithub_wiki}/Options"
-	arr["RUSSIAN",590]="${pending_of_translation} Вы можете вручную изменить файл ${rc_path}, чтобы изменить его параметры. Вы также можете указать \"flags\" в командной строке. Дополнительная информация об опциях: ${urlgithub_wiki}/Options"
+	arr["RUSSIAN",590]="Вы можете вручную изменить файл ${rc_path}, чтобы изменить его опции. Вы также можете указать \"flags\" в командной строке. Дополнительная информация об опциях: ${urlgithub_wiki}/Options"
 	arr["GREEK",590]="Μπορείτε να τροποποιήσετε χειροκίνητα το αρχείο ${rc_path} για να αλλάξετε τις επιλογές του. Μπορείτε επίσης να βάλετε \"flags\" στη γραμμή εντολών. Περισσότερες πληροφορίες στο: ${urlgithub_wiki}/Options"
 	arr["ITALIAN",590]="Puoi modificare manualmente il file ${rc_path} per modificarne le opzioni. Puoi anche lanciare \"flags\" sulla linea di comando. Maggiori informazioni su: ${urlgithub_wiki}/Options"
 	arr["POLISH",590]="${pending_of_translation} Możesz ręcznie zmodyfikować plik ${rc_path} aby zmienić jego opcje. Możesz także wpisać \"flags\" w linii poleceń. Więcej informacji: ${urlgithub_wiki}/Options"

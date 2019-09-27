@@ -1,3 +1,7 @@
+### 9.23
+ - Fixed error printing hints
+ - Fixed problem with default values on options file creation
+
 ### 9.22
  - Improved certificates validations and error messages
  - Removed useless internet access DNS resolution method for captive portal Evil Twin, now pure dnsspoof
