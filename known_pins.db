@@ -2,7 +2,6 @@
 #Title........: known_pins.db
 #Description..: This is a WPS PIN database for routers that generate generic passwords.
 #Author.......: v1s1t0r
-#Date.........: 20190918
 #Bash Version.: 4.2 or later
 
 #Set PIN database. Keys are the first 6 bssid digits and are ordered

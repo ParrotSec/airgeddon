@@ -1,3 +1,14 @@
+airgeddon (10.0+parrot0) testing; urgency=medium
+
+ * Added plugins system
+ * Added example plugin: Missing dependencies auto-installation for some distros (Kali, Parrot, BlackArch)
+ * Improvements for Evil Twin on captive portal detection for newer devices
+ * Missing 5GHz channels added
+ * Github pull request template added and issue templates updated
+ * Fixed error on hex2ascii conversion for some WEP passwords
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sun, 03 Nov 2019 20:45:23 +0800
+
 airgeddon (9.23+parrot0) testing; urgency=medium
 
  * Fixed error printing hints

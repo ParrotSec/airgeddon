@@ -2,8 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Date.........: 20190924
-#Version......: 9.23
+#Version......: 10.0
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -40,6 +39,7 @@ essential_tools_names=(
 						"xterm"
 						"ip"
 						"lspci"
+						"ps"
 					)
 
 optional_tools_names=(
@@ -71,6 +71,16 @@ optional_tools_names=(
 
 update_tools=("curl")
 
+internal_tools=(
+				"xdpyinfo"
+				"ethtool"
+				"lsusb"
+				"rfkill"
+				"wget"
+				"ccze"
+				"xset"
+			)
+
 declare -A possible_package_names=(
 									[${essential_tools_names[0]}]="net-tools" #ifconfig
 									[${essential_tools_names[1]}]="wireless-tools / wireless_tools" #iwconfig
@@ -82,6 +92,7 @@ declare -A possible_package_names=(
 									[${essential_tools_names[7]}]="xterm" #xterm
 									[${essential_tools_names[8]}]="iproute2" #ip
 									[${essential_tools_names[9]}]="pciutils" #lspci
+									[${essential_tools_names[10]}]="procps / procps-ng" #ps
 									[${optional_tools_names[0]}]="aircrack-ng" #wpaclean
 									[${optional_tools_names[1]}]="crunch" #crunch
 									[${optional_tools_names[2]}]="aircrack-ng" #aireplay-ng
@@ -115,12 +126,13 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="9.23"
-language_strings_expected_version="9.23-1"
+airgeddon_version="10.0"
+language_strings_expected_version="10.0-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
 osversionfile_dir="/etc/"
+plugins_dir="plugins/"
 minimum_bash_version_required="4.2"
 resume_message=224
 abort_question=12
@@ -138,7 +150,7 @@ ghz="Ghz"
 band_24ghz="2.4${ghz}"
 band_5ghz="5${ghz}"
 valid_channels_24_ghz_regexp="([1-9]|1[0-4])"
-valid_channels_24_and_5_ghz_regexp="([1-9]|1[0-4]|3[68]|4[0468]|5[246]|6[024]|10[0248]|11[02])"
+valid_channels_24_and_5_ghz_regexp="([1-9]|1[0-4]|3[68]|4[02468]|5[02468]|6[024]|10[02468]|11[02468]|12[02468]|13[2468]|14[0249]|15[13579]|16[15])"
 minimum_wash_dualscan_version="1.6.5"
 
 #aircrack vars
@@ -172,7 +184,7 @@ wep_processes_file="wep_processes"
 
 #Docker vars
 docker_based_distro="Parrot"
-docker_io_dir="/io"
+docker_io_dir="/io/"
 
 #WPS vars
 minimum_reaver_pixiewps_version="1.5.2"
@@ -205,16 +217,16 @@ mail="v1s1t0r.1s.h3r3@gmail.com"
 author="v1s1t0r"
 
 #Dhcpd, Hostapd and misc Evil Twin vars
-ip_range="192.168.1.0"
-alt_ip_range="172.16.250.0"
-router_ip="192.168.1.1"
-alt_router_ip="172.16.250.1"
-broadcast_ip="192.168.1.255"
-alt_broadcast_ip="172.16.250.255"
-range_start="192.168.1.33"
-range_stop="192.168.1.100"
-alt_range_start="172.16.250.33"
-alt_range_stop="172.16.250.100"
+ip_range="192.169.1.0"
+alt_ip_range="192.167.1.0"
+router_ip="192.169.1.1"
+alt_router_ip="192.167.1.1"
+broadcast_ip="192.169.1.255"
+alt_broadcast_ip="192.167.1.255"
+range_start="192.169.1.33"
+range_stop="192.169.1.100"
+alt_range_start="192.167.1.33"
+alt_range_stop="192.167.1.100"
 std_c_mask="255.255.255.0"
 ip_mask="255.255.255.255"
 std_c_mask_cidr="24"
@@ -226,6 +238,7 @@ loopback_ip="127.0.0.1"
 loopback_ipv6="::1/128"
 routing_tmp_file="ag.iptables_nftables"
 dhcpd_file="ag.dhcpd.conf"
+hosts_file="ag.hosts"
 internet_dns1="8.8.8.8"
 internet_dns2="8.8.4.4"
 internet_dns3="139.130.4.5"
@@ -320,7 +333,7 @@ known_arm_compatible_distros=(
 							)
 
 #Hint vars
-declare main_hints=(128 134 163 437 438 442 445 516 590 626)
+declare main_hints=(128 134 163 437 438 442 445 516 590 626 660)
 declare dos_hints=(129 131 133)
 declare handshake_hints=(127 130 132 136)
 declare dos_handshake_hints=(142)
@@ -556,6 +569,11 @@ function option_toggle() {
 
 	debug_print
 
+	local required_reboot=0
+	if [[ -n "${2}" ]] && [[ "${2}" = "required_reboot" ]]; then
+		required_reboot=1
+	fi
+
 	local option_var_name="${1}"
 	local option_var_value="${!1}"
 
@@ -564,13 +582,19 @@ function option_toggle() {
 		if ! grep "${option_var_name}=false" "${rc_path}" > /dev/null; then
 			return 1
 		fi
-		eval "export ${option_var_name}=false"
+
+		if [ ${required_reboot} -eq 0 ]; then
+			eval "export ${option_var_name}=false"
+		fi
 	else
 		sed -ri "s:(${option_var_name})=(false):\1=true:" "${rc_path}" 2> /dev/null
 		if ! grep "${option_var_name}=true" "${rc_path}" > /dev/null; then
 			return 1
 		fi
-		eval "export ${option_var_name}=true"
+
+		if [ ${required_reboot} -eq 0 ]; then
+			eval "export ${option_var_name}=true"
+		fi
 	fi
 
 	case "${option_var_name}" in
@@ -618,47 +642,49 @@ function debug_print() {
 	if "${AIRGEDDON_DEBUG_MODE:-true}"; then
 
 		declare excluded_functions=(
-								"airmon_fix"
-								"ask_yesno"
-								"check_pending_of_translation"
-								"clean_env_vars"
-								"contains_element"
-								"create_rcfile"
-								"echo_blue"
-								"echo_brown"
-								"echo_cyan"
-								"echo_green"
-								"echo_green_title"
-								"echo_pink"
-								"echo_red"
-								"echo_red_slim"
-								"echo_white"
-								"echo_yellow"
-								"env_vars_initialization"
-								"env_vars_values_validation"
-								"generate_dynamic_line"
-								"initialize_colors"
-								"initialize_script_settings"
-								"interrupt_checkpoint"
-								"language_strings"
-								"last_echo"
-								"physical_interface_finder"
-								"print_hint"
-								"print_large_separator"
-								"print_simple_separator"
-								"read_yesno"
-								"remove_warnings"
-								"set_script_folder_and_name"
-								"special_text_missed_optional_tool"
-								"store_array"
-								"under_construction_message"
-							)
+							"airmon_fix"
+							"ask_yesno"
+							"check_pending_of_translation"
+							"clean_env_vars"
+							"contains_element"
+							"create_rcfile"
+							"echo_blue"
+							"echo_brown"
+							"echo_cyan"
+							"echo_green"
+							"echo_green_title"
+							"echo_pink"
+							"echo_red"
+							"echo_red_slim"
+							"echo_white"
+							"echo_yellow"
+							"env_vars_initialization"
+							"env_vars_values_validation"
+							"fix_autocomplete_chars"
+							"flying_saucer"
+							"generate_dynamic_line"
+							"initialize_colors"
+							"initialize_script_settings"
+							"interrupt_checkpoint"
+							"language_strings"
+							"last_echo"
+							"physical_interface_finder"
+							"print_hint"
+							"print_large_separator"
+							"print_simple_separator"
+							"read_yesno"
+							"remove_warnings"
+							"set_script_paths"
+							"special_text_missed_optional_tool"
+							"store_array"
+							"under_construction_message"
+						)
 
 		if (IFS=$'\n'; echo "${excluded_functions[*]}") | grep -qFx "${FUNCNAME[1]}"; then
 			return 1
 		fi
 
-		echo "Line:${BASH_LINENO[1]}" "${FUNCNAME[1]}"
+		echo "Line:${BASH_LINENO[2]}" "${FUNCNAME[1]}"
 	fi
 
 	return 0
@@ -675,7 +701,7 @@ function interrupt_checkpoint() {
 		last_buffered_type1=${2}
 		last_buffered_type2=${2}
 	else
-		if [ "${1}" -ne ${resume_message} ]; then
+		if [[ "${1}" -ne "${resume_message}" ]] 2>/dev/null && [[ "${1}" != "${resume_message}" ]]; then
 			last_buffered_message2=${last_buffered_message1}
 			last_buffered_message1=${1}
 			last_buffered_type2=${last_buffered_type1}
@@ -1630,6 +1656,11 @@ function option_menu() {
 	else
 		language_strings "${language}" 637
 	fi
+	if "${AIRGEDDON_PLUGINS_ENABLED:-true}"; then
+		language_strings "${language}" 651
+	else
+		language_strings "${language}" 652
+	fi
 	language_strings "${language}" 447
 	print_hint ${current_menu}
 
@@ -1871,13 +1902,22 @@ function option_menu() {
 		;;
 		10)
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
-				sed -ri "s:(AIRGEDDON_WINDOWS_HANDLING)=(xterm):\1=tmux:" "${rc_path}" 2> /dev/null
+				ask_yesno 657 "yes"
+				if [ "${yesno}" = "y" ]; then
+					sed -ri "s:(AIRGEDDON_WINDOWS_HANDLING)=(xterm):\1=tmux:" "${rc_path}" 2> /dev/null
+					echo
+					language_strings "${language}" 620 "yellow"
+					language_strings "${language}" 115 "read"
+				fi
 			else
-				sed -ri "s:(AIRGEDDON_WINDOWS_HANDLING)=(tmux):\1=xterm:" "${rc_path}" 2> /dev/null
+				ask_yesno 658 "yes"
+				if [ "${yesno}" = "y" ]; then
+					sed -ri "s:(AIRGEDDON_WINDOWS_HANDLING)=(tmux):\1=xterm:" "${rc_path}" 2> /dev/null
+					echo
+					language_strings "${language}" 620 "yellow"
+					language_strings "${language}" 115 "read"
+				fi
 			fi
-			echo
-			language_strings "${language}" 620 "yellow"
-			language_strings "${language}" 115 "read"
 		;;
 		11)
 			ask_yesno 639 "yes"
@@ -1890,6 +1930,24 @@ function option_menu() {
 			fi
 		;;
 		12)
+			if "${AIRGEDDON_PLUGINS_ENABLED:-true}"; then
+				ask_yesno 655 "yes"
+			else
+				ask_yesno 656 "yes"
+			fi
+
+			if [ "${yesno}" = "y" ]; then
+				if option_toggle "AIRGEDDON_PLUGINS_ENABLED" "required_reboot"; then
+					echo
+					language_strings "${language}" 620 "yellow"
+				else
+					echo
+					language_strings "${language}" 417 "red"
+				fi
+				language_strings "${language}" 115 "read"
+			fi
+		;;
+		13)
 			ask_yesno 478 "yes"
 			if [ "${yesno}" = "y" ]; then
 				get_current_permanent_language
@@ -2848,6 +2906,7 @@ function create_certificates_config_files() {
 }
 
 #Manage the questions to decide if custom certificates are used
+#shellcheck disable=SC2181
 function custom_certificates_integration() {
 
 	debug_print
@@ -2932,6 +2991,8 @@ function custom_certificates_integration() {
 function validate_certificates() {
 
 	debug_print
+	local certsresult
+	certsresult=0
 
 	if ! [ -f "${1}server.pem" ] || ! [ -r "${1}server.pem" ] || ! [ -f "${1}ca.pem" ] || ! [ -r "${1}ca.pem" ] || ! [ -f "${1}server.key" ] || ! [ -r "${1}server.key" ]; then
 		return 1
@@ -3217,7 +3278,7 @@ function set_wep_key_script() {
 
 	cat >&8 <<-'EOF'
 				wep_hex_key=$(eval "${wep_hex_key_cmd}")
-				wep_ascii_key=$(echo "${wep_hex_key}" | awk 'RT{printf "%c", strtonum("0x"RT)}' RS='[0-9]{2}')
+				wep_ascii_key=$(echo "${wep_hex_key}" | awk 'RT{printf "%c", strtonum("0x"RT)}' RS='[0-9A-Fa-f]{2}')
 	EOF
 
 	cat >&8 <<-EOF
@@ -4731,12 +4792,32 @@ function print_options() {
 		language_strings "${language}" 595 "blue"
 	fi
 
-	language_strings "${language}" 641 "blue"
-
+	reboot_required_text=""
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		if grep -q "AIRGEDDON_WINDOWS_HANDLING=tmux" "${rc_path}" 2> /dev/null; then
+			reboot_required_text="${reboot_required[${language}]}"
+		fi
 		language_strings "${language}" 618 "blue"
 	else
+		if grep -q "AIRGEDDON_WINDOWS_HANDLING=xterm" "${rc_path}" 2> /dev/null; then
+			reboot_required_text="${reboot_required[${language}]}"
+		fi
 		language_strings "${language}" 619 "blue"
+	fi
+
+	language_strings "${language}" 641 "blue"
+
+	reboot_required_text=""
+	if "${AIRGEDDON_PLUGINS_ENABLED:-true}"; then
+		if grep -q "AIRGEDDON_PLUGINS_ENABLED=false" "${rc_path}" 2> /dev/null; then
+			reboot_required_text="${reboot_required[${language}]}"
+		fi
+		language_strings "${language}" 653 "blue"
+	else
+		if grep -q "AIRGEDDON_PLUGINS_ENABLED=true" "${rc_path}" 2> /dev/null; then
+			reboot_required_text="${reboot_required[${language}]}"
+		fi
+		language_strings "${language}" 654 "blue"
 	fi
 }
 
@@ -5064,7 +5145,7 @@ function dependencies_modifications() {
 	if [ "${iptables_nftables}" -eq 0 ]; then
 		optional_tools_names=("${optional_tools_names[@]/nft/iptables}")
 		possible_package_names[${optional_tools_names[7]}]="iptables"
-		unset possible_package_names["nftables"]
+		unset possible_package_names["nft"]
 	fi
 }
 
@@ -5187,7 +5268,7 @@ function clean_env_vars() {
 
 	debug_print
 
-	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_MDK_VERSION AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE AIRGEDDON_WINDOWS_HANDLING
+	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_MDK_VERSION AIRGEDDON_PLUGINS_ENABLED AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE AIRGEDDON_WINDOWS_HANDLING
 }
 
 #Clean temporary files
@@ -5207,6 +5288,7 @@ function clean_tmpfiles() {
 	rm -rf "${tmpdir}${hostapd_wpe_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${hostapd_wpe_log}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${dhcpd_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${hosts_file}" >/dev/null 2>&1
 	rm -rf "${tmpdir}${control_et_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${control_enterprise_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}parsed_file" > /dev/null 2>&1
@@ -7105,12 +7187,7 @@ function manage_hashcat_pot() {
 		language_strings "${language}" 234 "yellow"
 		ask_yesno 235 "yes"
 		if [ "${yesno}" = "y" ]; then
-
 			hashcat_potpath="${default_save_path}"
-			lastcharhashcat_potpath=${hashcat_potpath: -1}
-			if [ "${lastcharhashcat_potpath}" != "/" ]; then
-				hashcat_potpath="${hashcat_potpath}/"
-			fi
 
 			local multiple_users=0
 			if [ "${1}" = "personal" ]; then
@@ -7214,10 +7291,6 @@ function manage_jtr_pot() {
 		ask_yesno 235 "yes"
 		if [ "${yesno}" = "y" ]; then
 			jtr_potpath="${default_save_path}"
-			lastcharjtr_potpath=${jtr_potpath: -1}
-			if [ "${lastcharjtr_potpath}" != "/" ]; then
-				jtr_potpath="${jtr_potpath}/"
-			fi
 
 			local multiple_users=0
 
@@ -7308,10 +7381,6 @@ function manage_aircrack_pot() {
 		ask_yesno 235 "yes"
 		if [ "${yesno}" = "y" ]; then
 			aircrack_potpath="${default_save_path}"
-			lastcharaircrack_potpath=${aircrack_potpath: -1}
-			if [ "${lastcharaircrack_potpath}" != "/" ]; then
-				aircrack_potpath="${aircrack_potpath}/"
-			fi
 			aircrackpot_filename="aircrack-${bssid}.txt"
 			aircrack_potpath="${aircrack_potpath}${aircrackpot_filename}"
 
@@ -7365,12 +7434,7 @@ function manage_asleap_pot() {
 			ask_yesno 235 "yes"
 			if [ "${yesno}" = "y" ]; then
 				local write_to_file=1
-
 				asleap_potpath="${default_save_path}"
-				lastcharasleap_potpath=${asleap_potpath: -1}
-				if [ "${lastcharasleap_potpath}" != "/" ]; then
-					asleap_potpath="${asleap_potpath}/"
-				fi
 				asleappot_filename="asleap_decrypted_password.txt"
 				asleap_potpath="${asleap_potpath}${asleappot_filename}"
 
@@ -7445,10 +7509,6 @@ function manage_ettercap_log() {
 	if [ "${yesno}" = "y" ]; then
 		ettercap_log=1
 		default_ettercap_logpath="${default_save_path}"
-		lastcharettercaplogpath=${default_ettercap_logpath: -1}
-		if [ "${lastcharettercaplogpath}" != "/" ]; then
-			ettercap_logpath="${default_ettercap_logpath}/"
-		fi
 		default_ettercaplogfilename="evil_twin_captured_passwords-${essid}.txt"
 		rm -rf "${tmpdir}${ettercap_file}"* > /dev/null 2>&1
 		tmp_ettercaplog="${tmpdir}${ettercap_file}"
@@ -7470,10 +7530,6 @@ function manage_bettercap_log() {
 	if [ "${yesno}" = "y" ]; then
 		bettercap_log=1
 		default_bettercap_logpath="${default_save_path}"
-		lastcharbettercaplogpath=${default_bettercap_logpath: -1}
-		if [ "${lastcharbettercaplogpath}" != "/" ]; then
-			bettercap_logpath="${default_bettercap_logpath}/"
-		fi
 		default_bettercaplogfilename="evil_twin_captured_passwords-bettercap-${essid}.txt"
 		rm -rf "${tmpdir}${bettercap_file}"* > /dev/null 2>&1
 		tmp_bettercaplog="${tmpdir}${bettercap_file}"
@@ -7490,11 +7546,8 @@ function manage_wps_log() {
 
 	debug_print
 
-	wps_potpath=$(env | grep ^HOME | awk -F = '{print $2}')
-	lastcharwps_potpath=${wps_potpath: -1}
-	if [ "${lastcharwps_potpath}" != "/" ]; then
-		wps_potpath="${wps_potpath}/"
-	fi
+	wps_potpath="${user_homedir}"
+
 	if [ -z "${wps_essid}" ]; then
 		wpspot_filename="wps_captured_key-${wps_bssid}.txt"
 	else
@@ -7513,11 +7566,7 @@ function manage_wep_log() {
 
 	debug_print
 
-	wep_potpath=$(env | grep ^HOME | awk -F = '{print $2}')
-	lastcharwep_potpath=${wep_potpath: -1}
-	if [ "${lastcharwep_potpath}" != "/" ]; then
-		wep_potpath="${wep_potpath}/"
-	fi
+	wep_potpath="${user_homedir}"
 	weppot_filename="wep_captured_key-${essid}.txt"
 	wep_potpath="${wep_potpath}${weppot_filename}"
 
@@ -7532,12 +7581,7 @@ function manage_enterprise_log() {
 
 	debug_print
 
-	enterprise_potpath=$(env | grep ^HOME | awk -F = '{print $2}')
-
-	lastcharenterprise_potpath=${enterprise_potpath: -1}
-	if [ "${lastcharenterprise_potpath}" != "/" ]; then
-		enterprise_potpath="${enterprise_potpath}/"
-	fi
+	enterprise_potpath="${user_homedir}"
 	enterprisepot_suggested_dirname="enterprise_captured-${essid}"
 	enterprise_potpath="${enterprise_potpath}${enterprisepot_suggested_dirname}/"
 
@@ -7552,12 +7596,7 @@ function manage_enterprise_certs() {
 
 	debug_print
 
-	enterprisecertspath=$(env | grep ^HOME | awk -F = '{print $2}')
-
-	lastcharenterprisecertspath=${enterprisecertspath: -1}
-	if [ "${lastcharenterprisecertspath}" != "/" ]; then
-		enterprisecertspath="${enterprisecertspath}/"
-	fi
+	enterprisecertspath="${user_homedir}"
 	enterprisecerts_suggested_dirname="enterprise_certs"
 	enterprisecertspath="${enterprisecertspath}${enterprisecerts_suggested_dirname}/"
 
@@ -7591,12 +7630,8 @@ function manage_captive_portal_log() {
 	debug_print
 
 	default_et_captive_portal_logpath="${default_save_path}"
-	lastcharetcaptiveportallogpath=${default_et_captive_portal_logpath: -1}
-	if [ "${lastcharetcaptiveportallogpath}" != "/" ]; then
-		et_captive_portal_logpath="${default_et_captive_portal_logpath}/"
-	fi
 	default_et_captive_portallogfilename="evil_twin_captive_portal_password-${essid}.txt"
-	default_et_captive_portal_logpath="${et_captive_portal_logpath}${default_et_captive_portallogfilename}"
+	default_et_captive_portal_logpath="${default_et_captive_portal_logpath}${default_et_captive_portallogfilename}"
 	validpath=1
 	while [[ "${validpath}" != "0" ]]; do
 		read_path "et_captive_portallog"
@@ -9866,11 +9901,22 @@ function launch_dns_blackhole() {
 	debug_print
 
 	recalculate_windows_sizes
-	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"DNS\"" "${optional_tools_names[12]} -i ${interface}" "DNS"
+
+	tmpfiles_toclean=1
+	rm -rf "${tmpdir}${hosts_file}" > /dev/null 2>&1
+
+	{
+	echo -e "${et_ip_router}\t*.*"
+	echo -e "172.217.5.238\tgoogle.com"
+	echo -e "172.217.13.78\tclients3.google.com"
+	echo -e "172.217.13.78\tclients4.google.com"
+	} >> "${tmpdir}${hosts_file}"
+
+	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"DNS\"" "${optional_tools_names[12]} -i ${interface} -f \"${tmpdir}${hosts_file}\"" "DNS"
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
 		et_processes+=($!)
 	else
-		get_tmux_process_id "${optional_tools_names[12]} -i ${interface}"
+		get_tmux_process_id "${optional_tools_names[12]} -i ${interface} -f \"${tmpdir}${hosts_file}\""
 		et_processes+=("${global_process_pid}")
 		global_process_pid=""
 	fi
@@ -11041,10 +11087,6 @@ function capture_handshake_evil_twin() {
 	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
 
 		handshakepath="${default_save_path}"
-		lastcharhandshakepath=${handshakepath: -1}
-		if [ "${lastcharhandshakepath}" != "/" ]; then
-			handshakepath="${handshakepath}/"
-		fi
 		handshakefilename="handshake-${bssid}.cap"
 		handshakepath="${handshakepath}${handshakefilename}"
 
@@ -11567,10 +11609,6 @@ function launch_handshake_capture() {
 	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
 
 		handshakepath="${default_save_path}"
-		lastcharhandshakepath=${handshakepath: -1}
-		if [ "${lastcharhandshakepath}" != "/" ]; then
-			handshakepath="${handshakepath}/"
-		fi
 		handshakefilename="handshake-${bssid}.cap"
 		handshakepath="${handshakepath}${handshakefilename}"
 
@@ -13012,7 +13050,7 @@ function validate_wash_dualscan_version() {
 }
 
 #Set the script folder var if necessary
-function set_script_folder_and_name() {
+function set_script_paths() {
 
 	debug_print
 
@@ -13027,6 +13065,17 @@ function set_script_folder_and_name() {
 		scriptfolder="${scriptfolder%/*}/"
 		scriptname="${0##*/}"
 	fi
+
+	user_homedir=$(env | grep ^HOME | awk -F = '{print $2}' 2> /dev/null)
+	lastcharuser_homedir=${user_homedir: -1}
+	if [ "${lastcharuser_homedir}" != "/" ]; then
+		user_homedir="${user_homedir}/"
+	fi
+
+	plugins_paths=(
+					"${scriptfolder}${plugins_dir}"
+					"${user_homedir}.airgeddon/${plugins_dir}"
+				)
 }
 
 #Set the default directory for saving files
@@ -13037,7 +13086,7 @@ function set_default_save_path() {
 	if [ "${is_docker}" -eq 1 ]; then
 		default_save_path="${docker_io_dir}"
 	else
-		default_save_path=$(env | grep ^HOME | awk -F = '{print $2}')
+		default_save_path="${user_homedir}"
 	fi
 }
 
@@ -13512,11 +13561,6 @@ function general_checkings() {
 	debug_print
 
 	compatible=0
-	distro="Unknown Linux"
-
-	detect_distro_phase1
-	detect_distro_phase2
-	special_distro_features
 	check_if_kill_needed
 
 	if [ "${distro}" = "Unknown Linux" ]; then
@@ -13535,7 +13579,6 @@ function general_checkings() {
 		return
 	fi
 
-	language_strings "${language}" 115 "read"
 	exit_code=1
 	exit_script_option
 }
@@ -13690,6 +13733,7 @@ function check_compatibility() {
 			language_strings "${language}" 581 "blue"
 			echo
 		fi
+		language_strings "${language}" 115 "read"
 		return
 	fi
 
@@ -13699,8 +13743,9 @@ function check_compatibility() {
 		if [ ${optional_toolsok} -eq 0 ]; then
 			echo
 			language_strings "${language}" 219 "yellow"
-			echo
+
 			if [ ${fake_beef_found} -eq 1 ]; then
+				echo
 				language_strings "${language}" 401 "red"
 				echo
 			fi
@@ -13858,6 +13903,7 @@ function initialize_script_settings() {
 
 	debug_print
 
+	distro="Unknown Linux"
 	is_docker=0
 	exit_code=0
 	check_kill_needed=0
@@ -13879,7 +13925,7 @@ function initialize_script_settings() {
 	pin_dbfile_checked=0
 	beef_found=0
 	fake_beef_found=0
-	set_script_folder_and_name
+	set_script_paths
 	http_proxy_set=0
 	hccapx_needed=0
 	xterm_ok=1
@@ -14040,43 +14086,43 @@ function recalculate_windows_sizes() {
 #shellcheck disable=SC2145
 function env_vars_initialization() {
 
-	debug_print
-
 	ordered_options_env_vars=(
-									"AIRGEDDON_AUTO_UPDATE"
-									"AIRGEDDON_SKIP_INTRO"
-									"AIRGEDDON_BASIC_COLORS"
-									"AIRGEDDON_EXTENDED_COLORS"
-									"AIRGEDDON_AUTO_CHANGE_LANGUAGE"
-									"AIRGEDDON_SILENT_CHECKS"
-									"AIRGEDDON_PRINT_HINTS"
-									"AIRGEDDON_5GHZ_ENABLED"
-									"AIRGEDDON_FORCE_IPTABLES"
-									"AIRGEDDON_MDK_VERSION"
-									"AIRGEDDON_DEVELOPMENT_MODE"
-									"AIRGEDDON_DEBUG_MODE"
-									"AIRGEDDON_WINDOWS_HANDLING"
+									"AIRGEDDON_AUTO_UPDATE" #0
+									"AIRGEDDON_SKIP_INTRO" #1
+									"AIRGEDDON_BASIC_COLORS" #2
+									"AIRGEDDON_EXTENDED_COLORS" #3
+									"AIRGEDDON_AUTO_CHANGE_LANGUAGE" #4
+									"AIRGEDDON_SILENT_CHECKS" #5
+									"AIRGEDDON_PRINT_HINTS" #6
+									"AIRGEDDON_5GHZ_ENABLED" #7
+									"AIRGEDDON_FORCE_IPTABLES" #8
+									"AIRGEDDON_MDK_VERSION" #9
+									"AIRGEDDON_PLUGINS_ENABLED" #10
+									"AIRGEDDON_DEVELOPMENT_MODE" #11
+									"AIRGEDDON_DEBUG_MODE" #12
+									"AIRGEDDON_WINDOWS_HANDLING" #13
 									)
 
 	declare -gA nonboolean_options_env_vars
-	nonboolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="mdk4"
-	nonboolean_options_env_vars["${ordered_options_env_vars[12]},default_value"]="xterm"
+	nonboolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="mdk4" #mdk_version
+	nonboolean_options_env_vars["${ordered_options_env_vars[13]},default_value"]="xterm" #windows_handling
 
 	nonboolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
-	nonboolean_options_env_vars["${ordered_options_env_vars[12]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[12]},'default_value']}"
+	nonboolean_options_env_vars["${ordered_options_env_vars[13]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[13]},'default_value']}"
 
 	declare -gA boolean_options_env_vars
-	boolean_options_env_vars["${ordered_options_env_vars[0]},default_value"]="true"
-	boolean_options_env_vars["${ordered_options_env_vars[1]},default_value"]="false"
-	boolean_options_env_vars["${ordered_options_env_vars[2]},default_value"]="true"
-	boolean_options_env_vars["${ordered_options_env_vars[3]},default_value"]="true"
-	boolean_options_env_vars["${ordered_options_env_vars[4]},default_value"]="true"
-	boolean_options_env_vars["${ordered_options_env_vars[5]},default_value"]="false"
-	boolean_options_env_vars["${ordered_options_env_vars[6]},default_value"]="true"
-	boolean_options_env_vars["${ordered_options_env_vars[7]},default_value"]="true"
-	boolean_options_env_vars["${ordered_options_env_vars[8]},default_value"]="false"
-	boolean_options_env_vars["${ordered_options_env_vars[10]},default_value"]="false"
-	boolean_options_env_vars["${ordered_options_env_vars[11]},default_value"]="false"
+	boolean_options_env_vars["${ordered_options_env_vars[0]},default_value"]="true" #auto_update
+	boolean_options_env_vars["${ordered_options_env_vars[1]},default_value"]="false" #skip_intro
+	boolean_options_env_vars["${ordered_options_env_vars[2]},default_value"]="true" #basic_colors
+	boolean_options_env_vars["${ordered_options_env_vars[3]},default_value"]="true" #extended_colors
+	boolean_options_env_vars["${ordered_options_env_vars[4]},default_value"]="true" #auto_change_language
+	boolean_options_env_vars["${ordered_options_env_vars[5]},default_value"]="false" #silent_checks
+	boolean_options_env_vars["${ordered_options_env_vars[6]},default_value"]="true" #print_hints
+	boolean_options_env_vars["${ordered_options_env_vars[7]},default_value"]="true" #5ghz_enabled
+	boolean_options_env_vars["${ordered_options_env_vars[8]},default_value"]="false" #force_iptables
+	boolean_options_env_vars["${ordered_options_env_vars[10]},default_value"]="true" #plugins_enabled
+	boolean_options_env_vars["${ordered_options_env_vars[11]},default_value"]="false" #development_mode
+	boolean_options_env_vars["${ordered_options_env_vars[12]},default_value"]="false" #debug_mode
 
 	boolean_options_env_vars["${ordered_options_env_vars[0]},rcfile_text"]="#Enabled true / Disabled false - Auto update feature (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[0]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[1]},rcfile_text"]="#Enabled true / Disabled false - Skip intro (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[1]},'default_value']}"
@@ -14087,8 +14133,9 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[6]},rcfile_text"]="#Enabled true / Disabled false - Print help hints on menus - Default value ${boolean_options_env_vars[${ordered_options_env_vars[6]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[7]},rcfile_text"]="#Enabled true / Disabled false - Enable 5Ghz support (it has no effect if your cards are not 5Ghz compatible cards) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[7]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[8]},rcfile_text"]="#Enabled true / Disabled false - Force to use iptables instead of nftables (it has no effect if nftables are not present) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[8]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[11]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Enable plugins system - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[11]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[12]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[12]},'default_value']}"
 
 	readarray -t ENV_VARS_ELEMENTS < <(printf %s\\n "${!nonboolean_options_env_vars[@]} ${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
 	readarray -t ENV_BOOLEAN_VARS_ELEMENTS < <(printf %s\\n "${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
@@ -14514,114 +14561,152 @@ function manage_output() {
 	esac
 }
 
-#Script starting point
-function main() {
+#Plugins initialization, parsing and validations handling
+function parse_plugins() {
 
-	initialize_script_settings
-	initialize_colors
-	env_vars_initialization
+	plugins_enabled=()
 
-	debug_print
+	shopt -s nullglob
+	for path in "${plugins_paths[@]}"; do
+		if [ -d "${path}" ]; then
+			for file in "${path}"*.sh; do
+				if [ "${file}" != "${path}plugin_template.sh" ]; then
 
-	remap_colors
+					plugin_short_name="${file##*/}"
+					plugin_short_name="${plugin_short_name%.sh*}"
 
-	clear
-	current_menu="pre_main_menu"
-	docker_detection
-	set_default_save_path
-
-	if "${AIRGEDDON_AUTO_CHANGE_LANGUAGE:-true}"; then
-		autodetect_language
-	fi
-
-	check_language_strings
-
-	if [ ${tmux_error} -eq 1 ]; then
-		language_strings "${language}" 86 "title"
-		echo
-		language_strings "${language}" 621 "yellow"
-		language_strings "${language}" 115 "read"
-		create_tmux_session "${session_name}" "false"
-
-		exit_code=1
-		exit ${exit_code}
-	fi
-
-	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
-		check_xwindow_system
-		detect_screen_resolution
-	fi
-
-	iptables_nftables_detection
-	set_mdk_version
-	dependencies_modifications
-	set_possible_aliases
-	initialize_optional_tools_values
-
-	if ! "${AIRGEDDON_DEVELOPMENT_MODE:-false}"; then
-		if ! "${AIRGEDDON_SKIP_INTRO:-false}"; then
-			language_strings "${language}" 86 "title"
-			language_strings "${language}" 6 "blue"
-			echo
-			if check_window_size_for_intro; then
-				print_intro
-			else
-				language_strings "${language}" 228 "green"
-				echo
-				language_strings "${language}" 395 "yellow"
-			sleep 3
-			fi
-		fi
-
-		clear
-		language_strings "${language}" 86 "title"
-		language_strings "${language}" 7 "pink"
-		language_strings "${language}" 114 "pink"
-
-		if [ ${autochanged_language} -eq 1 ]; then
-			echo
-			language_strings "${language}" 2 "yellow"
-		fi
-
-		check_bash_version
-		check_root_permissions
-
-		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
-			echo
-			if [[ ${resolution_detected} -eq 1 ]] && [[ "${xterm_ok}" -eq 1 ]]; then
-				language_strings "${language}" 294 "blue"
-			else
-				if [ "${xterm_ok}" -eq 0 ]; then
-					language_strings "${language}" 476 "red"
-					exit_code=1
-					exit_script_option
-				else
-					language_strings "${language}" 295 "red"
-					echo
-					language_strings "${language}" 300 "yellow"
+					#shellcheck source=./plugins/missing_dependencies.sh
+					source "${file}"
+					if [ ${plugin_enabled} -eq 1 ]; then
+						validate_plugin_requirements
+						plugin_validation_result=$?
+						if [ "${plugin_validation_result}" -eq 0 ]; then
+							plugins_enabled+=("${plugin_short_name}")
+						fi
+					fi
 				fi
-			fi
+			done
 		fi
+	done
+	shopt -u nullglob
+}
 
-		echo
-		language_strings "${language}" 8 "blue"
-		print_known_distros
-		echo
-		language_strings "${language}" 9 "blue"
-		general_checkings
-		language_strings "${language}" 115 "read"
+#Validate if plugin meets the needed requirements
+function validate_plugin_requirements() {
 
-		airmonzc_security_check
-		check_update_tools
+	if [ -n "${plugin_minimum_ag_affected_version}" ]; then
+		if compare_floats_greater_than "${plugin_minimum_ag_affected_version}" "${airgeddon_version}"; then
+			return 1
+		fi
 	fi
 
-	print_configuration_vars_issues
-	initialize_extended_colorized_output
-	set_windows_sizes
-	select_interface
-	initialize_menu_options_dependencies
-	remove_warnings
-	main_menu
+	if [ -n "${plugin_maximum_ag_affected_version}" ]; then
+		if compare_floats_greater_than "${airgeddon_version}" "${plugin_maximum_ag_affected_version}"; then
+			return 1
+		fi
+	fi
+
+	if [ "${plugin_distros_supported[0]}" != "*" ]; then
+
+		for item in "${plugin_distros_supported[@]}"; do
+			if [ "${item}" = "${distro}" ]; then
+				return 0
+			fi
+		done
+
+		return 2
+	fi
+
+	return 0
+}
+
+#Apply modifications to functions with defined plugins changes
+#shellcheck disable=SC2086,SC2001
+function apply_plugin_functions_rewriting() {
+
+	declare -A function_hooks
+
+	local original_function
+	local action
+
+	for plugin in "${plugins_enabled[@]}"; do
+		for current_function in $(compgen -A function "${plugin}_" | grep -e "[override|prehook|posthook]"); do
+			original_function=$(echo ${current_function} | sed "s/^${plugin}_\(override\)*\(prehook\)*\(posthook\)*_//")
+			action=$(echo ${current_function} | sed "s/^${plugin}_\(override\)*\(prehook\)*\(posthook\)*_.*$/\1\2\3/")
+
+			if ! declare -F ${original_function} &>/dev/null; then
+				echo
+				language_strings "${language}" 659 "red"
+				exit_code=1
+				exit_script_option
+			fi
+
+			if printf '%s\n' "${!function_hooks[@]}" | grep -x -q "${original_function},${action}"; then
+				echo
+				language_strings "${language}" 661 "red"
+				exit_code=1
+				exit_script_option
+			fi
+
+			if ! printf '%s\n' "${hooked_functions[@]}" | grep -x -q "${original_function}"; then
+				hooked_functions+=("${original_function}")
+			fi
+			function_hooks[${original_function},${action}]=${plugin}
+		done
+	done
+
+	local function_modifications
+	local arguments
+	local actions=("prehook" "override" "posthook")
+
+	for current_function in "${hooked_functions[@]}"; do
+		arguments="${current_function} "
+		function_modifications=$(declare -f ${current_function} | sed "1c${current_function}_original ()")
+
+		for action in "${actions[@]}"; do
+			if printf '%s\n' "${!function_hooks[@]}" | grep -x -q "${current_function},${action}"; then
+				arguments+="true "
+				function_name="${function_hooks[${current_function},${action}]}_${action}_${current_function}"
+				function_modifications+=$'\n'"$(declare -f ${function_name} | sed "1c${current_function}_${action} ()")"
+			else
+				arguments+="false "
+			fi
+		done
+
+		arguments+="\"\${@}\""
+		function_modifications+=$'\n'"${current_function} () {"$'\n'" plugin_function_call_handler ${arguments}"$'\n'"}"
+		eval "${function_modifications}"
+	done
+}
+
+#Plugins function handler in charge of managing prehook, posthooks and override function calls
+function plugin_function_call_handler() {
+
+	local function_name=${1}
+	local prehook_enabled=${2}
+	local override_enabled=${3}
+	local posthook_enabled=${4}
+	local funtion_call="${function_name}_original"
+
+	if [ "${prehook_enabled}" = true ]; then
+		local prehook_funcion_name="${function_name}_prehook"
+		${prehook_funcion_name} "${@:5:${#}}"
+	fi
+
+	if [ "${override_enabled}" = true ]; then
+		funtion_call="${function_name}_override"
+	fi
+
+	${funtion_call} "${@:5:${#}}"
+
+	local result=${?}
+	if [ "${posthook_enabled}" = true ]; then
+		local posthook_funcion_name="${function_name}_posthook"
+		${posthook_funcion_name} ${result}
+		result=${?}
+	fi
+
+	return ${result}
 }
 
 #Avoid the problem of using airmon-zc without ethtool or lspci installed
@@ -15063,6 +15148,122 @@ function echo_white() {
 	debug_print
 
 	last_echo "${1}" "${white_color}"
+}
+
+#Script starting point
+function main() {
+
+	initialize_script_settings
+	initialize_colors
+	env_vars_initialization
+	detect_distro_phase1
+	detect_distro_phase2
+	special_distro_features
+
+	if "${AIRGEDDON_AUTO_CHANGE_LANGUAGE:-true}"; then
+		autodetect_language
+	fi
+
+	check_language_strings
+	iptables_nftables_detection
+	set_mdk_version
+	dependencies_modifications
+
+	if "${AIRGEDDON_PLUGINS_ENABLED:-true}"; then
+		parse_plugins
+		apply_plugin_functions_rewriting
+	fi
+
+	remap_colors
+
+	clear
+	current_menu="pre_main_menu"
+	docker_detection
+	set_default_save_path
+
+	if [ ${tmux_error} -eq 1 ]; then
+		language_strings "${language}" 86 "title"
+		echo
+		language_strings "${language}" 621 "yellow"
+		language_strings "${language}" 115 "read"
+		create_tmux_session "${session_name}" "false"
+
+		exit_code=1
+		exit ${exit_code}
+	fi
+
+	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+		check_xwindow_system
+		detect_screen_resolution
+	fi
+
+	set_possible_aliases
+	initialize_optional_tools_values
+
+	if ! "${AIRGEDDON_DEVELOPMENT_MODE:-false}"; then
+		if ! "${AIRGEDDON_SKIP_INTRO:-false}"; then
+			language_strings "${language}" 86 "title"
+			language_strings "${language}" 6 "blue"
+			echo
+			if check_window_size_for_intro; then
+				print_intro
+			else
+				language_strings "${language}" 228 "green"
+				echo
+				language_strings "${language}" 395 "yellow"
+			sleep 3
+			fi
+		fi
+
+		clear
+		language_strings "${language}" 86 "title"
+		language_strings "${language}" 7 "pink"
+		language_strings "${language}" 114 "pink"
+
+		if [ ${autochanged_language} -eq 1 ]; then
+			echo
+			language_strings "${language}" 2 "yellow"
+		fi
+
+		check_bash_version
+		check_root_permissions
+
+		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
+			echo
+			if [[ ${resolution_detected} -eq 1 ]] && [[ "${xterm_ok}" -eq 1 ]]; then
+				language_strings "${language}" 294 "blue"
+			else
+				if [ "${xterm_ok}" -eq 0 ]; then
+					language_strings "${language}" 476 "red"
+					exit_code=1
+					exit_script_option
+				else
+					language_strings "${language}" 295 "red"
+					echo
+					language_strings "${language}" 300 "yellow"
+				fi
+			fi
+		fi
+
+		echo
+		language_strings "${language}" 8 "blue"
+		print_known_distros
+		echo
+		language_strings "${language}" 9 "blue"
+		general_checkings
+		language_strings "${language}" 115 "read"
+
+		airmonzc_security_check
+		check_update_tools
+	fi
+
+	print_configuration_vars_issues
+	initialize_extended_colorized_output
+	set_windows_sizes
+	select_interface
+	initialize_menu_options_dependencies
+	remove_warnings
+	main_menu
 }
 
 #Script starts to executing stuff from this point, traps and then main function

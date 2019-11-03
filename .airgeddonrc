@@ -28,6 +28,9 @@ AIRGEDDON_FORCE_IPTABLES=false
 #Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value mdk4
 AIRGEDDON_MDK_VERSION=mdk4
 
+#Enabled true / Disabled false - Enable plugins system - Default value true
+AIRGEDDON_PLUGINS_ENABLED=true
+
 #Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value false
 AIRGEDDON_DEVELOPMENT_MODE=false
 
