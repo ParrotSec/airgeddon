@@ -26,7 +26,7 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
 3. Translate the strings located in `language_strings.sh` and the existing phrases _language_strings_handling_messages function_ in `airgeddon.sh`.
 4. If you want to create a pull request with a new language to be added, at least the 80% of the phrases must be translated and the rest must be done with at least _an automatic-translation_ system and marked with PoT (Pending of Translation) mark.
 5. Remember that pull requests done over master branch will be rejected. Read the git workflow policy first.
-6. After verification of and acceptation of the pull request, you can be added as a collaborator on the project to push directly on the repository instead of making pull requests.
+6. After verification of and acceptation of the pull request, you can be added as a collaborator on the project to push directly on the repository instead of submitting pull requests.
 7. Knowledge about `git` is mandatory (at least basic commands) to push directly into the project repository.
 
 ## Collaborating Developers and Plugins Development
@@ -46,12 +46,12 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
 8. Direct push to [Master] is not allowed. Pull Requests to [Master] are not allowed. Should be done over [Dev] or any other branch. They require revision and approvement. Read the git workflow policy first. 
 9. All the development and coding must be in English.
 
-*Be sure to merge the latest from "upstream" before making a pull request!*
+*Be sure to merge the latest from "upstream" before submitting a pull request!*
 
 #### For plugins development:
 
 1. Read carefully the [Wiki Plugins Development Section].
-2. Plugins Pull Requests will be never accepted. Plugins MUST be external to this repository.
+2. Plugins Pull Requests will never be accepted. Plugins MUST be external to this repository.
 3. Develop your plugin following the guidelines and using the plugin template to keep the needed structure.
 4. If you want to add your plugin to [Wiki Plugins Hall of Fame Section], follow the instructions explained there. Don't open an issue.
 

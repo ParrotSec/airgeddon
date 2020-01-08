@@ -1,3 +1,13 @@
+airgeddon (10.01+parrot0) testing; urgency=medium
+
+ * Removed deprecated ifconfig and iwconfig commands and dependencies
+ * Fixed error on enterprise certificates validation
+ * Added autoselection for secondary interface if only one existing
+ * Airmon compatibility check system refactored
+ * Fixed error in default paths trophy files for ettercap/bettercap
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Wed, 08 Jan 2020 10:23:36 +0700
+
 airgeddon (10.0+parrot0) testing; urgency=medium
 
  * Added plugins system

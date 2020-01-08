@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.0
+#Version......: 10.01
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -29,8 +29,6 @@ declare -A lang_association=(
 
 #Tools vars
 essential_tools_names=(
-						"ifconfig"
-						"iwconfig"
 						"iw"
 						"awk"
 						"airmon-ng"
@@ -82,17 +80,15 @@ internal_tools=(
 			)
 
 declare -A possible_package_names=(
-									[${essential_tools_names[0]}]="net-tools" #ifconfig
-									[${essential_tools_names[1]}]="wireless-tools / wireless_tools" #iwconfig
-									[${essential_tools_names[2]}]="iw" #iw
-									[${essential_tools_names[3]}]="awk / gawk" #awk
-									[${essential_tools_names[4]}]="aircrack-ng" #airmon-ng
-									[${essential_tools_names[5]}]="aircrack-ng" #airodump-ng
-									[${essential_tools_names[6]}]="aircrack-ng" #aircrack-ng
-									[${essential_tools_names[7]}]="xterm" #xterm
-									[${essential_tools_names[8]}]="iproute2" #ip
-									[${essential_tools_names[9]}]="pciutils" #lspci
-									[${essential_tools_names[10]}]="procps / procps-ng" #ps
+									[${essential_tools_names[0]}]="iw" #iw
+									[${essential_tools_names[1]}]="awk / gawk" #awk
+									[${essential_tools_names[2]}]="aircrack-ng" #airmon-ng
+									[${essential_tools_names[3]}]="aircrack-ng" #airodump-ng
+									[${essential_tools_names[4]}]="aircrack-ng" #aircrack-ng
+									[${essential_tools_names[5]}]="xterm" #xterm
+									[${essential_tools_names[6]}]="iproute2" #ip
+									[${essential_tools_names[7]}]="pciutils" #lspci
+									[${essential_tools_names[8]}]="procps / procps-ng" #ps
 									[${optional_tools_names[0]}]="aircrack-ng" #wpaclean
 									[${optional_tools_names[1]}]="crunch" #crunch
 									[${optional_tools_names[2]}]="aircrack-ng" #aireplay-ng
@@ -126,8 +122,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.0"
-language_strings_expected_version="10.0-1"
+airgeddon_version="10.01"
+language_strings_expected_version="10.01-1"
 standardhandshake_filename="handshake-01.cap"
 timeout_capture_handshake="20"
 tmpdir="/tmp/"
@@ -831,11 +827,11 @@ function check_monitor_enabled() {
 
 	debug_print
 
-	mode=$(iwconfig "${1}" 2> /dev/null | grep Mode: | awk '{print $4}' | cut -d ':' -f 2)
+	mode=$(iw "${1}" info 2> /dev/null | grep type | awk '{print $2}')
 
 	current_iface_on_messages="${1}"
 
-	if [[ ${mode} != "Monitor" ]]; then
+	if [[ ${mode^} != "Monitor" ]]; then
 		return 1
 	fi
 	return 0
@@ -846,19 +842,7 @@ function check_interface_wifi() {
 
 	debug_print
 
-	execute_iwconfig_fix "${1}"
-	return $?
-}
-
-#Execute the iwconfig fix to know if an interface is a wifi card or not
-function execute_iwconfig_fix() {
-
-	debug_print
-
-	iwconfig_fix
-	iwcmd="iwconfig ${1} ${iwcmdfix} > /dev/null 2> /dev/null"
-	eval "${iwcmd}"
-
+	iw "${1}" info > /dev/null 2>&1
 	return $?
 }
 
@@ -914,6 +898,30 @@ function check_interface_coherence() {
 	fi
 
 	return ${interface_auto_change}
+}
+
+#Check if an adapter is compatible to airmon
+function check_airmon_compatibility() {
+
+	debug_print
+
+	if [ "${1}" = "interface" ]; then
+		set_chipset "${interface}" "read_only"
+
+		if ! iw dev "${interface}" set bitrates legacy-2.4 1 > /dev/null 2>&1; then
+			interface_airmon_compatible=0
+		else
+			interface_airmon_compatible=1
+		fi
+	else
+		set_chipset "${secondary_wifi_interface}" "read_only"
+
+		if ! iw dev "${secondary_wifi_interface}" set bitrates legacy-2.4 1 > /dev/null 2>&1; then
+			secondary_interface_airmon_compatible=0
+		else
+			secondary_interface_airmon_compatible=1
+		fi
+	fi
 }
 
 #Add contributing footer to a file
@@ -1296,8 +1304,8 @@ function prepare_et_monitor() {
 	iface_monitor_et_deauth="mon${iface_phy_number}"
 
 	iw phy "${phy_interface}" interface add "${iface_monitor_et_deauth}" type monitor 2> /dev/null
-	ifconfig "${iface_monitor_et_deauth}" up > /dev/null 2>&1
-	iwconfig "${iface_monitor_et_deauth}" channel "${channel}" > /dev/null 2>&1
+	ip link set "${iface_monitor_et_deauth}" up > /dev/null 2>&1
+	iw "${iface_monitor_et_deauth}" set channel "${channel}" > /dev/null 2>&1
 }
 
 #Assure the mode of the interface before the Evil Twin or Enterprise process
@@ -1308,10 +1316,13 @@ function prepare_et_interface() {
 	et_initial_state=${ifacemode}
 
 	if [ "${ifacemode}" != "Managed" ]; then
+		check_airmon_compatibility "interface"
 		if [ "${interface_airmon_compatible}" -eq 1 ]; then
+
 			new_interface=$(${airmon} stop "${interface}" 2> /dev/null | grep station | head -n 1)
 			ifacemode="Managed"
 			[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
+
 			if [ "${interface}" != "${new_interface}" ]; then
 				if check_interface_coherence; then
 					interface=${new_interface}
@@ -1321,6 +1332,15 @@ function prepare_et_interface() {
 				fi
 				echo
 				language_strings "${language}" 15 "yellow"
+			fi
+		else
+			if ! set_mode_without_airmon "${interface}" "managed"; then
+				echo
+				language_strings "${language}" 1 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			else
+				ifacemode="Managed"
 			fi
 		fi
 	fi
@@ -1394,7 +1414,7 @@ function managed_option() {
 	disable_rfkill
 
 	language_strings "${language}" 17 "blue"
-	ifconfig "${1}" up
+	ip link set "${1}" up > /dev/null 2>&1
 
 	if [ "${1}" = "${interface}" ]; then
 		if [ "${interface_airmon_compatible}" -eq 0 ]; then
@@ -1461,48 +1481,37 @@ function monitor_option() {
 	disable_rfkill
 
 	language_strings "${language}" 18 "blue"
-	ifconfig "${1}" up
+	ip link set "${1}" up > /dev/null 2>&1
 
-	if ! iwconfig "${1}" rate 1M > /dev/null 2>&1; then
-		if ! set_mode_without_airmon "${1}" "monitor"; then
-			echo
-			language_strings "${language}" 20 "red"
-			language_strings "${language}" 115 "read"
-			return 1
-		else
-			if [ "${1}" = "${interface}" ]; then
-				interface_airmon_compatible=0
-				ifacemode="Monitor"
+	if [ "${1}" = "${interface}" ]; then
+		check_airmon_compatibility "interface"
+		if [ "${interface_airmon_compatible}" -eq 0 ]; then
+			if ! set_mode_without_airmon "${1}" "monitor"; then
+				echo
+				language_strings "${language}" 20 "red"
+				language_strings "${language}" 115 "read"
+				return 1
 			else
-				secondary_interface_airmon_compatible=0
+				ifacemode="Monitor"
 			fi
-		fi
-	else
-		if [ "${check_kill_needed}" -eq 1 ]; then
-			language_strings "${language}" 19 "blue"
-			${airmon} check kill > /dev/null 2>&1
-			nm_processes_killed=1
-		fi
+		else
+			if [ "${check_kill_needed}" -eq 1 ]; then
+				language_strings "${language}" 19 "blue"
+				${airmon} check kill > /dev/null 2>&1
+				nm_processes_killed=1
+			fi
 
-		desired_interface_name=""
-		if [ "${1}" = "${interface}" ]; then
-			interface_airmon_compatible=1
+			desired_interface_name=""
 			new_interface=$(${airmon} start "${1}" 2> /dev/null | grep monitor)
 			[[ ${new_interface} =~ ^You[[:space:]]already[[:space:]]have[[:space:]]a[[:space:]]([A-Za-z0-9]+)[[:space:]]device ]] && desired_interface_name="${BASH_REMATCH[1]}"
-		else
-			secondary_interface_airmon_compatible=1
-			new_secondary_interface=$(${airmon} start "${1}" 2> /dev/null | grep monitor)
-			[[ ${new_secondary_interface} =~ ^You[[:space:]]already[[:space:]]have[[:space:]]a[[:space:]]([A-Za-z0-9]+)[[:space:]]device ]] && desired_interface_name="${BASH_REMATCH[1]}"
-		fi
 
-		if [ -n "${desired_interface_name}" ]; then
-			echo
-			language_strings "${language}" 435 "red"
-			language_strings "${language}" 115 "read"
-			return 1
-		fi
+			if [ -n "${desired_interface_name}" ]; then
+				echo
+				language_strings "${language}" 435 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
 
-		if [ "${1}" = "${interface}" ]; then
 			ifacemode="Monitor"
 			[[ ${new_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_interface="${BASH_REMATCH[1]}"
 
@@ -1511,12 +1520,39 @@ function monitor_option() {
 					interface="${new_interface}"
 					phy_interface=$(physical_interface_finder "${interface}")
 					check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
-					current_iface_on_messages="${interface}"
 				fi
+				current_iface_on_messages="${interface}"
 				echo
 				language_strings "${language}" 21 "yellow"
 			fi
+		fi
+	else
+		check_airmon_compatibility "secondary_interface"
+		if [ "${secondary_interface_airmon_compatible}" -eq 0 ]; then
+			if ! set_mode_without_airmon "${1}" "monitor"; then
+				echo
+				language_strings "${language}" 20 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
 		else
+			if [ "${check_kill_needed}" -eq 1 ]; then
+				language_strings "${language}" 19 "blue"
+				${airmon} check kill > /dev/null 2>&1
+				nm_processes_killed=1
+			fi
+
+			secondary_interface_airmon_compatible=1
+			new_secondary_interface=$(${airmon} start "${1}" 2> /dev/null | grep monitor)
+			[[ ${new_secondary_interface} =~ ^You[[:space:]]already[[:space:]]have[[:space:]]a[[:space:]]([A-Za-z0-9]+)[[:space:]]device ]] && desired_interface_name="${BASH_REMATCH[1]}"
+
+			if [ -n "${desired_interface_name}" ]; then
+				echo
+				language_strings "${language}" 435 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
+
 			[[ ${new_secondary_interface} =~ \]?([A-Za-z0-9]+)\)?$ ]] && new_secondary_interface="${BASH_REMATCH[1]}"
 
 			if [ "${1}" != "${new_secondary_interface}" ]; then
@@ -1542,16 +1578,18 @@ function set_mode_without_airmon() {
 	local error
 	local mode
 
+	ip link set "${1}" down > /dev/null 2>&1
+
 	if [ "${2}" = "monitor" ]; then
 		mode="monitor"
+		iw "${1}" set monitor control > /dev/null 2>&1
 	else
 		mode="managed"
+		iw "${1}" set type managed > /dev/null 2>&1
 	fi
 
-	ifconfig "${1}" down > /dev/null 2>&1
-	iwconfig "${1}" mode "${mode}" > /dev/null 2>&1
 	error=$?
-	ifconfig "${1}" up > /dev/null 2>&1
+	ip link set "${1}" up > /dev/null 2>&1
 
 	if [ "${error}" != 0 ]; then
 		return 1
@@ -1565,21 +1603,21 @@ function check_interface_mode() {
 	debug_print
 
 	current_iface_on_messages="${1}"
-	if ! execute_iwconfig_fix "${1}"; then
+	if ! check_interface_wifi "${1}"; then
 		ifacemode="(Non wifi card)"
 		return 0
 	fi
 
-	modemanaged=$(iwconfig "${1}" 2> /dev/null | grep Mode: | cut -d ':' -f 2 | cut -d ' ' -f 1)
+	modemanaged=$(iw "${1}" info 2> /dev/null | grep type | awk '{print $2}')
 
-	if [[ ${modemanaged} = "Managed" ]]; then
+	if [[ ${modemanaged^} = "Managed" ]]; then
 		ifacemode="Managed"
 		return 0
 	fi
 
-	modemonitor=$(iwconfig "${1}" 2> /dev/null | grep Mode: | awk '{print $4}' | cut -d ':' -f 2)
+	modemonitor=$(iw "${1}" info 2> /dev/null | grep type | awk '{print $2}')
 
-	if [[ ${modemonitor} = "Monitor" ]]; then
+	if [[ ${modemonitor^} = "Monitor" ]]; then
 		ifacemode="Monitor"
 		return 0
 	fi
@@ -2133,8 +2171,9 @@ function set_chipset() {
 	sedrule5="s/ \(Gigabit\|Fast\) Ethernet.*//Ig"
 	sedrule6="s/ \[.*//"
 	sedrule7="s/ (.*//"
+	sedrule8="s|802\.11a/b/g/n/ac.*||Ig"
 
-	sedruleall="${sedrule1};${sedrule2};${sedrule3};${sedrule4};${sedrule5};${sedrule6};${sedrule7}"
+	sedruleall="${sedrule1};${sedrule2};${sedrule3};${sedrule4};${sedrule5};${sedrule6};${sedrule7};${sedrule8}"
 
 	if [ -f "/sys/class/net/${1}/device/modalias" ]; then
 		bus_type=$(cut -f 1 -d ":" < "/sys/class/net/${1}/device/modalias")
@@ -2142,25 +2181,41 @@ function set_chipset() {
 		if [ "${bus_type}" = "usb" ]; then
 			vendor_and_device=$(cut -b 6-14 < "/sys/class/net/${1}/device/modalias" | sed 's/^.//;s/p/:/')
 			if hash lsusb 2> /dev/null; then
-				chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+				if [[ -n "${2}" ]] && [[ "${2}" = "read_only" ]]; then
+					requested_chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+				else
+					chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+				fi
 			fi
 
 		elif [[ "${bus_type}" =~ pci|ssb|bcma|pcmcia ]]; then
 			if [[ -f /sys/class/net/${1}/device/vendor ]] && [[ -f /sys/class/net/${1}/device/device ]]; then
 				vendor_and_device=$(cat "/sys/class/net/${1}/device/vendor"):$(cat "/sys/class/net/${1}/device/device")
-				chipset=$(lspci -d "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+				if [[ -n "${2}" ]] && [[ "${2}" = "read_only" ]]; then
+					requested_chipset=$(lspci -d "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+				else
+					chipset=$(lspci -d "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+				fi
 			else
 				if hash ethtool 2> /dev/null; then
 					ethtool_output=$(ethtool -i "${1}" 2>&1)
 					vendor_and_device=$(printf "%s" "${ethtool_output}" | grep "bus-info" | cut -f 3 -d ":" | sed 's/^ //')
-					chipset=$(lspci | grep "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+					if [[ -n "${2}" ]] && [[ "${2}" = "read_only" ]]; then
+						requested_chipset=$(lspci | grep "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+					else
+						chipset=$(lspci | grep "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+					fi
 				fi
 			fi
 		fi
 	elif [[ -f /sys/class/net/${1}/device/idVendor ]] && [[ -f /sys/class/net/${1}/device/idProduct ]]; then
 		vendor_and_device=$(cat "/sys/class/net/${1}/device/idVendor"):$(cat "/sys/class/net/${1}/device/idProduct")
 		if hash lsusb 2> /dev/null; then
-			chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+			if [[ -n "${2}" ]] && [[ "${2}" = "read_only" ]]; then
+				requested_chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+			else
+				chipset=$(lsusb | grep -i "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
+			fi
 		fi
 	fi
 }
@@ -2273,16 +2328,32 @@ function select_secondary_et_interface() {
 	fi
 
 	if [ "${1}" = "dos_pursuit_mode" ]; then
-		secondary_ifaces=$(iwconfig 2>&1 | grep "802.11" | grep -v "no wireless extensions" | grep "${interface}" -v | awk '{print $1}')
+		readarray -t secondary_ifaces < <(iw dev | grep "Interface" | awk '{print $2}' | grep "${interface}" -v)
 	elif [ "${1}" = "internet" ]; then
-		secondary_ifaces=$(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep -E "^lo$" -v | grep "${interface}" -v)
 		if [ -n "${secondary_wifi_interface}" ]; then
-			secondary_ifaces=$(echo "${secondary_ifaces}" | grep "${secondary_wifi_interface}" -v)
+			readarray -t secondary_ifaces < <(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep -E "^lo$" -v | grep "${interface}" -v | grep "${secondary_wifi_interface}" -v)
+		else
+			readarray -t secondary_ifaces < <(ip link | grep -E "^[0-9]+" | cut -d ':' -f 2 | awk '{print $1}' | grep -E "^lo$" -v | grep "${interface}" -v)
 		fi
 	fi
 
+	if [ ${#secondary_ifaces[@]} -eq 1 ]; then
+		if [ "${1}" = "dos_pursuit_mode" ]; then
+			secondary_wifi_interface="${secondary_ifaces[0]}"
+			secondary_phy_interface=$(physical_interface_finder "${secondary_wifi_interface}")
+			check_interface_supported_bands "${secondary_phy_interface}" "secondary_wifi_interface"
+		elif [ "${1}" = "internet" ]; then
+			internet_interface="${secondary_ifaces[0]}"
+		fi
+
+		echo
+		language_strings "${language}" 662 "yellow"
+		language_strings "${language}" 115 "read"
+		return 0
+	fi
+
 	option_counter=0
-	for item in ${secondary_ifaces}; do
+	for item in "${secondary_ifaces[@]}"; do
 		if [ ${option_counter} -eq 0 ]; then
 			if [ "${1}" = "dos_pursuit_mode" ]; then
 				language_strings "${language}" 511 "green"
@@ -2353,7 +2424,7 @@ function select_secondary_et_interface() {
 		fi
 	else
 		option_counter2=0
-		for item2 in ${secondary_ifaces}; do
+		for item2 in "${secondary_ifaces[@]}"; do
 			option_counter2=$((option_counter2 + 1))
 			if [[ "${secondary_iface}" = "${option_counter2}" ]]; then
 				if [ "${1}" = "dos_pursuit_mode" ]; then
@@ -2967,16 +3038,17 @@ function custom_certificates_integration() {
 	language_strings "${language}" 649 "blue"
 	echo
 
-	validate_certificates "${hostapd_wpe_cert_path}" "${hostapd_wpe_cert_pass}"
-	if [ "$?" = "0" ]; then
+	local certsresult
+	certsresult=$(validate_certificates "${hostapd_wpe_cert_path}" "${hostapd_wpe_cert_pass}")
+	if [ "${certsresult}" = "0" ]; then
 		language_strings "${language}" 650 "yellow"
 		language_strings "${language}" 115 "read"
 		return 0
-	elif [ "$?" = "1" ]; then
+	elif [ "${certsresult}" = "1" ]; then
 		language_strings "${language}" 237 "red"
 		language_strings "${language}" 115 "read"
 		return 1
-	elif [ "$?" = "2" ]; then
+	elif [ "${certsresult}" = "2" ]; then
 		language_strings "${language}" 326 "red"
 		language_strings "${language}" 115 "read"
 		return 1
@@ -2995,16 +3067,16 @@ function validate_certificates() {
 	certsresult=0
 
 	if ! [ -f "${1}server.pem" ] || ! [ -r "${1}server.pem" ] || ! [ -f "${1}ca.pem" ] || ! [ -r "${1}ca.pem" ] || ! [ -f "${1}server.key" ] || ! [ -r "${1}server.key" ]; then
-		return 1
+		certsresult=1
 	else
-		if ! openssl x509 -in "${1}server.pem" -inform "PEM" -checkend "0" &> "/dev/null" || ! openssl x509 -in "${1}ca.pem" -inform "PEM" -checkend "0" &> "/dev/null"; then
-			return 2
-		elif ! openssl rsa -in "${1}server.key" -passin "pass:${2}" -check &> "/dev/null"; then
-			return 3
+		if ! openssl x509 -in "${1}server.pem" -inform "PEM" -checkend "0" > /dev/null 2>&1 || ! openssl x509 -in "${1}ca.pem" -inform "PEM" -checkend "0" > /dev/null 2>&1; then
+			certsresult=2
+		elif ! openssl rsa -in "${1}server.key" -passin "pass:${2}" -check > /dev/null 2>&1; then
+			certsresult=3
 		fi
 	fi
 
-	return 0
+	echo "${certsresult}"
 }
 
 #Create custom certificates
@@ -4116,7 +4188,7 @@ function launch_dos_pursuit_mode_attack() {
 		"Aireplay")
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${secondary_wifi_interface}"
-			iwconfig "${interface_pursuit_mode_deauth}" channel "${channel}" > /dev/null 2>&1
+			iw "${interface_pursuit_mode_deauth}" set channel "${channel}" > /dev/null 2>&1
 			dos_delay=3
 			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" "Deauth (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
@@ -5132,7 +5204,7 @@ function dependencies_modifications() {
 
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
 		essential_tools_names=("${essential_tools_names[@]/xterm/tmux}")
-		possible_package_names[${essential_tools_names[7]}]="tmux"
+		possible_package_names[${essential_tools_names[5]}]="tmux"
 		unset possible_package_names["xterm"]
 	fi
 
@@ -7512,7 +7584,7 @@ function manage_ettercap_log() {
 		default_ettercaplogfilename="evil_twin_captured_passwords-${essid}.txt"
 		rm -rf "${tmpdir}${ettercap_file}"* > /dev/null 2>&1
 		tmp_ettercaplog="${tmpdir}${ettercap_file}"
-		default_ettercap_logpath="${ettercap_logpath}${default_ettercaplogfilename}"
+		default_ettercap_logpath="${default_ettercap_logpath}${default_ettercaplogfilename}"
 		validpath=1
 		while [[ "${validpath}" != "0" ]]; do
 			read_path "ettercaplog"
@@ -7533,7 +7605,7 @@ function manage_bettercap_log() {
 		default_bettercaplogfilename="evil_twin_captured_passwords-bettercap-${essid}.txt"
 		rm -rf "${tmpdir}${bettercap_file}"* > /dev/null 2>&1
 		tmp_bettercaplog="${tmpdir}${bettercap_file}"
-		default_bettercap_logpath="${bettercap_logpath}${default_bettercaplogfilename}"
+		default_bettercap_logpath="${default_bettercap_logpath}${default_bettercaplogfilename}"
 		validpath=1
 		while [[ "${validpath}" != "0" ]]; do
 			read_path "bettercaplog"
@@ -8649,7 +8721,7 @@ function set_dhcp_config() {
 	tmpfiles_toclean=1
 	rm -rf "${tmpdir}${dhcpd_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}clts.txt" > /dev/null 2>&1
-	ifconfig "${interface}" up
+	ip link set "${interface}" up > /dev/null 2>&1
 
 	{
 	echo -e "authoritative;"
@@ -8727,9 +8799,9 @@ function set_spoofed_mac() {
 
 	new_random_mac=$(od -An -N6 -tx1 /dev/urandom | sed -e 's/^  *//' -e 's/  */:/g' -e 's/:$//' -e 's/^\(.\)[13579bdf]/\10/')
 
-	ifconfig "${1}" down > /dev/null 2>&1
-	ifconfig "${1}" hw ether "${new_random_mac}" > /dev/null 2>&1
-	ifconfig "${1}" up > /dev/null 2>&1
+	ip link set "${1}" down > /dev/null 2>&1
+	ip link set dev "${1}" address "${new_random_mac}" > /dev/null 2>&1
+	ip link set "${1}" up > /dev/null 2>&1
 }
 
 #Restore spoofed macs to original values
@@ -8738,9 +8810,9 @@ function restore_spoofed_macs() {
 	debug_print
 
 	for item in "${!original_macs[@]}"; do
-		ifconfig "${item}" down > /dev/null 2>&1
-		ifconfig "${item}" hw ether "${original_macs[${item}]}" > /dev/null 2>&1
-		ifconfig "${item}" up > /dev/null 2>&1
+		ip link set "${item}" down > /dev/null 2>&1
+		ip link set dev "${item}" address "${original_macs[${item}]}" > /dev/null 2>&1
+		ip link set "${item}" up > /dev/null 2>&1
 	done
 }
 
@@ -8754,7 +8826,7 @@ function set_std_internet_routing_rules() {
 		save_iptables_nftables
 	fi
 
-	ifconfig "${interface}" ${et_ip_router} netmask ${std_c_mask} > /dev/null 2>&1
+	ip addr add ${et_ip_router}/${std_c_mask} dev "${interface}" > /dev/null 2>&1
 	routing_modified=1
 
 	clean_initialize_iptables_nftables
@@ -9393,9 +9465,9 @@ function set_enterprise_control_script() {
 			iw dev "${iface_monitor_et_deauth}" del > /dev/null 2>&1
 
 			if [ "${et_initial_state}" = "Managed" ]; then
-				ifconfig "${interface}" down > /dev/null 2>&1
-				iwconfig "${interface}" mode "managed" > /dev/null 2>&1
-				ifconfig "${interface}" up > /dev/null 2>&1
+				ip link set "${interface}" down > /dev/null 2>&1
+				iw "${interface}" set type managed > /dev/null 2>&1
+				ip link set "${interface}" up > /dev/null 2>&1
 				ifacemode="Managed"
 			else
 				if [ "${interface_airmon_compatible}" -eq 1 ]; then
@@ -9408,9 +9480,9 @@ function set_enterprise_control_script() {
 						current_iface_on_messages="${interface}"
 					fi
 				else
-					ifconfig "${interface}" down > /dev/null 2>&1
-					iwconfig "${interface}" mode "monitor" > /dev/null 2>&1
-					ifconfig "${interface}" up > /dev/null 2>&1
+					ip link set "${interface}" down > /dev/null 2>&1
+					iw "${interface}" set monitor control > /dev/null 2>&1
+					ip link set "${interface}" up > /dev/null 2>&1
 				fi
 				ifacemode="Monitor"
 			fi
@@ -12898,19 +12970,6 @@ function airmon_fix() {
 	fi
 }
 
-#Prepare the fix for iwconfig command depending of the wireless tools version
-function iwconfig_fix() {
-
-	debug_print
-
-	local iwversion
-	iwversion=$(iwconfig --version 2> /dev/null | grep version | awk '{print $4}')
-	iwcmdfix=""
-	if [ "${iwversion}" -lt 30 ]; then
-		iwcmdfix=" 2> /dev/null | grep Mode: "
-	fi
-}
-
 #Set hashcat parameters based on version
 function set_hashcat_parameters() {
 
@@ -14709,7 +14768,7 @@ function plugin_function_call_handler() {
 	return ${result}
 }
 
-#Avoid the problem of using airmon-zc without ethtool or lspci installed
+#Avoid the problem of using airmon-zc without ethtool installed
 function airmonzc_security_check() {
 
 	debug_print
