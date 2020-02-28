@@ -1,3 +1,31 @@
+airgeddon (10.01+parrot0) testing; urgency=medium
+
+ * Removed deprecated ifconfig and iwconfig commands and dependencies
+ * Fixed error on enterprise certificates validation
+ * Added autoselection for secondary interface if only one existing
+ * Airmon compatibility check system refactored
+ * Fixed error in default paths trophy files for ettercap/bettercap
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Wed, 08 Jan 2020 10:23:36 +0700
+
+airgeddon (10.0+parrot0) testing; urgency=medium
+
+ * Added plugins system
+ * Added example plugin: Missing dependencies auto-installation for some distros (Kali, Parrot, BlackArch)
+ * Improvements for Evil Twin on captive portal detection for newer devices
+ * Missing 5GHz channels added
+ * Github pull request template added and issue templates updated
+ * Fixed error on hex2ascii conversion for some WEP passwords
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sun, 03 Nov 2019 20:45:23 +0800
+
+airgeddon (9.23+parrot0) testing; urgency=medium
+
+ * Fixed error printing hints
+ * Fixed problem with default values on options file creation
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Fri, 27 Sep 2019 07:42:57 +0900
+
 airgeddon (9.22+parrot0) testing; urgency=medium
 
   * Improved certificates validations and error messages

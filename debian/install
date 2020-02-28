@@ -1,4 +1,5 @@
 imgs /usr/share/airgeddon/
+plugins /usr/share/airgeddon/
 airgeddon.sh /usr/share/airgeddon/
 CHANGELOG.md /usr/share/airgeddon/
 CONTRIBUTING.md /usr/share/airgeddon/

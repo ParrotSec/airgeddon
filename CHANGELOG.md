@@ -1,3 +1,22 @@
+### 10.01
+ - Removed deprecated ifconfig and iwconfig commands and dependencies
+ - Fixed error on enterprise certificates validation
+ - Added autoselection for secondary interface if only one existing
+ - Airmon compatibility check system refactored
+ - Fixed error in default paths trophy files for ettercap/bettercap
+
+### 10.0
+ - Added plugins system
+ - Added example plugin: Missing dependencies auto-installation for some distros (Kali, Parrot, BlackArch)
+ - Improvements for Evil Twin on captive portal detection for newer devices
+ - Missing 5GHz channels added
+ - Github pull request template added and issue templates updated
+ - Fixed error on hex2ascii conversion for some WEP passwords
+
+### 9.23
+ - Fixed error printing hints
+ - Fixed problem with default values on options file creation
+
 ### 9.22
  - Improved certificates validations and error messages
  - Removed useless internet access DNS resolution method for captive portal Evil Twin, now pure dnsspoof
