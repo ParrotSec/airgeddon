@@ -1,3 +1,12 @@
+airgeddon (10.10+parrot0) testing; urgency=medium
+
+ * PMKID capture feature
+ * PMKID offline decryption feature
+ * Tested compatibility with Manjaro Linux
+ * Fixed error on auto_update plugin on some Linux distros
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Fri, 20 Mar 2020 10:20:15 +0200
+
 airgeddon (10.01+parrot0) testing; urgency=medium
 
  * Removed deprecated ifconfig and iwconfig commands and dependencies
