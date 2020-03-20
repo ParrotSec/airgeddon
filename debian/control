@@ -11,6 +11,6 @@ Package: airgeddon
 Architecture: all
 Multi-Arch: foreign
 Depends: iw, aircrack-ng, gawk, xterm, iproute2, bash (>=4.2), tmux, pciutils, procps, ${misc:Depends}, ${shlibs:Depends}
-Recommends: crunch, mdk3, mdk4, hashcat, hostapd, lighttpd, iptables, bettercap, beef-xss, ettercap-graphical, sslstrip, isc-dhcp-server, dsniff, reaver, bully, pixiewps, curl, rfkill, wget, usbutils, ethtool, x11-utils, ccze, x11-xserver-utils, asleap, hostapd-wpe, john, nftables, openssl, hcxtools, hcxdumptool
+Recommends: crunch, mdk3, mdk4, hashcat, hostapd, lighttpd, iptables, bettercap, beef-xss, ettercap-graphical, sslstrip, isc-dhcp-server, dsniff, reaver, bully, pixiewps, curl, rfkill, wget, usbutils, ethtool, x11-utils, ccze, x11-xserver-utils, asleap, hostapd-wpe, john, nftables, openssl, hcxtools, hcxdumptool,
 Description: a multi-use bash script to audit wireless networks
  a multi-use bash script to audit wireless networks
