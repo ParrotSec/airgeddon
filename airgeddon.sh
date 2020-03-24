@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.10
+#Version......: 10.11
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -126,8 +126,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.10"
-language_strings_expected_version="10.10-1"
+airgeddon_version="10.11"
+language_strings_expected_version="10.11-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 timeout_capture_handshake="20"
@@ -146,6 +146,7 @@ rc_file_name=".airgeddonrc"
 alternative_rc_file_name="airgeddonrc"
 language_strings_file="language_strings.sh"
 broadcast_mac="FF:FF:FF:FF:FF:FF"
+minimum_hcxdumptool_filterap_version="6.0.0"
 
 #5Ghz vars
 ghz="Ghz"
@@ -2857,7 +2858,7 @@ function handshake_capture_check() {
 	local time_counter=0
 	while true; do
 		sleep 5
-		if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
+		if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent" "only_handshake"; then
 			break
 		fi
 
@@ -6946,28 +6947,53 @@ function check_valid_file_to_clean() {
 	return 0
 }
 
-#Check if a bssid is present on a capture file to know if there is a Handshake with that bssid
+#Check if a bssid is present on a capture file to know if there is a Handshake/PMKID with that bssid
 function check_bssid_in_captured_file() {
 
 	debug_print
 
+	local nets_from_file
 	nets_from_file=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "WPA \([1-9][0-9]? handshake" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
 
+	if [ "${3}" = "also_pmkid" ]; then
+		get_aircrack_version
+		if compare_floats_greater_or_equal "${aircrack_version}" "${aircrack_pmkid_version}"; then
+			local nets_from_file2
+			nets_from_file2=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "handshake, with PMKID" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
+		fi
+	fi
+
 	if [ "${2}" != "silent" ]; then
-		echo
-		if [ "${nets_from_file}" = "" ]; then
-			if [ ! -f "${1}" ]; then
-				language_strings "${language}" 161 "red"
-				language_strings "${language}" 115 "read"
-			else
+		if [ ! -f "${1}" ]; then
+			echo
+			language_strings "${language}" 161 "red"
+			language_strings "${language}" 115 "read"
+			return 1
+		fi
+
+		if [[ "${2}" = "showing_msgs_checking" ]] && [[ "${3}" = "only_handshake" ]]; then
+			if [ "${nets_from_file}" = "" ]; then
+				echo
 				language_strings "${language}" 216 "red"
 				language_strings "${language}" 115 "read"
+				return 1
 			fi
-			return 1
+		fi
+
+		if [[ "${2}" = "showing_msgs_checking" ]] && [[ "${3}" = "also_pmkid" ]]; then
+			if [[ "${nets_from_file}" = "" ]] && [[ "${nets_from_file2}" = "" ]]; then
+				echo
+				language_strings "${language}" 682 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
 		fi
 	fi
 
 	declare -A bssids_detected
+	declare -A bssids_detected_pmkid
+
+	local option_counter
 	option_counter=0
 	for item in ${nets_from_file}; do
 		if [[ ${item} =~ ^[0-9a-fA-F]{2}: ]]; then
@@ -6976,20 +7002,67 @@ function check_bssid_in_captured_file() {
 		fi
 	done
 
+	if [[ "${3}" = "also_pmkid" ]] && [[ -n "${nets_from_file2}" ]]; then
+		option_counter=0
+		for item in ${nets_from_file2}; do
+			if [[ ${item} =~ ^[0-9a-fA-F]{2}: ]]; then
+				option_counter=$((option_counter + 1))
+				bssids_detected_pmkid[${option_counter}]=${item}
+			fi
+		done
+	fi
+
+	local handshake_captured=0
+	local pmkid_captured=0
+
 	for targetbssid in "${bssids_detected[@]}"; do
 		if [ "${bssid}" = "${targetbssid}" ]; then
-			if [ "${2}" != "silent" ]; then
-				language_strings "${language}" 322 "yellow"
-			fi
-			return 0
+			handshake_captured=1
+			break
 		fi
 	done
 
-	if [ "${2}" != "silent" ]; then
-		language_strings "${language}" 323 "red"
-		language_strings "${language}" 115 "read"
+	if [[ "${3}" = "also_pmkid" ]] && [[ -n "${nets_from_file2}" ]]; then
+		for targetbssid in "${bssids_detected_pmkid[@]}"; do
+			if [ "${bssid}" = "${targetbssid}" ]; then
+				pmkid_captured=1
+				break
+			fi
+		done
 	fi
-	return 1
+
+	if [[ "${handshake_captured}" = "1" ]] && [[ "${pmkid_captured}" = "0" ]]; then
+		if [[ "${2}" = "showing_msgs_checking" ]]; then
+			language_strings "${language}" 322 "yellow"
+		fi
+		return 0
+	elif [[ "${handshake_captured}" = "0" ]] && [[ "${pmkid_captured}" = "1" ]]; then
+		if [[ "${2}" = "showing_msgs_capturing" ]] && [[ "${3}" = "also_pmkid" ]]; then
+			echo
+			language_strings "${language}" 680 "yellow"
+		fi
+		if [[ "${2}" = "showing_msgs_checking" ]] && [[ "${3}" = "also_pmkid" ]]; then
+			echo
+			language_strings "${language}" 683 "yellow"
+		fi
+		return 0
+	elif [[ "${handshake_captured}" = "1" ]] && [[ "${pmkid_captured}" = "1" ]]; then
+		if [[ "${2}" = "showing_msgs_capturing" ]] && [[ "${3}" = "also_pmkid" ]]; then
+			echo
+			language_strings "${language}" 681 "yellow"
+		fi
+		if [[ "${2}" = "showing_msgs_checking" ]] && [[ "${3}" = "also_pmkid" ]]; then
+			echo
+			language_strings "${language}" 683 "yellow"
+		fi
+		return 0
+	else
+		if [[ "${2}" = "showing_msgs_checking" ]] && [[ "${3}" = "only_handshake" ]]; then
+			language_strings "${language}" 323 "red"
+			language_strings "${language}" 115 "read"
+		fi
+		return 1
+	fi
 }
 
 #Set the target vars to a bssid selecting them from a capture file which has a Handshake/PMKID
@@ -7005,6 +7078,7 @@ function select_wpa_bssid_target_from_captured_file() {
 		language_strings "${language}" 115 "read"
 	fi
 
+	local nets_from_file
 	if [ "${2}" = "only_handshake" ]; then
 		nets_from_file=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "WPA \([1-9][0-9]? handshake" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
 	else
@@ -11317,12 +11391,13 @@ function capture_handshake_evil_twin() {
 
 	handshake_capture_check
 
-	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
+	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "showing_msgs_capturing" "also_pmkid"; then
 
 		handshakepath="${default_save_path}"
 		handshakefilename="handshake-${bssid}.cap"
 		handshakepath="${handshakepath}${handshakefilename}"
 
+		echo
 		language_strings "${language}" 162 "yellow"
 		validpath=1
 		while [[ "${validpath}" != "0" ]]; do
@@ -11373,6 +11448,7 @@ function capture_pmkid_handshake() {
 	if [ "${1}" = "handshake" ]; then
 		dos_handshake_menu
 	else
+		get_hcxdumptool_version
 		launch_pmkid_capture
 	fi
 }
@@ -11860,12 +11936,14 @@ function launch_handshake_capture() {
 	fi
 
 	handshake_capture_check
-	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "silent"; then
+
+	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "showing_msgs_capturing" "also_pmkid"; then
 
 		handshakepath="${default_save_path}"
 		handshakefilename="handshake-${bssid}.cap"
 		handshakepath="${handshakepath}${handshakefilename}"
 
+		echo
 		language_strings "${language}" 162 "yellow"
 		validpath=1
 		while [[ "${validpath}" != "0" ]]; do
@@ -11924,16 +12002,23 @@ function launch_pmkid_capture() {
 	echo
 	language_strings "${language}" 325 "blue"
 
+	if compare_floats_greater_or_equal "${hcxdumptool_version}" "${minimum_hcxdumptool_filterap_version}"; then
+		hcxdumptool_filter="--filterlist_ap="
+	else
+		hcxdumptool_filter="--filterlist="
+	fi
+
 	rm -rf "${tmpdir}pmkid"* > /dev/null 2>&1
 	recalculate_windows_sizes
-	manage_output "+j -sb -rightbar -bg \"#000000\" -fg \"#FFC0CB\" -geometry ${g1_topright_window} -T \"Capturing PMKID\"" "timeout -s SIGTERM ${timeout_capture_pmkid} hcxdumptool -i ${interface} --enable_status=1 --filterlist=${tmpdir}target.txt --filtermode=2 -o ${tmpdir}pmkid.pcapng" "Capturing PMKID" "active"
-	wait_for_process "timeout -s SIGTERM ${timeout_capture_pmkid} hcxdumptool -i ${interface} --enable_status=1 --filterlist=${tmpdir}target.txt --filtermode=2 -o ${tmpdir}pmkid.pcapng" "Capturing PMKID"
+	manage_output "+j -sb -rightbar -bg \"#000000\" -fg \"#FFC0CB\" -geometry ${g1_topright_window} -T \"Capturing PMKID\"" "timeout -s SIGTERM ${timeout_capture_pmkid} hcxdumptool -i ${interface} --enable_status=1 ${hcxdumptool_filter}${tmpdir}target.txt --filtermode=2 -o ${tmpdir}pmkid.pcapng" "Capturing PMKID" "active"
+	wait_for_process "timeout -s SIGTERM ${timeout_capture_pmkid} hcxdumptool -i ${interface} --enable_status=1 ${hcxdumptool_filter}${tmpdir}target.txt --filtermode=2 -o ${tmpdir}pmkid.pcapng" "Capturing PMKID"
 
 	if hcxpcaptool -z "${tmpdir}${standardpmkid_filename}" "${tmpdir}pmkid.pcapng" | grep -q "PMKID(s) written" 2> /dev/null; then
 		pmkidpath="${default_save_path}"
 		pmkidfilename="pmkid-${bssid}.txt"
 		pmkidpath="${pmkidpath}${pmkidfilename}"
 
+		echo
 		language_strings "${language}" 162 "yellow"
 		validpath=1
 		while [[ "${validpath}" != "0" ]]; do
@@ -12544,8 +12629,12 @@ function et_prerequisites() {
 			ask_yesno 321 "no"
 		fi
 
+		local msg_mode
+		msg_mode="showing_msgs_checking"
+
 		if [[ ${yesno} = "n" ]] || [[ ${retrying_handshake_capture} -eq 1 ]]; then
 			capture_handshake_evil_twin
+			msg_mode="silent"
 			case "$?" in
 				"2")
 					retry_handshake_capture=1
@@ -12562,7 +12651,7 @@ function et_prerequisites() {
 		retry_handshake_capture=0
 		retrying_handshake_capture=0
 
-		if ! check_bssid_in_captured_file "${et_handshake}"; then
+		if ! check_bssid_in_captured_file "${et_handshake}" "${msg_mode}" "also_pmkid"; then
 			return_to_et_main_menu=1
 			return
 		fi
@@ -13245,6 +13334,14 @@ function get_hashcat_version() {
 
 	hashcat_version=$(hashcat -V 2> /dev/null)
 	hashcat_version=${hashcat_version#"v"}
+}
+
+#Determine hcxdumptool version
+function get_hcxdumptool_version() {
+
+	debug_print
+
+	hcxdumptool_version=$(hcxdumptool --version | awk '{print $2}')
 }
 
 #Determine beef version

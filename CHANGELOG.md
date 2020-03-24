@@ -1,3 +1,8 @@
+### 10.11
+ - Fixed error on PMKID capturing due hcxdumptool different params for different versions
+ - Added feature to detect captured PMKID while capturing Handshake
+ - Integration of PMKID on Evil Twin Captive Portal
+
 ### 10.10
  - PMKID capture feature
  - PMKID offline decryption feature

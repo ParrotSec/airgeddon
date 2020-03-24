@@ -10,7 +10,7 @@ function set_language_strings_version() {
 
 	debug_print
 
-	language_strings_version="10.10-1"
+	language_strings_version="10.11-1"
 }
 
 #Set different language text strings
@@ -2943,8 +2943,8 @@ function language_strings() {
 	arr["GREEK",172]="1.  (aircrack) Επίθεση με χρήση λεξικού σε αρχείο καταγραφής Handshake/PMKID"
 	arr["ITALIAN",172]="1.  (aircrack) Attacco dizionario sul file di cattura Handshake/PMKID"
 	arr["POLISH",172]="1.  (aircrack) Atak słownikowy na plik przechwytywania Handshake/PMKID"
-	arr["GERMAN",172]="${pending_of_translation} 1.  (aircrack) Wörterbuchangriff auf der aufgenommene Handshake/PMKID Datei"
-	arr["TURKISH",172]="${pending_of_translation} 1.  (aircrack) Yakalanan Handshake/PMKID dosyaya Dictionary saldırısı"
+	arr["GERMAN",172]="1.  (aircrack) Wörterbuchangriff auf der aufgenommenen Handshake/PMKID Datei"
+	arr["TURKISH",172]="1.  (aircrack) Yakalanan Handshake/PMKID dosyasına sözlük saldırısı"
 
 	arr["ENGLISH",173]="Selected capture file: ${pink_color}${enteredpath}${normal_color}"
 	arr["SPANISH",173]="Fichero de captura seleccionado: ${pink_color}${enteredpath}${normal_color}"
@@ -4758,17 +4758,17 @@ function language_strings() {
 	arr["GERMAN",323]="Ein Handshake des ausgewählten Netzwerks wurde in der Erfassungsdatei nicht gefunden"
 	arr["TURKISH",323]="Yakalama dosyasında seçilen ağın bir Handshake'i yok"
 
-	arr["ENGLISH",324]="Handshake file generated successfully at [${normal_color}${et_handshake}${blue_color}]"
-	arr["SPANISH",324]="Fichero de Handshake generado con éxito en [${normal_color}${et_handshake}${blue_color}]"
-	arr["FRENCH",324]="Fichier Handshake généré avec succès dans [${normal_color}${et_handshake}${blue_color}]"
-	arr["CATALAN",324]="Fitxer de Handshake generat amb èxit a [${normal_color}${et_handshake}${blue_color}]"
-	arr["PORTUGUESE",324]="Arquivo Handshake gerado com sucesso [${normal_color}${et_handshake}${blue_color}]"
-	arr["RUSSIAN",324]="Файл рукопожатия успешно создан в [${normal_color}${et_handshake}${blue_color}]"
-	arr["GREEK",324]="Το αρχείο Χειραψίας δημιουργήθηκε επιτυχώς στο [${normal_color}${et_handshake}${blue_color}]"
-	arr["ITALIAN",324]="File di Handhake generato con successo in [${normal_color}${et_handshake}${blue_color}]"
-	arr["POLISH",324]="Plik Handshake został pomyślnie wygenerowany w [${normal_color}${et_handshake}${blue_color}]"
-	arr["GERMAN",324]="Handshake-Datei wurde erfolgreich in generiert [${normal_color}${et_handshake}${blue_color}]"
-	arr["TURKISH",324]="Handshake dosyası başarıyla oluşturuldu [${normal_color}${et_handshake}${blue_color}]"
+	arr["ENGLISH",324]="Capture file generated successfully at [${normal_color}${et_handshake}${blue_color}]"
+	arr["SPANISH",324]="Fichero de captura generado con éxito en [${normal_color}${et_handshake}${blue_color}]"
+	arr["FRENCH",324]="Fichier de capture généré avec succès dans [${normal_color}${et_handshake}${blue_color}]"
+	arr["CATALAN",324]="Fitxer de captura generat amb èxit a [${normal_color}${et_handshake}${blue_color}]"
+	arr["PORTUGUESE",324]="Arquivo de captura gerado com sucesso [${normal_color}${et_handshake}${blue_color}]"
+	arr["RUSSIAN",324]="${pending_of_translation} Захватить файл успешно создан в [${normal_color}${et_handshake}${blue_color}]"
+	arr["GREEK",324]="Το αρχείο καταγραφής δημιουργήθηκε επιτυχώς στο [${normal_color}${et_handshake}${blue_color}]"
+	arr["ITALIAN",324]="File di cattura generato con successo in [${normal_color}${et_handshake}${blue_color}]"
+	arr["POLISH",324]="${pending_of_translation} Plik przechwyć  został pomyślnie wygenerowany w [${normal_color}${et_handshake}${blue_color}]"
+	arr["GERMAN",324]="Capture-Datei wurde erfolgreich in [${normal_color}${et_handshake}${blue_color}] generiert"
+	arr["TURKISH",324]="Akalama dosyası başarıyla oluşturuldu [${normal_color}${et_handshake}${blue_color}]"
 
 	arr["ENGLISH",325]="Wait. Be patient..."
 	arr["SPANISH",325]="Espera. Ten un poco de paciencia..."
@@ -8092,7 +8092,7 @@ function language_strings() {
 	arr["ITALIAN",601]="Il file selezionato non ha un hash valido in formato enterprise per hashcat"
 	arr["POLISH",601]="Wybrany plik ma nieprawidłowy format hash korporacyjnego dla hashcat"
 	arr["GERMAN",601]="Die ausgewählte Datei hat kein gültiges Enterprise-Hashformat für hashcat"
-	arr["TURKISH",601]="${pending_of_translation} Seçilen dosya hashcat için geçerli bir enterprise hashes biçimine sahip değil"
+	arr["TURKISH",601]="Seçilen dosya hashcat için geçerli bir enterprise hash biçimine sahip değil"
 
 	arr["ENGLISH",602]="Selected file has a valid hashcat enterprise hashes format"
 	arr["SPANISH",602]="El fichero seleccionado tiene un formato válido de hashes enterprise para hashcat"
@@ -9029,6 +9029,54 @@ function language_strings() {
 	arr["POLISH",679]="Masz zainstalowany hashcat (v${hashcat_version}), ale nie wymaganą wersję. Aby zrealizować atak PMKID zintegrowany z programem hashcat musisz mieć co najmniej wersję v${minimum_hashcat_pmkid_version}"
 	arr["GERMAN",679]="Hashcat (v${hashcat_version}) ist installiert, jedoch nicht die erforderliche Version. Um den PMKID-Angriff mit Hashcat zu integrieren, müssen Sie mindestens die Version v${minimum_hashcat_pmkid_version} haben"
 	arr["TURKISH",679]="Hashcat sisteminizde kurulu (v${hashcat_version}), ancak sürüm uygun değil. PMKID hashcat saldırısını gerçekleştirmek için minimum sürüm olan ${minimum_hashcat_pmkid_version} yüklenmeli"
+
+	arr["ENGLISH",680]="Although you were trying to capture a Handshake, it has been verified that a PMKID was successfully captured from the target network which is also valid"
+	arr["SPANISH",680]="Aunque estabas intentando capturar un Handshake, se ha comprobado que se capturado con éxito un PMKID de la red elegida como objetivo que también es válido"
+	arr["FRENCH",680]="Bien que vous essayiez de capturer une Handshake, il a été vérifié qu'un PMKID a été capturé avec succès à partir du réseau cible qui est également valide"
+	arr["CATALAN",680]="Encara que estaves intentant capturar un Handshake, s'ha comprovat que es capturat amb èxit un PMKID de la xarxa triada com a objectiu que també és vàlid"
+	arr["PORTUGUESE",680]="Embora você esteja tentando capturar um Handshake, você já possui um PMKID da rede capturado, o que também é válido"
+	arr["RUSSIAN",680]="${pending_of_translation} Хотя вы пытались захватить Handshake, было подтверждено, что PMKID был успешно получен из целевой сети, что также является действительным"
+	arr["GREEK",680]="Παρόλο που προσπαθούσατε να καταγράψετε κάποιο Handshake, επιβεβαιώθηκε πως ένα έγκυρο PMKID καταγράφηκε επιτυχώς από το δίκτυο-στόχος"
+	arr["ITALIAN",680]="Anche se stavi cercando di catturare un Handshake, è stato verificato che è stato catturato con successo un PMKID della rete scelta che è valido"
+	arr["POLISH",680]="${pending_of_translation} Chociaż próbujesz przechwycić Handshake, potwierdzono, że PMKID sieci docelowej został pomyślnie przechwycony, co jest również ważne"
+	arr["GERMAN",680]="Obwohl Sie versucht haben, einen Handshake zu erfassen, haben wir ein PMKID erfasst, was auch gültig ist"
+	arr["TURKISH",680]="Ir Handshake yakalamaya çalışmış olsanız da, hedef ağdan bir PMKID'nin başarılı bir şekilde yakalandığı doğrulandı"
+
+	arr["ENGLISH",681]="In addition to capturing a Handshake, it has been verified that a PMKID from the target network has also been successfully captured"
+	arr["SPANISH",681]="Además de capturar un Handshake, se ha comprobado que se capturado con éxito también un PMKID de la red elegida como objetivo"
+	arr["FRENCH",681]="En plus de capturer une Handshake, il a été vérifié qu'un PMKID du réseau cible a été également capturé avec succès"
+	arr["CATALAN",681]="A més de capturar un Handshake, s'ha comprovat que es capturat amb èxit també un PMKID de la xarxa triada com a objectiu"
+	arr["PORTUGUESE",681]="Além de capturar um Handshake, um PMKID da rede também foi capturado com sucesso"
+	arr["RUSSIAN",681]="${pending_of_translation} В дополнение к захвату Handshake, было подтверждено, что PMKID из целевой сети также был успешно захвачен"
+	arr["GREEK",681]="Εκτός από την καταγραφή ενός Handshake, επιβεβαιώθηκε πως κάποιο PMKID από το δίκτυο-στόχος έχει επίσης καταγραφεί με επιτυχία"
+	arr["ITALIAN",681]="Oltre all'acquisizione di un Handshake, è stato verificato che anche un PMKID della rete scelta è stato catturato correttamente"
+	arr["POLISH",681]="${pending_of_translation} Oprócz przechwytywania Handshake potwierdzono, że PMKID z sieci docelowej również został pomyślnie przechwycony"
+	arr["GERMAN",681]="Neben der Erfassung eines Handshakes wurde überprüft, ob auch eine PMKID aus dem Zielnetzwerk erfolgreich erfasst wurde"
+	arr["TURKISH",681]="Bir Handshake yakalamanın yanı sıra, hedef ağdan bir PMKID değerinin de başarıyla yakalandığı doğrulandı"
+
+	arr["ENGLISH",682]="No networks found with Handshake/PMKID captured on the selected file"
+	arr["SPANISH",682]="No se encontraron redes con Handshake/PMKID capturado en el fichero seleccionado"
+	arr["FRENCH",682]="Aucun réseau avec son Handshake/PMKID n'a été trouvé dans le fichier sélectionné"
+	arr["CATALAN",682]="No s'han trobat xarxes amb Handshake/PMKID capturat en el fitxer seleccionat"
+	arr["PORTUGUESE",682]="Nenhuma rede encontrada no arquivo Handshake/PMKID selecionado"
+	arr["RUSSIAN",682]="В выбранном файле сети с захваченным рукопожатием/PMKID не найдены"
+	arr["GREEK",682]="Δεν βρέθηκαν δίκτυα με Χειραψία/PMKID στο επιλεγμένο αρχείο"
+	arr["ITALIAN",682]="Nessuna rete trovata con Handshake/PMKID catturati nel file selezionato"
+	arr["POLISH",682]="Nie znaleziono sieci z przechwyconym Handshake/PMKID w wybranym pliku"
+	arr["GERMAN",682]="In der ausgewählten Datei wurden keine Netzwerke mit Handshake/PMKID gefunden"
+	arr["TURKISH",682]="Seçilen dosyada yakalanan Handshake/PMKID ile ağ bulunamadı"
+
+	arr["ENGLISH",683]="It has been verified that capture file contains Handshake/PMKID of target network. Script can continue..."
+	arr["SPANISH",683]="Se ha comprobado que el fichero de captura contiene Handshake/PMKID de la red objetivo. El script puede continuar..."
+	arr["FRENCH",683]="Il a été vérifié que le fichier de capture contient une Handshake/PMKID du réseau cible. Le script peut continuer..."
+	arr["CATALAN",683]="S'ha comprovat que el fitxer de captura conté Handshake/PMKID de la xarxa objectiu. El script pot continuar..."
+	arr["PORTUGUESE",683]="Foi verificado que o arquivo de captura contém um Handshake/PMKID da rede. O script pode continuar..."
+	arr["RUSSIAN",683]="${pending_of_translation} Было проверено, что файл захвата содержит Handshake/PMKID целевой сети. Скрипт может продолжать..."
+	arr["GREEK",683]="Επιβεβαιώθηκε πως το αρχείο καταγραφής περιέχει το Handshake/PMKID του δικτύου-στόχος. Το script μπορεί να συνεχίσει... "
+	arr["ITALIAN",683]="È stato verificato che il file di cattura contiene Handshake/PMKID della rete obiettivo. Lo script può continuare..."
+	arr["POLISH",683]="${pending_of_translation} Plik przechwytywania został zweryfikowany jako zawierający Handshake/PMKID sieci docelowej. Skrypt może kontynuować..."
+	arr["GERMAN",683]="Es wurde überprüft, ob die Capture-Datei das Handshake/PMKID des Zielnetzwerks enthält. Das Skript kann fortfahren..."
+	arr["TURKISH",683]="Yakalama dosyasının hedef ağın El Handshake/PMKID değerini içerdiği doğrulandı. Yazılım devam edebilir..."
 
 	case "${3}" in
 		"yellow")
