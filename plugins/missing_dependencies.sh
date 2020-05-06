@@ -120,41 +120,148 @@ function commands_to_packages() {
 	esac
 
 	local missing_packages_string=""
+	missing_special_packages=()
 	IFS=' ' read -r -a missing_commands_array <<< "${missing_commands_string_clean}"
 	for item in "${missing_commands_array[@]}"; do
-		missing_packages_string+=" ${commands_to_packages_correspondence[${item}]}"
+		case "${item}" in
+				"sslstrip")
+					missing_special_packages+=("${item}")
+				;;
+				*)
+					missing_packages_string+=" ${commands_to_packages_correspondence[${item}]}"
+				;;
+		esac
 	done
 
 	missing_packages_string_clean="${missing_packages_string#${missing_packages_string%%[![:space:]]*}}"
+}
+
+#Custom function. Detect the architecture of the running system
+function detect_architecture() {
+
+	if [[ $(uname -m) =~ x86_64 ]]; then
+		architecture="amd64"
+	else
+		architecture="i386"
+	fi
+}
+
+#Custom function. Install special packages not availables on standard repos
+#shellcheck disable=SC2154,SC2086
+function special_installation() {
+
+	airgeddon_deb_packages_repo="https://${repository_hostname}/${github_user}/airgeddon_deb_packages"
+
+	local special_installation_error=0
+	for package in "${missing_special_packages[@]}"; do
+		case "${package}" in
+			"sslstrip")
+				local packages_to_install
+
+				case "${architecture}" in
+					"amd64")
+						packages_to_install=(
+												"python-attr_19.3.0-2_all.deb"
+												"python-six_1.14.0-2_all.deb"
+												"python-automat_0.8.0-1_all.deb"
+												"python-constantly_15.1.0-1_all.deb"
+												"python-hamcrest_1.9.0-2_all.deb"
+												"python-idna_2.6-2_all.deb"
+												"python-hyperlink_19.0.0-1_all.deb"
+												"python-incremental_16.10.1-3.1_all.deb"
+												"python-ipaddress_1.0.17-1_all.deb"
+												"python-cffi-backend_1.13.2-1_amd64.deb"
+												"python-enum34_1.1.6-2_all.deb"
+												"python-cryptography_2.8-3+b1_amd64.deb"
+												"python-openssl_19.0.0-1_all.deb"
+												"python-pyasn1_0.4.2-3_all.deb"
+												"python-pyasn1-modules_0.2.1-0.2_all.deb"
+												"python-service-identity_18.1.0-5_all.deb"
+												"python-zope.interface_4.7.1-1+b1_amd64.deb"
+												"python-twisted-bin_18.9.0-10_amd64.deb"
+												"python-twisted-core_18.9.0-10_all.deb"
+												"python-twisted-web_18.9.0-10_all.deb"
+												"sslstrip_0.9-1kali3_all.deb"
+											)
+					;;
+					"i386")
+						packages_to_install=(
+												"python-attr_19.3.0-2_all.deb"
+												"python-six_1.14.0-2_all.deb"
+												"python-automat_0.8.0-1_all.deb"
+												"python-constantly_15.1.0-1_all.deb"
+												"python-hamcrest_1.9.0-2_all.deb"
+												"python-idna_2.6-2_all.deb"
+												"python-hyperlink_19.0.0-1_all.deb"
+												"python-incremental_16.10.1-3.1_all.deb"
+												"python-ipaddress_1.0.17-1_all.deb"
+												"python-cffi-backend_1.13.2-1_i386.deb"
+												"python-enum34_1.1.6-2_all.deb"
+												"python-cryptography_2.8-3+b1_i386.deb"
+												"python-openssl_19.0.0-1_all.deb"
+												"python-pyasn1_0.4.2-3_all.deb"
+												"python-pyasn1-modules_0.2.1-0.2_all.deb"
+												"python-service-identity_18.1.0-5_all.deb"
+												"python-zope.interface_4.3.2-1+b2_i386.deb"
+												"python-twisted-bin_18.9.0-3_i386.deb"
+												"python-twisted-core_18.9.0-3_all.deb"
+												"python-twisted-web_18.9.0-3_all.deb"
+												"sslstrip_0.9-1kali3_all.deb"
+											)
+					;;
+				esac
+
+				if hash wget; then
+					for item in "${packages_to_install[@]}"; do
+						if wget -q "${airgeddon_deb_packages_repo}/raw/master/${architecture}/${item}" -O "${tmpdir}${item}" > /dev/null 2>&1; then
+							if ! dpkg -i "${tmpdir}${item}" > /dev/null 2>&1; then
+								special_installation_error=1
+								rm -rf "${tmpdir}${item}" > /dev/null 2>&1
+								break
+							fi
+							rm -rf "${tmpdir}${item}" > /dev/null 2>&1
+						else
+							special_installation_error=1
+							break
+						fi
+					done
+				else
+					special_installation_error=1
+				fi
+			;;
+		esac
+	done
+
+	return ${special_installation_error}
 }
 
 #Custom function. Create text messages to be used in missing dependencies plugin
 #shellcheck disable=SC2154
 function missing_dependencies_text() {
 
-	arr["ENGLISH","missing_dependencies_1"]="${blue_color}Even with the ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color} option enabled, airgeddon has detected that you are missing some dependencies due to the auto install missing dependencies plugin. ${green_color}Do you want to proceed with the automatic installation? ${normal_color}${visual_choice}"
-	arr["SPANISH","missing_dependencies_1"]="${blue_color}Incluso con la opción ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color} habilitado, debido al plugin de auto instalación de dependencias airgeddon ha detectado que faltan algunas. ${green_color}¿Quieres proceder con la instalación automática? ${normal_color}${visual_choice}"
-	arr["FRENCH","missing_dependencies_1"]="${blue_color}Même si l'option ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color} est activé, en raison du plugin d'installation automatique des dépendances d'airgeddon, certaines manquent. ${green_color}Voulez-vous procéder à l'installation automatique? ${normal_color}${visual_choice}"
-	arr["CATALAN","missing_dependencies_1"]="${blue_color}Fins i tot amb l'opció habilitada ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color}, a causa del plugin d'acte instal·lació de dependències airgeddon ha detectat que falten algunes. ${green_color}Vols procedir amb la instal·lació automàtica? ${normal_color}${visual_choice}"
-	arr["PORTUGUESE","missing_dependencies_1"]="${blue_color}Mesmo com a opção ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color} habilitada, airgeddon detectou algumas ausentes devido ao plugin de instalação automática de dependências. ${green_color}Você quer prosseguir com a instalação automática? ${normal_color}${visual_choice}"
-	arr["RUSSIAN","missing_dependencies_1"]="${blue_color}Даже при включённой опции ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color}, airgeddon с помощью плагина auto install missing dependencies (автоматическая установка отсутствующих зависимостей) обнаружил, что вам не хватает некоторых зависимостей. ${green_color}Вы хотите продолжить автоматическую установку? ${normal_color}${visual_choice}"
-	arr["GREEK","missing_dependencies_1"]="${blue_color}Ακόμα και με ενεργοποιημένη την επιλογή ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color}, το airgeddon εντόπισε ότι σας λείπουν κάποια dependencies λόγω της αυτόματης εγκατάστασης του missing dependencies plugin. ${green_color}Θέλετε να συνεχίσετε με την αυτόματη εγκατάσταση; ${normal_color}${visual_choice}"
-	arr["ITALIAN","missing_dependencies_1"]="${blue_color}Anche con l'opzione abilitata ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color} abilitata, a causa del plugin di installazione automatica delle dipendenze, airgeddon ha rilevato che mancano alcune. ${green_color}Vuoi procedere con l'installazione automatica? ${normal_color}${visual_choice}"
-	arr["POLISH","missing_dependencies_1"]="${blue_color}Nawet z włączoną opcją ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color} airgeddon wykrył przy pomocy wtyczki automatyczne instalacji brakujących zależności. ${green_color}Chcesz przystąpić do automatycznej instalacji? ${normal_color}${visual_choice}"
-	arr["GERMAN","missing_dependencies_1"]="${blue_color}Auch wenn die ${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color} Option aktiviert ist, hat airgeddon bemerkt, dass einige Abhängigkeiten fehlen aufgrund der automatischen Installation fehlenden Abhängigkeiten Plugin. ${green_color}Möchten Sie mit der automatischen Installation fortfahren? ${normal_color}${visual_choice}"
-	arr["TURKISH","missing_dependencies_1"]="${normal_color}AIRGEDDON_SILENT_CHECKS${blue_color} seçeneği etkin olsa bile, airgeddon bağımlılıkları eklentisi eksik nedeniyle otomatik bazı bağımlılıkları eksik olduğunu install algıladı. ${green_color}Otomatik yükleme ile devam etmek istiyor musunuz? ${normal_color}${visual_choice}"
+	arr["ENGLISH","missing_dependencies_1"]="\${blue_color}Even with the \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color} option enabled, airgeddon has detected that you are missing some dependencies due to the auto install missing dependencies plugin. \${green_color}Do you want to proceed with the automatic installation? \${normal_color}\${visual_choice}"
+	arr["SPANISH","missing_dependencies_1"]="\${blue_color}Incluso con la opción \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color} habilitado, debido al plugin de auto instalación de dependencias airgeddon ha detectado que faltan algunas. \${green_color}¿Quieres proceder con la instalación automática? \${normal_color}\${visual_choice}"
+	arr["FRENCH","missing_dependencies_1"]="\${blue_color}Même si l'option \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color} est activé, en raison du plugin d'installation automatique des dépendances d'airgeddon, certaines manquent. \${green_color}Voulez-vous procéder à l'installation automatique? \${normal_color}\${visual_choice}"
+	arr["CATALAN","missing_dependencies_1"]="\${blue_color}Fins i tot amb l'opció habilitada \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color}, a causa del plugin d'acte instal·lació de dependències airgeddon ha detectat que falten algunes. \${green_color}Vols procedir amb la instal·lació automàtica? \${normal_color}\${visual_choice}"
+	arr["PORTUGUESE","missing_dependencies_1"]="\${blue_color}Mesmo com a opção \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color} habilitada, airgeddon detectou algumas ausentes devido ao plugin de instalação automática de dependências. \${green_color}Você quer prosseguir com a instalação automática? \${normal_color}\${visual_choice}"
+	arr["RUSSIAN","missing_dependencies_1"]="\${blue_color}Даже при включённой опции \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color}, airgeddon с помощью плагина auto install missing dependencies (автоматическая установка отсутствующих зависимостей) обнаружил, что вам не хватает некоторых зависимостей. \${green_color}Вы хотите продолжить автоматическую установку? \${normal_color}\${visual_choice}"
+	arr["GREEK","missing_dependencies_1"]="\${blue_color}Ακόμα και με ενεργοποιημένη την επιλογή \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color}, το airgeddon εντόπισε ότι σας λείπουν κάποια dependencies λόγω της αυτόματης εγκατάστασης του missing dependencies plugin. \${green_color}Θέλετε να συνεχίσετε με την αυτόματη εγκατάσταση; \${normal_color}\${visual_choice}"
+	arr["ITALIAN","missing_dependencies_1"]="\${blue_color}Anche con l'opzione abilitata \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color} abilitata, a causa del plugin di installazione automatica delle dipendenze, airgeddon ha rilevato che mancano alcune. \${green_color}Vuoi procedere con l'installazione automatica? \${normal_color}\${visual_choice}"
+	arr["POLISH","missing_dependencies_1"]="\${blue_color}Nawet z włączoną opcją \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color} airgeddon wykrył przy pomocy wtyczki automatyczne instalacji brakujących zależności. \${green_color}Chcesz przystąpić do automatycznej instalacji? \${normal_color}\${visual_choice}"
+	arr["GERMAN","missing_dependencies_1"]="\${blue_color}Auch wenn die \${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color} Option aktiviert ist, hat airgeddon bemerkt, dass einige Abhängigkeiten fehlen aufgrund der automatischen Installation fehlenden Abhängigkeiten Plugin. \${green_color}Möchten Sie mit der automatischen Installation fortfahren? \${normal_color}\${visual_choice}"
+	arr["TURKISH","missing_dependencies_1"]="\${normal_color}AIRGEDDON_SILENT_CHECKS\${blue_color} seçeneği etkin olsa bile, airgeddon bağımlılıkları eklentisi eksik nedeniyle otomatik bazı bağımlılıkları eksik olduğunu install algıladı. \${green_color}Otomatik yükleme ile devam etmek istiyor musunuz? \${normal_color}\${visual_choice}"
 
-	arr["ENGLISH","missing_dependencies_2"]="${blue_color}Due to the auto install missing dependencies plugin, airgeddon could try to install the necessary missing packages. ${green_color}Do you want to proceed with the automatic installation? ${normal_color}${visual_choice}"
-	arr["SPANISH","missing_dependencies_2"]="${blue_color}Debido al plugin de auto instalación de dependencias, airgeddon podría intentar instalar los paquetes necesarios que faltan. ${green_color}¿Quieres proceder con la instalación automática? ${normal_color}${visual_choice}"
-	arr["FRENCH","missing_dependencies_2"]="${blue_color}En raison du plugin d'installation automatique des dependances, airgeddon pourrait essayer d'installer les logiciels manquants nécessaires. ${green_color}Voulez-vous procéder à l'installation automatique? ${normal_color}${visual_choice}"
-	arr["CATALAN","missing_dependencies_2"]="${blue_color}A causa del plugin d'acte instal·lació de dependències, airgeddon podria intentar instal·lar els paquets necessaris que falten. ${green_color}Vols procedir amb la instal·lació automàtica? ${normal_color}${visual_choice}"
-	arr["PORTUGUESE","missing_dependencies_2"]="${blue_color}Devido ao plug-in de instalação automática de dependência, o airgeddon pode tentar instalar os pacotes ausentes necessários. ${green_color}Você quer prosseguir com a instalação automática? ${normal_color}${visual_choice}"
-	arr["RUSSIAN","missing_dependencies_2"]="${blue_color}Благодаря плагину auto install missing dependencies (автоматическая установка отсутствующих зависимостей) airgeddon может попытаться установить необходимые недостающие пакеты. ${green_color}Вы хотите продолжить автоматическую установку? ${normal_color}${visual_choice}"
-	arr["GREEK","missing_dependencies_2"]="${blue_color}Λόγω της αυτόματης εγκατάστασης του missing dependencies plugin, το airgeddon θα μπορούσε να προσπαθήσει να εγκαταστήσει τα απαραίτητα πακέτα που λείπουν. ${green_color}θέλετε να συνεχίσετε με την αυτόματη εγκατάσταση; ${normal_color}${visual_choice}"
-	arr["ITALIAN","missing_dependencies_2"]="${blue_color}A causa del plugin di installazione automatica delle dipendenze, airgeddon potrebbe provare a installare i pacchetti mancanti necessari. ${green_color}Vuoi procedere con l'installazione automatica? ${normal_color}${visual_choice}"
-	arr["POLISH","missing_dependencies_2"]="${blue_color}Z powodu wtyczki automatycznej instalacji zależności airgeddon może spróbować zainstalować niezbędne brakujące pakiety. ${green_color}Chcesz przystąpić do automatycznej instalacji? ${normal_color}${visual_choice}"
-	arr["GERMAN","missing_dependencies_2"]="${blue_color}Mit dem Auto-Dependency-Installations-Plugin könnte airgeddon versuchen, die erforderlichen fehlenden Pakete zu installieren. ${green_color}Haben sie mit der automatischen installation fortfahren? ${normal_color}${visual_choice}"
-	arr["TURKISH","missing_dependencies_2"]="${blue_color}Otomatik bağımlılık yükleme eklentisi nedeniyle, airgeddon gerekli eksik paketleri kurmayı deneyebilir. ${green_color}Otomatik yükleme ile devam etmek istiyor musunuz? ${normal_color}${visual_choice}"
+	arr["ENGLISH","missing_dependencies_2"]="\${blue_color}Due to the auto install missing dependencies plugin, airgeddon could try to install the necessary missing packages. \${green_color}Do you want to proceed with the automatic installation? \${normal_color}\${visual_choice}"
+	arr["SPANISH","missing_dependencies_2"]="\${blue_color}Debido al plugin de auto instalación de dependencias, airgeddon podría intentar instalar los paquetes necesarios que faltan. \${green_color}¿Quieres proceder con la instalación automática? \${normal_color}\${visual_choice}"
+	arr["FRENCH","missing_dependencies_2"]="\${blue_color}En raison du plugin d'installation automatique des dependances, airgeddon pourrait essayer d'installer les logiciels manquants nécessaires. \${green_color}Voulez-vous procéder à l'installation automatique? \${normal_color}\${visual_choice}"
+	arr["CATALAN","missing_dependencies_2"]="\${blue_color}A causa del plugin d'acte instal·lació de dependències, airgeddon podria intentar instal·lar els paquets necessaris que falten. \${green_color}Vols procedir amb la instal·lació automàtica? \${normal_color}\${visual_choice}"
+	arr["PORTUGUESE","missing_dependencies_2"]="\${blue_color}Devido ao plug-in de instalação automática de dependência, o airgeddon pode tentar instalar os pacotes ausentes necessários. \${green_color}Você quer prosseguir com a instalação automática? \${normal_color}\${visual_choice}"
+	arr["RUSSIAN","missing_dependencies_2"]="\${blue_color}Благодаря плагину auto install missing dependencies (автоматическая установка отсутствующих зависимостей) airgeddon может попытаться установить необходимые недостающие пакеты. \${green_color}Вы хотите продолжить автоматическую установку? \${normal_color}\${visual_choice}"
+	arr["GREEK","missing_dependencies_2"]="\${blue_color}Λόγω της αυτόματης εγκατάστασης του missing dependencies plugin, το airgeddon θα μπορούσε να προσπαθήσει να εγκαταστήσει τα απαραίτητα πακέτα που λείπουν. \${green_color}θέλετε να συνεχίσετε με την αυτόματη εγκατάσταση; \${normal_color}\${visual_choice}"
+	arr["ITALIAN","missing_dependencies_2"]="\${blue_color}A causa del plugin di installazione automatica delle dipendenze, airgeddon potrebbe provare a installare i pacchetti mancanti necessari. \${green_color}Vuoi procedere con l'installazione automatica? \${normal_color}\${visual_choice}"
+	arr["POLISH","missing_dependencies_2"]="\${blue_color}Z powodu wtyczki automatycznej instalacji zależności airgeddon może spróbować zainstalować niezbędne brakujące pakiety. \${green_color}Chcesz przystąpić do automatycznej instalacji? \${normal_color}\${visual_choice}"
+	arr["GERMAN","missing_dependencies_2"]="\${blue_color}Mit dem Auto-Dependency-Installations-Plugin könnte airgeddon versuchen, die erforderlichen fehlenden Pakete zu installieren. \${green_color}Haben sie mit der automatischen installation fortfahren? \${normal_color}\${visual_choice}"
+	arr["TURKISH","missing_dependencies_2"]="\${blue_color}Otomatik bağımlılık yükleme eklentisi nedeniyle, airgeddon gerekli eksik paketleri kurmayı deneyebilir. \${green_color}Otomatik yükleme ile devam etmek istiyor musunuz? \${normal_color}\${visual_choice}"
 
 	arr["ENGLISH","missing_dependencies_3"]="Missing dependencies packages are trying to be installed. Please be patient..."
 	arr["SPANISH","missing_dependencies_3"]="Se está intentando instalar los paquetes de las dependencias que faltaban. Por favor ten paciencia..."
@@ -219,6 +326,8 @@ function missing_dependencies_posthook_check_compatibility() {
 
 		if [ "${yesno}" = "y" ]; then
 
+			detect_architecture
+
 			local missing_tools=()
 
 			for item in "${!possible_package_names[@]}"; do
@@ -259,16 +368,25 @@ function missing_dependencies_posthook_check_compatibility() {
 			language_strings "${language}" "missing_dependencies_3" "blue"
 			echo
 
-			local resultok=0
+			local resultok=1
 			case "${distro}" in
 				"Kali"|"Parrot")
-					if apt update > /dev/null 2>&1 && apt -y install ${missing_packages_string_clean} > /dev/null 2>&1; then
-						resultok=1
+					if [ -n "${missing_packages_string_clean}" ]; then
+						if ! apt update > /dev/null 2>&1; then
+							resultok=0
+						else
+							if ! apt -y install ${missing_packages_string_clean} > /dev/null 2>&1; then
+								resultok=0
+							fi
+						fi
+					fi
+					if ! special_installation; then
+						resultok=0
 					fi
 				;;
 				"BlackArch")
-					if pacman -Sy > /dev/null 2>&1 && pacman --noconfirm -S ${missing_packages_string_clean} > /dev/null 2>&1; then
-						resultok=1
+					if ! pacman -Sy > /dev/null 2>&1 && pacman --noconfirm -S ${missing_packages_string_clean} > /dev/null 2>&1; then
+						resultok=0
 					fi
 				;;
 			esac

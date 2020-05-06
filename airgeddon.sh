@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.11
+#Version......: 10.20
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -126,8 +126,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.11"
-language_strings_expected_version="10.11-1"
+airgeddon_version="10.20"
+language_strings_expected_version="10.20-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 timeout_capture_handshake="20"
@@ -734,12 +734,15 @@ function special_text_missed_optional_tool() {
 		done
 	fi
 
+	local message
+	message=$(replace_string_vars "${@}")
+
 	if [ ${allowed_menu_option} -eq 1 ]; then
-		last_echo "${arr[${1},${2}]}" "${normal_color}"
+		last_echo "${message}" "${normal_color}"
 	else
-		[[ ${arr[${1},${2}]} =~ ^([0-9]+)\.(.*)$ ]] && forbidden_options+=("${BASH_REMATCH[1]}")
+		[[ ${message} =~ ^([0-9]+)\.(.*)$ ]] && forbidden_options+=("${BASH_REMATCH[1]}")
 		tools_needed=${tools_needed:: -1}
-		echo_red_slim "${arr[${1},${2}]} (${tools_needed})"
+		echo_red_slim "${message} (${tools_needed})"
 	fi
 }
 
@@ -2164,6 +2167,7 @@ function language_menu() {
 			invalid_language_selected
 		;;
 	esac
+	initialize_language_strings
 
 	language_menu
 }
@@ -6959,7 +6963,7 @@ function check_bssid_in_captured_file() {
 		get_aircrack_version
 		if compare_floats_greater_or_equal "${aircrack_version}" "${aircrack_pmkid_version}"; then
 			local nets_from_file2
-			nets_from_file2=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "handshake, with PMKID" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
+			nets_from_file2=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "WPA \([1-9][0-9]? handshake|handshake, with PMKID" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
 		fi
 	fi
 
@@ -7082,7 +7086,7 @@ function select_wpa_bssid_target_from_captured_file() {
 	if [ "${2}" = "only_handshake" ]; then
 		nets_from_file=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "WPA \([1-9][0-9]? handshake" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
 	else
-		nets_from_file=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "handshake, with PMKID" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
+		nets_from_file=$(echo "1" | aircrack-ng "${1}" 2> /dev/null | grep -E "WPA \([1-9][0-9]? handshake|handshake, with PMKID" | awk '{ saved = $1; $1 = ""; print substr($0, 2) }')
 	fi
 
 	echo
@@ -9910,6 +9914,11 @@ function set_enterprise_control_script() {
 
 			echo -ne "\033[K\033[u"
 			sleep 0.3
+			current_window_size="$(tput cols)x$(tput lines)"
+			if [ "${current_window_size}" != "${stored_window_size}" ]; then
+				stored_window_size="${current_window_size}"
+				clear
+			fi
 		done
 
 		if [ "${enterprise_heredoc_mode}" = "smooth" ]; then
@@ -10191,6 +10200,11 @@ function set_et_control_script() {
 			fi
 			echo -ne "\033[K\033[u"
 			sleep 0.3
+			current_window_size="$(tput cols)x$(tput lines)"
+			if [ "${current_window_size}" != "${stored_window_size}" ]; then
+				stored_window_size="${current_window_size}"
+				clear
+			fi
 		done
 	EOF
 
@@ -12292,7 +12306,7 @@ function explore_for_wps_targets_option() {
 
 			if [[ ${expwps_power} -lt 0 ]]; then
 				if [[ ${expwps_power} -eq -1 ]]; then
-					exp_power=0
+					expwps_power=0
 				else
 					expwps_power=$((expwps_power + 100))
 				fi
@@ -14632,7 +14646,7 @@ function print_configuration_vars_issues() {
 			if [ -z "${!error_var_state}" ]; then
 				error_var_default_value="${errors_on_configuration_vars[${item},"${error_var_state}"]}"
 				stop_on_var_errors=1
-				if [ "${error_var_state}" = "missing_var"  ]; then
+				if [ "${error_var_state}" = "missing_var" ]; then
 					echo
 					language_strings "${language}" 614 "yellow"
 				else
@@ -15569,6 +15583,7 @@ function main() {
 	fi
 
 	check_language_strings
+	initialize_language_strings
 	iptables_nftables_detection
 	set_mdk_version
 	dependencies_modifications

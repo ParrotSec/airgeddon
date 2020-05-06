@@ -1,3 +1,9 @@
+### 10.20
+ - Big language strings array now loaded only once and printing system changed. Speed highly improved
+ - Fixed problem for handshake detection on captured files containing only handshake (without pmkid)
+ - Missing dependencies plugin adapted to install some special (missing on repos due retirement) packages
+ - Dockerfile adapted to work flawlessly with the deprecated retired packages
+
 ### 10.11
  - Fixed error on PMKID capturing due hcxdumptool different params for different versions
  - Added feature to detect captured PMKID while capturing Handshake

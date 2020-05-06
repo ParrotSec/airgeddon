@@ -1,3 +1,12 @@
+airgeddon (10.20+parrot0) testing; urgency=medium
+
+ * Big language strings array now loaded only once and printing system changed. Speed highly improved
+ * Fixed problem for handshake detection on captured files containing only handshake (without pmkid)
+ * Missing dependencies plugin adapted to install some special (missing on repos due retirement) packages
+ * Dockerfile adapted to work flawlessly with the deprecated retired packages
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Wed, 06 May 2020 16:23:13 +0700
+ 
 airgeddon (10.11+parrot0) testing; urgency=medium
 
  * Fixed error on PMKID capturing due hcxdumptool different params for different versions
