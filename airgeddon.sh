@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.20
+#Version......: 10.21
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -67,6 +67,7 @@ optional_tools_names=(
 						"openssl"
 						"hcxpcaptool"
 						"hcxdumptool"
+						"tshark"
 					)
 
 update_tools=("curl")
@@ -117,6 +118,7 @@ declare -A possible_package_names=(
 									[${optional_tools_names[23]}]="openssl" #openssl
 									[${optional_tools_names[24]}]="hcxtools" #hcxpcaptool
 									[${optional_tools_names[25]}]="hcxdumptool" #hcxdumptool
+									[${optional_tools_names[26]}]="tshark / wireshark-cli / wireshark" #tshark
 									[${update_tools[0]}]="curl" #curl
 								)
 
@@ -126,10 +128,11 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.20"
-language_strings_expected_version="10.20-1"
+airgeddon_version="10.21"
+language_strings_expected_version="10.21-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
+standardpmkidcap_filename="pmkid.cap"
 timeout_capture_handshake="20"
 timeout_capture_pmkid="25"
 tmpdir="/tmp/"
@@ -188,7 +191,7 @@ wep_key_handler="ag.wep_key_handler.sh"
 wep_processes_file="wep_processes"
 
 #Docker vars
-docker_based_distro="Parrot"
+docker_based_distro="Arch"
 docker_io_dir="/io/"
 
 #WPS vars
@@ -7524,10 +7527,14 @@ function manage_hashcat_pot() {
 				{
 				echo "BSSID: ${bssid}"
 				} >> "${potenteredpath}"
-			else
+			elif [ "${1}" = "personal_pmkid" ]; then
+				{
+				echo "${hashcat_texts[${language},4]}:"
+				} >> "${potenteredpath}"
+			elif [ "${1}" = "enterprise" ]; then
 				if [ "${multiple_users}" -eq 1 ]; then
 					{
-					echo "${hashcat_texts[${language},3]}"
+					echo "${hashcat_texts[${language},3]}:"
 					} >> "${potenteredpath}"
 				else
 					{
@@ -7841,7 +7848,7 @@ function manage_wps_log() {
 
 	debug_print
 
-	wps_potpath="${user_homedir}"
+	wps_potpath="${default_save_path}"
 
 	if [ -z "${wps_essid}" ]; then
 		wpspot_filename="wps_captured_key-${wps_bssid}.txt"
@@ -7861,7 +7868,7 @@ function manage_wep_log() {
 
 	debug_print
 
-	wep_potpath="${user_homedir}"
+	wep_potpath="${default_save_path}"
 	weppot_filename="wep_captured_key-${essid}.txt"
 	wep_potpath="${wep_potpath}${weppot_filename}"
 
@@ -7876,7 +7883,7 @@ function manage_enterprise_log() {
 
 	debug_print
 
-	enterprise_potpath="${user_homedir}"
+	enterprise_potpath="${default_save_path}"
 	enterprisepot_suggested_dirname="enterprise_captured-${essid}"
 	enterprise_potpath="${enterprise_potpath}${enterprisepot_suggested_dirname}/"
 
@@ -7891,7 +7898,7 @@ function manage_enterprise_certs() {
 
 	debug_print
 
-	enterprisecertspath="${user_homedir}"
+	enterprisecertspath="${default_save_path}"
 	enterprisecerts_suggested_dirname="enterprise_certs"
 	enterprisecertspath="${enterprisecertspath}${enterprisecerts_suggested_dirname}/"
 
@@ -8857,7 +8864,6 @@ function set_hostapd_wpe_config() {
 
 	{
 	echo -e "channel=${et_channel}"
-	echo -e "wpe_logfile=/dev/null"
 	echo -e "eap_server=1"
 	echo -e "eap_fast_a_id=101112131415161718191a1b1c1d1e1f"
 	echo -e "eap_fast_a_id_info=hostapd-wpe"
@@ -11534,6 +11540,10 @@ function validate_path() {
 				enteredpath="${pathname}${standardpmkid_filename}"
 				suggested_filename="${standardpmkid_filename}"
 			;;
+			"pmkidcap")
+				enteredpath="${pathname}${standardpmkidcap_filename}"
+				suggested_filename="${standardpmkidcap_filename}"
+			;;
 			"aircrackpot")
 				suggested_filename="${aircrackpot_filename}"
 				aircrackpotenteredpath+="${aircrackpot_filename}"
@@ -11707,6 +11717,14 @@ function read_path() {
 			read_and_clean_path "enteredpath"
 			if [ -z "${enteredpath}" ]; then
 				enteredpath="${pmkidpath}"
+			fi
+			validate_path "${enteredpath}" "${1}"
+		;;
+		"pmkidcap")
+			language_strings "${language}" 686 "green"
+			read_and_clean_path "enteredpath"
+			if [ -z "${enteredpath}" ]; then
+				enteredpath="${pmkidcappath}"
 			fi
 			validate_path "${enteredpath}" "${1}"
 		;;
@@ -12039,11 +12057,35 @@ function launch_pmkid_capture() {
 			read_path "pmkid"
 		done
 
-		cp "${tmpdir}${standardpmkid_filename}" "${enteredpath}"
+		cp "${tmpdir}${standardpmkid_filename}" "${enteredpath}" > /dev/null 2>&1
 
 		echo
 		language_strings "${language}" 673 "blue"
-		language_strings "${language}" 115 "read"
+		ask_yesno 684 "yes"
+		if [ "${yesno}" = "y" ]; then
+			if hash tshark 2> /dev/null; then
+				tshark -r "${tmpdir}pmkid.pcapng" -R "(wlan.fc.type_subtype == 0x08 || wlan.fc.type_subtype == 0x05 || eapol && wlan.addr==${bssid})" -2 -w "${tmpdir}pmkid_transformed.cap" -F pcap > /dev/null 2>&1
+
+				pmkidcappath="${default_save_path}"
+				pmkidcapfilename="pmkid-${bssid}.cap"
+				pmkidcappath="${pmkidcappath}${pmkidcapfilename}"
+
+				validpath=1
+				while [[ "${validpath}" != "0" ]]; do
+					read_path "pmkidcap"
+				done
+
+				cp "${tmpdir}pmkid_transformed.cap" "${enteredpath}" > /dev/null 2>&1
+
+				echo
+				language_strings "${language}" 673 "blue"
+				language_strings "${language}" 115 "read"
+			else
+				echo
+				language_strings "${language}" 685 "red"
+				language_strings "${language}" 115 "read"
+			fi
+		fi
 	else
 		echo
 		language_strings "${language}" 672 "red"
@@ -13788,7 +13830,7 @@ function detect_arm_architecture() {
 
 	distro_already_known=0
 
-	if uname -m | grep -i "arm" > /dev/null && [[ "${distro}" != "Unknown Linux" ]]; then
+	if uname -m | grep -Ei "arm|aarch64" > /dev/null && [[ "${distro}" != "Unknown Linux" ]]; then
 
 		for item in "${known_arm_compatible_distros[@]}"; do
 			if [ "${distro}" = "${item}" ]; then
@@ -13985,7 +14027,7 @@ function general_checkings() {
 		echo -e "${yellow_color}${distro}${normal_color}"
 	else
 		if [ "${is_docker}" -eq 1 ]; then
-			echo -e "${yellow_color}${docker_based_distro} Linux ${pink_color}(Docker)${normal_color}"
+			echo -e "${yellow_color}${docker_based_distro} Linux ${pink_color}(${docker_image[${language}]})${normal_color}"
 		else
 			echo -e "${yellow_color}${distro} Linux${normal_color}"
 		fi

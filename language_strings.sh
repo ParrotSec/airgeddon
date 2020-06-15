@@ -10,7 +10,7 @@ function set_language_strings_version() {
 
 	debug_print
 
-	language_strings_version="10.20-1"
+	language_strings_version="10.21-1"
 }
 
 #Set different language text strings
@@ -126,6 +126,19 @@ function initialize_language_strings() {
 	reboot_required["POLISH"]="${red_color_slim} (wymagane ponowne uruchomienie)${normal_color}"
 	reboot_required["GERMAN"]="${red_color_slim} (Neustart erforderlich)${normal_color}"
 	reboot_required["TURKISH"]="${red_color_slim} (yeniden başlatma gerekli)${normal_color}"
+
+	declare -gA docker_image
+	docker_image["ENGLISH"]="ArchStrike Docker image based"
+	docker_image["SPANISH"]="Basado en imagen de Docker de ArchStrike"
+	docker_image["FRENCH"]="Fondé sur l'image  de Docker d'ArchStrike"
+	docker_image["CATALAN"]="Basat en imatge de Docker de ArchStrike"
+	docker_image["PORTUGUESE"]="Baseado na imagem Docker do ArchStrike"
+	docker_image["RUSSIAN"]="${pending_of_translation} Основано на изображении ArchStrike Docker"
+	docker_image["GREEK"]="Με βάση to ArchStrike Docker image"
+	docker_image["ITALIAN"]="Basato sull'immagine di Docker di ArchStrike"
+	docker_image["POLISH"]="${pending_of_translation} Na podstawie obrazu ArchStrike Docker"
+	docker_image["GERMAN"]="Auf dem ArchStrike Docker-Image"
+	docker_image["TURKISH"]="ArchStrike Docker image tabanlı"
 
 	declare -gA et_misc_texts
 	et_misc_texts["ENGLISH",0]="Evil Twin AP Info"
@@ -696,6 +709,18 @@ function initialize_language_strings() {
 	hashcat_texts["POLISH",3]="Użytkownicy i hasła enterprise"
 	hashcat_texts["GERMAN",3]="Enterprise-Benutzernamen und Kennwörter"
 	hashcat_texts["TURKISH",3]="Enterprise kullanıcılar ve şifreler"
+
+	hashcat_texts["ENGLISH",4]="PMKID password"
+	hashcat_texts["SPANISH",4]="Contraseña PMKID"
+	hashcat_texts["FRENCH",4]="Mot de passe PMKID"
+	hashcat_texts["CATALAN",4]="Contrasenya PMKID"
+	hashcat_texts["PORTUGUESE",4]="Senha PMKID"
+	hashcat_texts["RUSSIAN",4]="Пароль PMKID"
+	hashcat_texts["GREEK",4]="Κωδικός πρόσβασης PMKID"
+	hashcat_texts["ITALIAN",4]="Password PMKID"
+	hashcat_texts["POLISH",4]="Hasło PMKID"
+	hashcat_texts["GERMAN",4]="PMKID-Passwort"
+	hashcat_texts["TURKISH",4]="PMKID şifresi"
 
 	declare -gA aircrack_texts
 	aircrack_texts["ENGLISH",1]="airgeddon. Decrypted password using aircrack"
@@ -2433,7 +2458,7 @@ function initialize_language_strings() {
 	arr["ENGLISH",130]="Remember to select a target network with clients to capture Handshake"
 	arr["SPANISH",130]="Recuerda seleccionar una red objetivo con clientes para capturar el Handshake"
 	arr["FRENCH",130]="Rappelez-vous de sélectionner un réseau cible avec un/des client(s) connecté(s) pour pouvoir capturer un Handshake"
-	arr["CATALAN",130]="Recorda que has de seleccionar una xarxa de destinació amb clients per capturar el Handshake"
+	arr["CATALAN",130]="Recorda que has de seleccionar una xarxa objectiu amb clients per capturar el Handshake"
 	arr["PORTUGUESE",130]="Lembre-se de selecionar uma rede com clientes para capturar o Handshake"
 	arr["RUSSIAN",130]="Не забудьте выбрать целевую сеть с клиентами для захвата рукопожатия"
 	arr["GREEK",130]="Θυμηθείτε να επιλέξετε ένα δίκτυο-στόχος με έναν ή παραπάνω χρήστες για να καταγράψετε μία Χειραψία"
@@ -4470,17 +4495,17 @@ function initialize_language_strings() {
 	arr["GERMAN",299]="Interface wiederherstellen..."
 	arr["TURKISH",299]="Arayüz onarılıyor..."
 
-	arr["ENGLISH",300]="If the xpdyinfo command works, the script will be able to calculate your screen resolution and display the windows in a better way. Depending of the system, the package name containing it could be x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
+	arr["ENGLISH",300]="If the xdpyinfo command works, the script will be able to calculate your screen resolution and display the windows in a better way. Depending of the system, the package name containing it could be x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
 	arr["SPANISH",300]="Si haces que funcione en tu sistema el comando xdpyinfo, el script podrá calcular tu resolución de pantalla y mostrarte las ventanas de forma más optimizada. Dependiendo del sistema el paquete que lo contiene puede llamarse x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
 	arr["FRENCH",300]="Si la commande xdpyinfo est installée dans vôtre système le script pourra calculer votre résolution d'écran et optimiser l'affichage en conséquence. Le paquet à installer pour avoir cette commande s'appelle (selon la distribution) x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
 	arr["CATALAN",300]="Si fas que funcioni en el teu sistema l'ordre xdpyinfo, el script podrà calcular la teua resolució de pantalla i mostrar-te les finestres de forma més optimitzada. Depenent del sistema el paquet que el conté pot dir-se x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
 	arr["PORTUGUESE",300]="Se o comando xdpyinfo funcionar em seu sistema o script será capaz de calcular a resolução da tela e mostrar-lhe as janelas de uma maneira melhor. Dependendo do sistema, o nome do pacote pode ser: x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
-	arr["RUSSIAN",300]="Команда xpdyinfo поможет этому скрипту определить разрешение вашего экрана и выбрать наилучшее отображение окон. В зависимости от системы, имя пакета, в котором содержится эта программа, может быть x11-utils, xdpyinfo, xorg-xdpyinfo, и т.д."
-	arr["GREEK",300]="Αν δουλέψει η εντολή xpdyinfo, το script θα μπορέσει να υπολογίσει την ανάλυση της οθόνης και να δείχνει τα παράθυρα καλύτερα. Εξαρτάται από το σύστημα, το όνομα του πακέτου που το περιέχει θα μπορούσε να είναι x11-utils, xdpyinfo, xorg-xdpyinfo, κτλπ."
+	arr["RUSSIAN",300]="Команда xdpyinfo поможет этому скрипту определить разрешение вашего экрана и выбрать наилучшее отображение окон. В зависимости от системы, имя пакета, в котором содержится эта программа, может быть x11-utils, xdpyinfo, xorg-xdpyinfo, и т.д."
+	arr["GREEK",300]="Αν δουλέψει η εντολή xdpyinfo, το script θα μπορέσει να υπολογίσει την ανάλυση της οθόνης και να δείχνει τα παράθυρα καλύτερα. Εξαρτάται από το σύστημα, το όνομα του πακέτου που το περιέχει θα μπορούσε να είναι x11-utils, xdpyinfo, xorg-xdpyinfo, κτλπ."
 	arr["ITALIAN",300]="Se funziona il comando xdpyinfo, lo script calcolerà la risoluzione dello schermo e mostrerá le finestre in modo ottimizzato. A seconda del sistema il pacchetto che lo contiene può chiamarsi x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
 	arr["POLISH",300]="Jeśli polecenie xdpyinfo działa w systemie, skrypt będzie mógł obliczyć rozdzielczość ekranu i lepiej wyświetlać okna. W zależności od systemu pakiet zawierający go może być nazwany x11-utils, xdpyinfo, xorg-xdpyinfo, itd."
 	arr["GERMAN",300]="Wenn Sie den Befehl xdpyinfo in Ihrem System verwenden, kann das Skript Ihre Bildschirmauflösung berechnen und Ihnen die Fenster in einer optimierten Weise zeigen. Je nach System kann das Paket, das es enthält, x11-utils, xdpyinfo, xorg-xdpyinfo usw. genannt werden"
-	arr["TURKISH",300]="Eğer xpdyinfo komutu çalışırsa, yazılım ekran çözünürlüğünüzü hesaplayabilecek ve en iyi boyutlardaki pencereler ile çalışacak. Paket isimleri sisteminize göre x11-utils, xdpyinfo, xorg-xdpyinfo, vb... olarak değişiklik gösterebilir"
+	arr["TURKISH",300]="Eğer xdpyinfo komutu çalışırsa, yazılım ekran çözünürlüğünüzü hesaplayabilecek ve en iyi boyutlardaki pencereler ile çalışacak. Paket isimleri sisteminize göre x11-utils, xdpyinfo, xorg-xdpyinfo, vb... olarak değişiklik gösterebilir"
 
 	arr["ENGLISH",301]="For enterprise attacks, if you already have the legitimate certificates of the target network and the password, you can use them. If you don't have them, you can use airgeddon to generate some certificates with the same data and use them to make the attack more credible"
 	arr["SPANISH",301]="Para los ataques enterprise, si tienes los certificados legítimos de la red objetivo y su contraseña, podrás utilizarlos. Si no los tienes, puedes generar con airgeddon unos certificados con los mismos datos y utilizarlos para que el ataque sea más creíble"
@@ -6210,7 +6235,7 @@ function initialize_language_strings() {
 	arr["GERMAN",444]="12. Optionen und Sprachmenü"
 	arr["TURKISH",444]="12. Ayarlar ve dil menüsü"
 
-	arr["ENGLISH",445]="If you have ccze installed and are experiencing display errors or glitches on some windows, you should disable extended colorization in the option and language menu"
+	arr["ENGLISH",445]="If you have ccze installed and are experiencing display errors or glitches on some windows, you should disable extended colorization in the options and language menu"
 	arr["SPANISH",445]="Si tienes instalado ccze y experimentas errores de visualización o parpadeos en algunas ventanas, desactiva la colorización extendida en el menú de opciones e idioma"
 	arr["FRENCH",445]="Si ccze est installé et vous avez des erreurs de visualisation et de clignotement avec certaines fenêtres, désactivez la colorisation repandue vers le menu d'options et langues"
 	arr["CATALAN",445]="Si tens instal·lat ccze i experimentes errors de visualització o parpelleigs en algunes finestres, desactiva la coloració estesa al menú d'opcions i idioma"
@@ -9072,11 +9097,47 @@ function initialize_language_strings() {
 	arr["CATALAN",683]="S'ha comprovat que el fitxer de captura conté Handshake/PMKID de la xarxa objectiu. El script pot continuar..."
 	arr["PORTUGUESE",683]="Foi verificado que o arquivo de captura contém um Handshake/PMKID da rede. O script pode continuar..."
 	arr["RUSSIAN",683]="\${pending_of_translation} Было проверено, что файл захвата содержит Handshake/PMKID целевой сети. Скрипт может продолжать..."
-	arr["GREEK",683]="Επιβεβαιώθηκε πως το αρχείο καταγραφής περιέχει το Handshake/PMKID του δικτύου-στόχος. Το script μπορεί να συνεχίσει... "
+	arr["GREEK",683]="Επιβεβαιώθηκε πως το αρχείο καταγραφής περιέχει το Handshake/PMKID του δικτύου-στόχος. Το script μπορεί να συνεχίσει..."
 	arr["ITALIAN",683]="È stato verificato che il file di cattura contiene Handshake/PMKID della rete obiettivo. Lo script può continuare..."
 	arr["POLISH",683]="\${pending_of_translation} Plik przechwytywania został zweryfikowany jako zawierający Handshake/PMKID sieci docelowej. Skrypt może kontynuować..."
 	arr["GERMAN",683]="Es wurde überprüft, ob die Capture-Datei das Handshake/PMKID des Zielnetzwerks enthält. Das Skript kann fortfahren..."
 	arr["TURKISH",683]="Yakalama dosyasının hedef ağın El Handshake/PMKID değerini içerdiği doğrulandı. Yazılım devam edebilir..."
+
+	arr["ENGLISH",684]="\${blue_color}The captured PMKID file is in a text format containing the hash in order to be cracked using hashcat. Additionally, airgeddon can transform the capture to \".cap\" format to let the file to be cracked using aircrack-ng as if it were an airodump-ng capture, but tshark command will be required to be able to carry out this transformation. \${green_color}Do you want to perform the transformation? \${pink_color}(you'll also keep the hashcat file, this is additional) \${normal_color}\${visual_choice}"
+	arr["SPANISH",684]="\${blue_color}El fichero PMKID que has capturado está en un formato de texto con el hash para que se pueda crackear usando hashcat. Adicionalmente, airgeddon puede transformar la captura a formato \".cap\" para que el fichero pueda ser crackeado con aircrack-ng como si se tratase de una captura de airodump-ng, pero requerirá del comando tshark para realizar dicha transformación. \${green_color}¿Quieres realizar la transformación? \${pink_color}(mantendrás también el fichero de hashcat, esto es adicional) \${normal_color}\${visual_choice}"
+	arr["FRENCH",684]="\${blue_color}Le fichier PMKID que vous avez capturé est en format de texte avec le hash afin qu'il puisse être craqué en utilisant hashcat. Airgeddon peut aussi transformer la capture au format \".cap\" afin que le fichier puisse être cracké avec aircrack-ng comme s'il s'agissait d'une capture d'airodump-ng, mais il nécessitera la commande tshark pour effectuer cette transformation. \${green_color}Voulez-vous effectuer la transformation? \${pink_color}(vous conserverez également le fichier hashcat, ceci est supplémentaire) \${normal_color}\${visual_choice}"
+	arr["CATALAN",684]="\${blue_color}El fitxer PMKID que has capturat està en un format de text amb el hash perquè es pugui crackejar usant hashcat. Addicionalment, airgeddon pot transformar la captura a format \".cap\" perquè el fitxer pugui ser esquerdat amb aircrack-ng com si es tractés d'una captura de airodump-ng, però requerirà del comandament tshark per realitzar aquesta transformació. \${green_color}¿Vols fer la transformació? \${pink_color}(mantindràs també el fitxer de hashcat, això és addicional) \${normal_color}\${visual_choice}"
+	arr["PORTUGUESE",684]="\${blue_color}O arquivo PMKID que você capturou contém um texto no formato de uma hash, para ser descriptografado usando o hashcat. Além disso, o airgeddon pode transformar o arquivo no formato \".cap\" para que poder ser quebrado com o aircrack-ng como se fosse um arquivo capturado pelo airodump-ng, mas será necessário o comando tshark para executar essa transformação. \${green_color}Deseja executar a transformação? \${pink_color}(você também continuará com o arquivo original) \${normal_color}\${visual_choice}"
+	arr["RUSSIAN",684]="\${pending_of_translation} \${blue_color}Захваченный файл PMKID находится в текстовом формате, содержащем хэш, чтобы быть взломанным с использованием hashcat. Кроме того, airgeddon может преобразовать захват в формат \".cap\", чтобы позволить файлу быть взломанным с помощью aircrack-ng, как если бы это был захват airodump-ng, но для выполнения этого преобразования потребуется команда tshark. \${green_color}Вы хотите выполнить преобразование? \${pink_color}(вы также сохраните файл hashcat, это дополнительно) \${normal_color}\${visual_choice}"
+	arr["GREEK",684]="\${blue_color}Το PMKID αρχείο που έχει καταγραφεί είναι σε μορφή hash, ώστε να \"σπάσει\" χρησιμοποιώντας το hashcat. Επιπλέον, το airgeddon μπορεί να το μετατρέψει σε μορφή \".cap\" για να χρησιμοποιηθεί στο aircrack-ng, σαν να έγινε export από το airodump-ng, απαιτείται όμως η εντολή tshark για να είναι σε θέση να πραγματοποιήσει αυτόν τον μετασχηματισμό. \${green_color}Θέλετε να πραγματοποιήσετε τη μετατροπή; \${pink_color}(θα διατηρήσετε επίσης το αρχείο hashcat, αυτό είναι extra) \${normal_color}\${visual_choice}"
+	arr["ITALIAN",684]="\${blue_color}Il file PMKID che hai catturato è in un formato di testo con l'hash in modo che possa essere craccato usando hashcat. Inoltre, airgeddon può trasformare la cattura in formato \".cap\" in modo che il file possa essere craccato con aircrack-ng come se fosse stato catturato con airodump-ng, ma richiederà il comando tshark per eseguire questa trasformazione. \${green_color}Vuoi eseguire la trasformazione? \${pink_color}(manterrai anche il file hashcat, questo è aggiuntivo) \${normal_color}\${visual_choice}"
+	arr["POLISH",684]="\${pending_of_translation} \${blue_color}Plik PMKID, który przechwyciłeś, jest w formacie tekstowym z hashem, dzięki czemu można go złamać za pomocą hashcat. Ponadto airgeddon może przekształcić przechwytywanie w format \".cap\", dzięki czemu plik może zostać złamany za pomocą aircrack-ng, tak jakby był przechwytywaniem airodump-ng, ale do przeprowadzenia tej transformacji będzie wymagało polecenia tshark. \${green_color}Czy chcesz wykonać transformację? \${pink_color}(zachowasz również plik hashcat, to jest dodatek) \${normal_color}\${visual_choice}"
+	arr["GERMAN",684]="\${blue_color}Die von Ihnen erfasste PMKID-Datei liegt in einem Textformat mit dem Hash vor, sodass sie mit Hashcat geknackt werden kann. Darüber hinaus kann airgeddon die Erfassung in das Format \".cap\" umwandeln, sodass die Datei mit aircrack-ng geknackt werden kann, als wäre es eine airodump-ng-Erfassung. Für diese Umwandlung ist jedoch der Befehl tshark erforderlich. \${green_color}Möchten Sie die Transformation durchführen? \${pink_color}(Sie behalten auch die Hashcat-Datei bei, dies ist zusätzlich) \${normal_color}\${visual_choice}"
+	arr["TURKISH",684]="\${blue_color}Yakaladığınız PMKID dosyası, karma ile metin biçimindedir, böylece hashcat kullanılarak kırılabilir. Buna ek olarak, airgeddon yakalamayı \".cap\" biçimine dönüştürebilir, böylece dosya bir airodump-ng yakalaması gibi aircrack-ng ile kırılabilir, ancak tshark komutunun bu dönüşümü gerçekleştirmesi gerekir. \${green_color}Dönüşümü gerçekleştirmek istiyor musunuz? \${pink_color}(hashcat dosyasını da saklayacaksınız, bu ektir) \${normal_color}\${visual_choice}"
+
+	arr["ENGLISH",685]="Error. It looks like you don't have tshark command available. Depending on the system, the package name containing the command could be tshark, wireshark-cli, wireshark, etc. Install it before trying this transformation next time. The transformation can't be done"
+	arr["SPANISH",685]="Error. Parece que no tienes disponible el comando tshark. Dependiendo del sistema, el paquete que lo contiene puede ser tshark, wireshark-cli, wireshark, etc. Instálalo antes de intentar esta transformación la próxima vez. La transformación no se puede llevar a cabo"
+	arr["FRENCH",685]="Erreur. Il semble que vous n'avez pas la commande tshark. Selon le système, le paquet qui le contient peut être tshark, wireshark-cli, wireshark, etc. Installez-le avant d'essayer cette transformation la prochaine fois. La transformation ne peut pas être effectuée"
+	arr["CATALAN",685]="Error. Sembla que no tens disponible el comandament tshark. Depenent del sistema, el paquet que el conté pot ser tshark, wireshark-cli, wireshark, etc. Instal·la-l abans d'intentar aquesta transformació la propera vegada. La transformació no es pot dur a terme"
+	arr["PORTUGUESE",685]="Erro. Parece que você não tem o comando tshark disponível. Dependendo do sistema, o nome do pacote pode ser: tshark, wireshark-cli, wireshark, etc. Instale-o antes de tentar esta transformação na próxima vez. A transformação não pode ser realizada!"
+	arr["RUSSIAN",685]="\${pending_of_translation} Ошибка. Похоже, у вас нет команды tshark. В зависимости от системы имя пакета, содержащего его, может быть tshark, wireshark-cli, wireshark и т. Д. Установите его, прежде чем пытаться выполнить это преобразование в следующий раз. Преобразование не может быть сделано"
+	arr["GREEK",685]="Σφάλμα. Φαίνεται ότι η εντολή tshark δεν είναι διαθέσιμη. Ανάλογα με τη διανομή του συστήματος, το όνομα του πακέτου που περιέχει το tshark διαφέρει και θα μπορούσε να είναι tshark, wireshark-cli, wireshark, κ.λπ. Εγκαταστήστε το πριν δοκιμάσετε αυτόν τον μετασχηματισμό την επόμενη φορά. Ο μετασχηματισμός δεν μπορεί να γίνει"
+	arr["ITALIAN",685]="Errore. Sembra che tu non abbia il comando tshark disponibile. A seconda del sistema, il pacchetto che lo contiene può essere tshark, wireshark-cli, wireshark, etc. Installalo prima di provare questa trasformazione la prossima volta. La trasformazione non può essere effettuata"
+	arr["POLISH",685]="\${pending_of_translation} Błąd. Wygląda na to, że nie masz dostępnego polecenia tshark. W zależności od systemu pakiet, który go zawiera, może być tshark, wireshark-cli, wireshark itp. Zainstaluj go przed następnym użyciem tej transformacji. Nie można przeprowadzić transformacji"
+	arr["GERMAN",685]="Fehler. Anscheinend steht Ihnen der Befehl tshark nicht zur Verfügung. Je nach System kann das Paket tshark, wireshark-cli, wireshark usw. sein. Installieren Sie es, bevor Sie diese Transformation das nächste Mal versuchen. Die Transformation kann nicht durchgeführt werden"
+	arr["TURKISH",685]="Hata. Görünüşe göre tshark komutu yok. Sisteme bağlı olarak, onu içeren paket tshark, wireshark-cli, wireshark vb. Olabilir. Bir dahaki sefere bu dönüşümü denemeden önce ilgili paketleri kurun. Dönüşüm yapılamaz"
+
+	arr["ENGLISH",686]="Type the path to store the file or press [Enter] to accept the default proposal \${normal_color}[\${pmkidcappath}]"
+	arr["SPANISH",686]="Escribe la ruta donde guardaremos el fichero o pulsa [Enter] para aceptar la propuesta por defecto \${normal_color}[\${pmkidcappath}]"
+	arr["FRENCH",686]="Entrez le chemin où vous voulez enregistrer le fichier ou bien appuyez sur [Enter] pour prendre le chemin proposé par défaut \${normal_color}[\${pmkidcappath}]"
+	arr["CATALAN",686]="Escriu la ruta on guardarem el fitxer o prem [Enter] per acceptar la proposta per defecte \${normal_color}[\${pmkidcappath}]"
+	arr["PORTUGUESE",686]="Digite o caminho para salvar o arquivo ou pressione [Enter] para o caminho padrão \${normal_color}[\${pmkidcappath}]"
+	arr["RUSSIAN",686]="Напечатайте путь, по которому сохранить файл или нажмите [Enter] для принятия предложения по умолчанию \${normal_color}[\${pmkidcappath}]"
+	arr["GREEK",686]="Πληκτρολογήστε το μονοπάτι για την αποθήκευση του αρχείου ή πατήστε [Enter] για την προεπιλεγμένη επιλογή \${normal_color}[\${pmkidcappath}]"
+	arr["ITALIAN",686]="Scrivere il percorso dove memorizzare il file o premere [Enter] per accettare la proposta di default \${normal_color}[\${pmkidcappath}]"
+	arr["POLISH",686]="Wpisz ścieżkę do zapisywania plików lub naciśnij [Enter], aby zaakceptować domyślną propozycję \${normal_color}[\${pmkidcappath}]"
+	arr["GERMAN",686]="Schreiben Sie den Pfad, unter dem die Datei gespeichert werden soll, oder drücken Sie die [Enter]-Taste, um den Standardvorschlag \${normal_color}[\${pmkidcappath}] \${green_color}zu benutzen"
+	arr["TURKISH",686]="Dosyayı depolamak için yolu yazın veya varsayılan teklifi kabul etmek için [Enter] tuşuna basın \${normal_color}[\${pmkidcappath}]"
 }
 
 #Expand escaped variables in language strings with their actual values

@@ -1,3 +1,10 @@
+airgeddon (10.21+parrot0) testing; urgency=medium
+ * Improved hostapd-wpe config for some conflicting Linux
+ * Dockerfile migrated to Arch (ArchStrike image as base) to avoid Debian based missing packages problem
+ * After PMKID capturing, now additionally can transform captured file into .cap aircrack-ng file format
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Mon, 15 Jun 2020 22:01:45 +0800
+
 airgeddon (10.20+parrot0) testing; urgency=medium
 
  * Big language strings array now loaded only once and printing system changed. Speed highly improved

@@ -1,3 +1,8 @@
+### 10.21
+ - Improved hostapd-wpe config for some conflicting Linux
+ - Dockerfile migrated to Arch (ArchStrike image as base) to avoid Debian based missing packages problem
+ - After PMKID capturing, now additionally can transform captured file into .cap aircrack-ng file format
+
 ### 10.20
  - Big language strings array now loaded only once and printing system changed. Speed highly improved
  - Fixed problem for handshake detection on captured files containing only handshake (without pmkid)
