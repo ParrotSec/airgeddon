@@ -1,3 +1,11 @@
+### 10.30
+ - Fixed error on internet interface selection menu when no number provided
+ - Fixed BeEF error due forced config file changes for some versions
+ - Fixed weird error for endless loop while capturing handshake on some devices
+ - Fixed terminal freeze problem when Ctrl+C pressed on path prompt
+ - Fixed Network Manager problem on fake AP used for Evil Twin attacks
+ - Arabic language translation added (Thank you to "darthvader-htb")
+
 ### 10.21
  - Improved hostapd-wpe config for some conflicting Linux
  - Dockerfile migrated to Arch (ArchStrike image as base) to avoid Debian based missing packages problem

@@ -1,3 +1,13 @@
+airgeddon (10.30+parrot0) testing; urgency=medium
+ * Fixed error on internet interface selection menu when no number provided
+ * Fixed BeEF error due forced config file changes for some versions
+ * Fixed weird error for endless loop while capturing handshake on some devices
+ * Fixed terminal freeze problem when Ctrl+C pressed on path prompt
+ * Fixed Network Manager problem on fake AP used for Evil Twin attacks
+ * Arabic language translation added (Thank you to "darthvader-htb")
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sat, 17 Oct 2020 21:55:34 +0600
+ 
 airgeddon (10.21+parrot0) testing; urgency=medium
  * Improved hostapd-wpe config for some conflicting Linux
  * Dockerfile migrated to Arch (ArchStrike image as base) to avoid Debian based missing packages problem
