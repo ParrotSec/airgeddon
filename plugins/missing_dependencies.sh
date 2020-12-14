@@ -24,7 +24,7 @@ function commands_to_packages() {
 
 	case "${distro}" in
 		"Kali"|"Parrot")
-			commands_to_packages_correspondence["hcxpcaptool"]="hcxtools"
+			commands_to_packages_correspondence["hcxpcapngtool"]="hcxtools"
 			commands_to_packages_correspondence["hcxdumptool"]="hcxdumptool"
 			commands_to_packages_correspondence["iw"]="iw"
 			commands_to_packages_correspondence["awk"]="gawk"
@@ -72,7 +72,7 @@ function commands_to_packages() {
 			commands_to_packages_correspondence["xset"]="x11-xserver-utils"
 		;;
 		"BlackArch")
-			commands_to_packages_correspondence["hcxpcaptool"]="hcxtools"
+			commands_to_packages_correspondence["hcxpcapngtool"]="hcxtools"
 			commands_to_packages_correspondence["hcxdumptool"]="hcxdumptool"
 			commands_to_packages_correspondence["iw"]="iw"
 			commands_to_packages_correspondence["awk"]="gawk"

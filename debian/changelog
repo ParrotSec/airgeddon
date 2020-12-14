@@ -1,3 +1,13 @@
+airgeddon (10.31+parrot0) testing; urgency=medium
+ * Fixed error of no returning to DoS menu after fail on handshake capture for Evil Twin Captive portal attack
+ * Fixed error of no returning to Evil Twin main menu for some special situations on BeEF attack
+ * Removed deprecated hcxpcaptool, replaced by hcxpcapngtool
+ * Replaced old PMKID hash format to be used in hashcat, from 16800 to 22000
+ * Improved responsive behaviour of Evil Twin Captive Portal web page
+ * Compatibility extended to Bettercap 2.x (>=2.28) for sslstrip2/BeEF Evil Twin attack
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Mon, 14 Dec 2020 18:27:28 +0700
+
 airgeddon (10.30+parrot0) testing; urgency=medium
  * Fixed error on internet interface selection menu when no number provided
  * Fixed BeEF error due forced config file changes for some versions
@@ -7,7 +17,7 @@ airgeddon (10.30+parrot0) testing; urgency=medium
  * Arabic language translation added (Thank you to "darthvader-htb")
 
  -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Sat, 17 Oct 2020 21:55:34 +0600
- 
+
 airgeddon (10.21+parrot0) testing; urgency=medium
  * Improved hostapd-wpe config for some conflicting Linux
  * Dockerfile migrated to Arch (ArchStrike image as base) to avoid Debian based missing packages problem
