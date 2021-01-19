@@ -3,12 +3,12 @@ Upstream-Name: airgeddon
 Source: https://github.com/v1s1t0r1sh3r3/airgeddon
 
 Files:	debian/*
-Copyright: 2020 Lorenzo "Palinuro" faletra <palinuro@parrotsec.org>
+Copyright: 2021 Lorenzo "Palinuro" faletra <palinuro@parrotsec.org>
 License: GNU/GPL v3
 
 
 Files:	*
-Copyright: 2020 v1s1t0r.1s.h3r3@gmail.com (https://github.com/v1s1t0r1sh3r3)
+Copyright: 2021 v1s1t0r.1s.h3r3@gmail.com (https://github.com/v1s1t0r1sh3r3)
 License:  GNU/GPL v3
  Everyone is permitted to copy and distribute verbatim copies of this license
  document, but changing it is not allowed.

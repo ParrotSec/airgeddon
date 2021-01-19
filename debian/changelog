@@ -1,3 +1,13 @@
+airgeddon (10.40+parrot0) testing; urgency=medium
+ * Removed deprecated route command
+ * Fixed error on WPS PINs found in database counter
+ * Sslstrip Evil Twin attack replaced by Bettercap-Sslstrip2 Evil Twin attack, sslstrip dependency removed
+ * Fixed error on Evil Twin attacks when tmux and Bettercap 2.x used
+ * Fixed wrong username shown on asleap decryption after capture for Enterprise Evil Twin attack
+ * Fixed freezing while trying to resume reaver session
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Wed, 20 Jan 2021 00:07:13 +0400
+
 airgeddon (10.31+parrot0) testing; urgency=medium
  * Fixed error of no returning to DoS menu after fail on handshake capture for Evil Twin Captive portal attack
  * Fixed error of no returning to Evil Twin main menu for some special situations on BeEF attack
