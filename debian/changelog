@@ -1,3 +1,12 @@
+airgeddon (10.41+parrot0) testing; urgency=medium
+ * Fixed error on PMKID hash validation
+ * Created an option to avoid Network Manager force killing on Evil Twin attacks
+ * Code improvements to allow new kind of arguments based plugins
+ * Dsniff Evil Twin captive portal DNS black hole replaced by dnsmasq
+ * Dockerfile rollback to Parrot (Parrot Security image as base) to avoid Arch Glibc + Dockerhub automated builds problem
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Mon, 22 Mar 2021 11:20:47 +0500
+
 airgeddon (10.40+parrot0) testing; urgency=medium
  * Removed deprecated route command
  * Fixed error on WPS PINs found in database counter

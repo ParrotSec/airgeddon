@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.40
+#Version......: 10.41
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -57,7 +57,7 @@ optional_tools_names=(
 						"ettercap"
 						"etterlog"
 						"lighttpd"
-						"dnsspoof"
+						"dnsmasq"
 						"wash"
 						"reaver"
 						"bully"
@@ -107,7 +107,7 @@ declare -A possible_package_names=(
 									[${optional_tools_names[8]}]="ettercap / ettercap-text-only / ettercap-graphical" #ettercap
 									[${optional_tools_names[9]}]="ettercap / ettercap-text-only / ettercap-graphical" #etterlog
 									[${optional_tools_names[10]}]="lighttpd" #lighttpd
-									[${optional_tools_names[11]}]="dsniff" #dnsspoof
+									[${optional_tools_names[11]}]="dnsmasq" #dnsmasq
 									[${optional_tools_names[12]}]="reaver" #wash
 									[${optional_tools_names[13]}]="reaver" #reaver
 									[${optional_tools_names[14]}]="bully" #bully
@@ -131,8 +131,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.40"
-language_strings_expected_version="10.40-1"
+airgeddon_version="10.41"
+language_strings_expected_version="10.41-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
@@ -194,7 +194,7 @@ wep_key_handler="ag.wep_key_handler.sh"
 wep_processes_file="wep_processes"
 
 #Docker vars
-docker_based_distro="Arch"
+docker_based_distro="Parrot"
 docker_io_dir="/io/"
 
 #WPS vars
@@ -249,7 +249,7 @@ loopback_ip="127.0.0.1"
 loopback_ipv6="::1/128"
 routing_tmp_file="ag.iptables_nftables"
 dhcpd_file="ag.dhcpd.conf"
-hosts_file="ag.hosts"
+dnsmasq_file="ag.dnsmasq.conf"
 internet_dns1="8.8.8.8"
 internet_dns2="8.8.4.4"
 internet_dns3="139.130.4.5"
@@ -1725,6 +1725,11 @@ function option_menu() {
 	else
 		language_strings "${language}" 652
 	fi
+	if "${AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING:-true}"; then
+		language_strings "${language}" 688
+	else
+		language_strings "${language}" 689
+	fi
 	language_strings "${language}" 447
 	print_hint ${current_menu}
 
@@ -2012,6 +2017,33 @@ function option_menu() {
 			fi
 		;;
 		13)
+			if "${AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING:-true}"; then
+				ask_yesno 692 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING"; then
+						echo
+						language_strings "${language}" 694 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			else
+				ask_yesno 693 "yes"
+				if [ "${yesno}" = "y" ]; then
+					if option_toggle "AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING"; then
+						echo
+						language_strings "${language}" 695 "blue"
+					else
+						echo
+						language_strings "${language}" 417 "red"
+					fi
+					language_strings "${language}" 115 "read"
+				fi
+			fi
+		;;
+		14)
 			ask_yesno 478 "yes"
 			if [ "${yesno}" = "y" ]; then
 				get_current_permanent_language
@@ -4925,6 +4957,12 @@ function print_options() {
 		language_strings "${language}" 595 "blue"
 	fi
 
+	if "${AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING:-true}"; then
+		language_strings "${language}" 690 "blue"
+	else
+		language_strings "${language}" 691 "blue"
+	fi
+
 	reboot_required_text=""
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
 		if grep -q "AIRGEDDON_WINDOWS_HANDLING=tmux" "${rc_path}" 2> /dev/null; then
@@ -5402,7 +5440,7 @@ function clean_env_vars() {
 
 	debug_print
 
-	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_MDK_VERSION AIRGEDDON_PLUGINS_ENABLED AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE AIRGEDDON_WINDOWS_HANDLING
+	unset AIRGEDDON_AUTO_UPDATE AIRGEDDON_SKIP_INTRO AIRGEDDON_BASIC_COLORS AIRGEDDON_EXTENDED_COLORS AIRGEDDON_AUTO_CHANGE_LANGUAGE AIRGEDDON_SILENT_CHECKS AIRGEDDON_PRINT_HINTS AIRGEDDON_5GHZ_ENABLED AIRGEDDON_FORCE_IPTABLES AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING AIRGEDDON_MDK_VERSION AIRGEDDON_PLUGINS_ENABLED AIRGEDDON_DEVELOPMENT_MODE AIRGEDDON_DEBUG_MODE AIRGEDDON_WINDOWS_HANDLING
 }
 
 #Clean temporary files
@@ -5424,7 +5462,7 @@ function clean_tmpfiles() {
 	rm -rf "${tmpdir}${hostapd_wpe_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${hostapd_wpe_log}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${dhcpd_file}" > /dev/null 2>&1
-	rm -rf "${tmpdir}${hosts_file}" >/dev/null 2>&1
+	rm -rf "${tmpdir}${dnsmasq_file}" >/dev/null 2>&1
 	rm -rf "${tmpdir}${control_et_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}${control_enterprise_file}" > /dev/null 2>&1
 	rm -rf "${tmpdir}parsed_file" > /dev/null 2>&1
@@ -7240,7 +7278,7 @@ function validate_pmkid_hashcat_file() {
 	readarray -t HASHCAT_LINES_TO_VALIDATE < <(cat "${1}" 2> /dev/null)
 
 	for item in "${HASHCAT_LINES_TO_VALIDATE[@]}"; do
-		if [[ ! "${item}" =~ ^WPA\*[0-9]{2}\*[0-9a-fA-F]{32}\*([0-9a-fA-F]{12}\*){2}[0-9a-fA-F]{26,28}\*{3}$ ]]; then
+		if [[ ! "${item}" =~ ^WPA\*[0-9]{2}\*[0-9a-fA-F]{32}\*([0-9a-fA-F]{12}\*){2}[0-9a-fA-F]{26,32}\*+.*$ ]]; then
 			language_strings "${language}" 676 "red"
 			language_strings "${language}" 115 "read"
 			return 1
@@ -9003,9 +9041,14 @@ function launch_fake_ap() {
 		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
 	fi
 
-	if [ "${check_kill_needed}" -eq 1 ]; then
+	if "${AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING:-true}"; then
 		${airmon} check kill > /dev/null 2>&1
 		nm_processes_killed=1
+	else
+		if [ "${check_kill_needed}" -eq 1 ]; then
+			${airmon} check kill > /dev/null 2>&1
+			nm_processes_killed=1
+		fi
 	fi
 
 	if [ ${mac_spoofing_desired} -eq 1 ]; then
@@ -10186,9 +10229,13 @@ function set_et_control_script() {
 				} >> "${et_captive_portal_logpath}"
 
 				sleep 2
+	EOF
+
+	cat >&7 <<-'EOF'
 				kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill "$(ps -C dhcpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill "$(ps -C aireplay-ng --no-headers -o pid | tr -d ' ')" &> /dev/null
+				kill "$(ps -C dnsmasq --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill "$(ps -C lighttpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill_et_windows
 	EOF
@@ -10328,7 +10375,7 @@ function set_et_control_script() {
 	sleep 1
 }
 
-#Launch dnsspoof dns black hole for captive portal Evil Twin attack
+#Launch dnsmasq dns black hole for captive portal Evil Twin attack
 function launch_dns_blackhole() {
 
 	debug_print
@@ -10336,20 +10383,25 @@ function launch_dns_blackhole() {
 	recalculate_windows_sizes
 
 	tmpfiles_toclean=1
-	rm -rf "${tmpdir}${hosts_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${dnsmasq_file}" > /dev/null 2>&1
 
 	{
-	echo -e "${et_ip_router}\t*.*"
-	echo -e "172.217.5.238\tgoogle.com"
-	echo -e "172.217.13.78\tclients3.google.com"
-	echo -e "172.217.13.78\tclients4.google.com"
-	} >> "${tmpdir}${hosts_file}"
+	echo -e "interface=${interface}"
+	echo -e "address=/#/${et_ip_router}"
+	echo -e "address=/google.com/172.217.5.238"
+	echo -e "address=/gstatic.com/172.217.5.238"
+	echo -e "no-dhcp-interface=${interface}"
+	echo -e "log-queries"
+	echo -e "no-daemon"
+	echo -e "no-resolv"
+	echo -e "no-hosts"
+	} >> "${tmpdir}${dnsmasq_file}"
 
-	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"DNS\"" "${optional_tools_names[11]} -i ${interface} -f \"${tmpdir}${hosts_file}\"" "DNS"
+	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"DNS\"" "${optional_tools_names[11]} -C \"${tmpdir}${dnsmasq_file}\"" "DNS"
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
 		et_processes+=($!)
 	else
-		get_tmux_process_id "${optional_tools_names[11]} -i ${interface} -f \"${tmpdir}${hosts_file}\""
+		get_tmux_process_id "${optional_tools_names[11]} -C \"${tmpdir}${dnsmasq_file}\""
 		et_processes+=("${global_process_pid}")
 		global_process_pid=""
 	fi
@@ -11212,6 +11264,7 @@ function kill_et_windows() {
 	else
 		kill "${et_process_control_window}" &> /dev/null
 		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
+		kill "$(ps -C dnsmasq --no-headers -o pid | tr -d ' ')" &> /dev/null
 	fi
 
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
@@ -14689,19 +14742,20 @@ function env_vars_initialization() {
 									"AIRGEDDON_PRINT_HINTS" #6
 									"AIRGEDDON_5GHZ_ENABLED" #7
 									"AIRGEDDON_FORCE_IPTABLES" #8
-									"AIRGEDDON_MDK_VERSION" #9
-									"AIRGEDDON_PLUGINS_ENABLED" #10
-									"AIRGEDDON_DEVELOPMENT_MODE" #11
-									"AIRGEDDON_DEBUG_MODE" #12
-									"AIRGEDDON_WINDOWS_HANDLING" #13
+									"AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING" #9
+									"AIRGEDDON_MDK_VERSION" #10
+									"AIRGEDDON_PLUGINS_ENABLED" #11
+									"AIRGEDDON_DEVELOPMENT_MODE" #12
+									"AIRGEDDON_DEBUG_MODE" #13
+									"AIRGEDDON_WINDOWS_HANDLING" #14
 									)
 
 	declare -gA nonboolean_options_env_vars
-	nonboolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="mdk4" #mdk_version
-	nonboolean_options_env_vars["${ordered_options_env_vars[13]},default_value"]="xterm" #windows_handling
+	nonboolean_options_env_vars["${ordered_options_env_vars[10]},default_value"]="mdk4" #mdk_version
+	nonboolean_options_env_vars["${ordered_options_env_vars[14]},default_value"]="xterm" #windows_handling
 
-	nonboolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
-	nonboolean_options_env_vars["${ordered_options_env_vars[13]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[13]},'default_value']}"
+	nonboolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
+	nonboolean_options_env_vars["${ordered_options_env_vars[14]},rcfile_text"]="#Available values: xterm, tmux - Define the needed tool to be used for windows handling - Default value ${nonboolean_options_env_vars[${ordered_options_env_vars[14]},'default_value']}"
 
 	declare -gA boolean_options_env_vars
 	boolean_options_env_vars["${ordered_options_env_vars[0]},default_value"]="true" #auto_update
@@ -14713,9 +14767,10 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[6]},default_value"]="true" #print_hints
 	boolean_options_env_vars["${ordered_options_env_vars[7]},default_value"]="true" #5ghz_enabled
 	boolean_options_env_vars["${ordered_options_env_vars[8]},default_value"]="false" #force_iptables
-	boolean_options_env_vars["${ordered_options_env_vars[10]},default_value"]="true" #plugins_enabled
-	boolean_options_env_vars["${ordered_options_env_vars[11]},default_value"]="false" #development_mode
-	boolean_options_env_vars["${ordered_options_env_vars[12]},default_value"]="false" #debug_mode
+	boolean_options_env_vars["${ordered_options_env_vars[9]},default_value"]="true" #force_network_manager_killing
+	boolean_options_env_vars["${ordered_options_env_vars[11]},default_value"]="true" #plugins_enabled
+	boolean_options_env_vars["${ordered_options_env_vars[12]},default_value"]="false" #development_mode
+	boolean_options_env_vars["${ordered_options_env_vars[13]},default_value"]="false" #debug_mode
 
 	boolean_options_env_vars["${ordered_options_env_vars[0]},rcfile_text"]="#Enabled true / Disabled false - Auto update feature (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[0]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[1]},rcfile_text"]="#Enabled true / Disabled false - Skip intro (it has no effect on development mode) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[1]},'default_value']}"
@@ -14726,9 +14781,10 @@ function env_vars_initialization() {
 	boolean_options_env_vars["${ordered_options_env_vars[6]},rcfile_text"]="#Enabled true / Disabled false - Print help hints on menus - Default value ${boolean_options_env_vars[${ordered_options_env_vars[6]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[7]},rcfile_text"]="#Enabled true / Disabled false - Enable 5Ghz support (it has no effect if your cards are not 5Ghz compatible cards) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[7]},'default_value']}"
 	boolean_options_env_vars["${ordered_options_env_vars[8]},rcfile_text"]="#Enabled true / Disabled false - Force to use iptables instead of nftables (it has no effect if nftables are not present) - Default value ${boolean_options_env_vars[${ordered_options_env_vars[8]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[10]},rcfile_text"]="#Enabled true / Disabled false - Enable plugins system - Default value ${boolean_options_env_vars[${ordered_options_env_vars[10]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[11]},'default_value']}"
-	boolean_options_env_vars["${ordered_options_env_vars[12]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[12]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[9]},rcfile_text"]="#Enabled true / Disabled false - Force to kill Network Manager before launching Evil Twin attacks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[9]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[11]},rcfile_text"]="#Enabled true / Disabled false - Enable plugins system - Default value ${boolean_options_env_vars[${ordered_options_env_vars[11]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[12]},rcfile_text"]="#Enabled true / Disabled false - Development mode for faster development skipping intro and all initial checks - Default value ${boolean_options_env_vars[${ordered_options_env_vars[12]},'default_value']}"
+	boolean_options_env_vars["${ordered_options_env_vars[13]},rcfile_text"]="#Enabled true / Disabled false - Debug mode for development printing debug information - Default value ${boolean_options_env_vars[${ordered_options_env_vars[13]},'default_value']}"
 
 	readarray -t ENV_VARS_ELEMENTS < <(printf %s\\n "${!nonboolean_options_env_vars[@]} ${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
 	readarray -t ENV_BOOLEAN_VARS_ELEMENTS < <(printf %s\\n "${!boolean_options_env_vars[@]}" | cut -d, -f1 | sort -u)
@@ -15010,8 +15066,8 @@ function check_inside_tmux() {
 
 	local parent_pid
 	local parent_window
-	parent_pid=$(ps -o ppid= ${PPID} | tr -d ' ')
-	parent_window="$(ps --no-headers -p "${parent_pid}" -o comm=)"
+	parent_pid=$(ps -o ppid= ${PPID} 2> /dev/null | tr -d ' ')
+	parent_window="$(ps --no-headers -p "${parent_pid}" -o comm= 2> /dev/null)"
 	if [[ "${parent_window}" =~ tmux ]]; then
 		return 0
 	fi
@@ -15169,7 +15225,7 @@ function parse_plugins() {
 					plugin_short_name="${plugin_short_name%.sh*}"
 
 					#shellcheck source=./plugins/missing_dependencies.sh
-					source "${file}"
+					source "${file}" "$@"
 					if [ "${plugin_enabled}" -eq 1 ]; then
 						validate_plugin_requirements
 						plugin_validation_result=$?
@@ -15783,7 +15839,7 @@ function main() {
 	dependencies_modifications
 
 	if "${AIRGEDDON_PLUGINS_ENABLED:-true}"; then
-		parse_plugins
+		parse_plugins "$@"
 		apply_plugin_functions_rewriting
 	fi
 
@@ -15885,4 +15941,4 @@ for f in SIGINT SIGHUP INT SIGTSTP; do
 	eval "${trap_cmd}"
 done
 
-main
+main "$@"

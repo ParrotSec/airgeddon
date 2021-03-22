@@ -84,6 +84,12 @@ Anything can be also discussed on public [IRC] or [Discord] channel. More info a
 
 ---
 
+## Discord Server Boosting
+
+Another way to contribute is to use your Nitro Boosts on our [Discord] server. After boosting, your name will appear as a _Server Booster_ contributor there. Check [Wiki Contact Section] for more info about how to connect to it.
+
+---
+
 ## Donate
 
 If you enjoyed the script, feel free to donate. Support the project through Paypal or sending a fraction any of these cryptocurrencies. Any amount, not matter how small (1, 2, 5 $/€) is welcome:
