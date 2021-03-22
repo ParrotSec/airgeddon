@@ -1,5 +1,5 @@
 #Enabled true / Disabled false - Auto update feature (it has no effect on development mode) - Default value true
-AIRGEDDON_AUTO_UPDATE=true
+AIRGEDDON_AUTO_UPDATE=false
 
 #Enabled true / Disabled false - Skip intro (it has no effect on development mode) - Default value false
 AIRGEDDON_SKIP_INTRO=false
