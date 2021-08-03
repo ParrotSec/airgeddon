@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.41
+#Version......: 10.42
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -131,8 +131,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.41"
-language_strings_expected_version="10.41-1"
+airgeddon_version="10.42"
+language_strings_expected_version="10.42-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
@@ -194,7 +194,7 @@ wep_key_handler="ag.wep_key_handler.sh"
 wep_processes_file="wep_processes"
 
 #Docker vars
-docker_based_distro="Parrot"
+docker_based_distro="Arch"
 docker_io_dir="/io/"
 
 #WPS vars
@@ -255,6 +255,10 @@ internet_dns2="8.8.4.4"
 internet_dns3="139.130.4.5"
 bettercap_proxy_port="8080"
 bettercap_dns_port="5300"
+dns_port="53"
+dhcp_port="67"
+www_port="80"
+https_port="443"
 minimum_bettercap_advanced_options="1.5.9"
 minimum_bettercap_fixed_beef_iptables_issue="1.6.2"
 bettercap2_version="2.0"
@@ -346,22 +350,22 @@ known_arm_compatible_distros=(
 							)
 
 #Hint vars
-declare main_hints=(128 134 163 437 438 442 445 516 590 626 660)
-declare dos_hints=(129 131 133)
-declare handshake_pmkid_hints=(127 130 132 664 665)
-declare dos_handshake_hints=(142)
-declare decrypt_hints=(171 179 208 244 163)
-declare personal_decrypt_hints=(171 178 179 208 244 163)
-declare enterprise_decrypt_hints=(171 179 208 244 163 610)
-declare select_interface_hints=(246)
+declare main_hints=(128 134 163 437 438 442 445 516 590 626 660 697)
+declare dos_hints=(129 131 133 697)
+declare handshake_pmkid_hints=(127 130 132 664 665 697)
+declare dos_handshake_hints=(142 697)
+declare decrypt_hints=(171 179 208 244 163 697)
+declare personal_decrypt_hints=(171 178 179 208 244 163 697)
+declare enterprise_decrypt_hints=(171 179 208 244 163 610 697)
+declare select_interface_hints=(246 697)
 declare language_hints=(250 438)
-declare option_hints=(445 250 448 477 591 626)
-declare evil_twin_hints=(254 258 264 269 309 328 400 509)
-declare evil_twin_dos_hints=(267 268 509)
+declare option_hints=(445 250 448 477 591 626 697)
+declare evil_twin_hints=(254 258 264 269 309 328 400 509 697)
+declare evil_twin_dos_hints=(267 268 509 697)
 declare beef_hints=(408)
-declare wps_hints=(342 343 344 356 369 390 490 625)
-declare wep_hints=(431 429 428 432 433)
-declare enterprise_hints=(112 332 483 518 629 301)
+declare wps_hints=(342 343 344 356 369 390 490 625 697)
+declare wep_hints=(431 429 428 432 433 697)
+declare enterprise_hints=(112 332 483 518 629 301 697)
 
 #Charset vars
 crunch_lowercasecharset="abcdefghijklmnopqrstuvwxyz"
@@ -705,7 +709,7 @@ function debug_print() {
 			return 1
 		fi
 
-		echo "Line:${BASH_LINENO[2]}" "${FUNCNAME[1]}"
+		echo "Line:${BASH_LINENO[1]}" "${FUNCNAME[1]}"
 	fi
 
 	return 0
@@ -768,7 +772,11 @@ function generate_dynamic_line() {
 
 	local type=${2}
 	if [ "${type}" = "title" ]; then
-		ncharstitle=78
+		if [ "${FUNCNAME[2]}" = "main_menu" ]; then
+			ncharstitle=91
+		else
+			ncharstitle=78
+		fi
 		titlechar="*"
 	elif [ "${type}" = "separator" ]; then
 		ncharstitle=58
@@ -936,7 +944,7 @@ function check_airmon_compatibility() {
 	if [ "${1}" = "interface" ]; then
 		set_chipset "${interface}" "read_only"
 
-		if ! iw dev "${interface}" set bitrates legacy-2.4 1 > /dev/null 2>&1; then
+		if iw phy "${phy_interface}" info 2>/dev/null | grep -iq 'interface combinations are not supported'; then
 			interface_airmon_compatible=0
 		else
 			interface_airmon_compatible=1
@@ -1269,6 +1277,76 @@ function search_in_pin_database() {
 			fill_wps_data_array "${wps_bssid}" "Database" "${pins_found}"
 		fi
 	done
+}
+
+#Handler for multiple busy port checkings
+function check_busy_ports() {
+
+	debug_print
+
+	IFS=' ' read -r -a tcp_ports <<< "${ports_needed["tcp"]}"
+	IFS=' ' read -r -a udp_ports <<< "${ports_needed["udp"]}"
+
+	if [[ -n "${tcp_ports[*]}" ]] && [[ "${#tcp_ports[@]}" -ge 1 ]]; then
+		port_type="tcp"
+		for tcp_port in "${tcp_ports[@]}"; do
+			if ! check_tcp_udp_port "${tcp_port}" "${port_type}"; then
+				busy_port="${tcp_port}"
+				echo
+				language_strings "${language}" 698 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
+		done
+	fi
+
+	if [[ -n "${udp_ports[*]}" ]] && [[ "${#udp_ports[@]}" -ge 1 ]]; then
+		port_type="udp"
+		for udp_port in "${udp_ports[@]}"; do
+			if ! check_tcp_udp_port "${udp_port}" "${port_type}"; then
+				busy_port="${udp_port}"
+				echo
+				language_strings "${language}" 698 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
+		done
+	fi
+
+	return 0
+}
+
+#Validate if a given tcp/udp port is busy
+#shellcheck disable=SC2207
+function check_tcp_udp_port() {
+
+	debug_print
+
+	local port
+	local port_type
+	port=$(printf "%04x" "${1}")
+	port_type="${2}"
+
+	declare -a busy_ports=($(grep -v "rem_address" --no-filename "/proc/net/${port_type}" | awk '{print $2}' | cut -d: -f2 | sort -u))
+	for hexport in "${busy_ports[@]}"; do
+		if [ "${hexport}" = "${port}" ]; then
+			return 1
+		fi
+	done
+
+	return 0
+}
+
+#Validate if a wireless card is supporting VIF (Virtual Interface)
+function check_vif_support() {
+
+	debug_print
+
+	if iw "${phy_interface}" info | grep "Supported interface modes" -A 8 | grep "AP/VLAN" > /dev/null 2>&1; then
+		return 0
+	else
+		return 1
+	fi
 }
 
 #Find the physical interface for a card
@@ -2427,8 +2505,10 @@ function select_secondary_et_interface() {
 	for item in "${secondary_ifaces[@]}"; do
 		if [ ${option_counter} -eq 0 ]; then
 			if [ "${1}" = "dos_pursuit_mode" ]; then
+				echo
 				language_strings "${language}" 511 "green"
 			elif [ "${1}" = "internet" ]; then
+				echo
 				language_strings "${language}" 279 "green"
 			fi
 			print_simple_separator
@@ -2577,6 +2657,11 @@ function select_interface() {
 				phy_interface=$(physical_interface_finder "${interface}")
 				check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
 				interface_mac=$(ip link show "${interface}" | awk '/ether/ {print $2}')
+				if ! check_vif_support; then
+					card_vif_support=0
+				else
+					card_vif_support=1
+				fi
 				break
 			fi
 		done
@@ -5383,6 +5468,7 @@ function initialize_menu_and_print_selections() {
 			et_mode=""
 			et_processes=()
 			secondary_wifi_interface=""
+			et_attack_adapter_prerequisites_ok=0
 			print_iface_selected
 			print_all_target_vars_et
 		;;
@@ -5392,6 +5478,7 @@ function initialize_menu_and_print_selections() {
 			enterprise_mode=""
 			et_processes=()
 			secondary_wifi_interface=""
+			et_enterprise_attack_adapter_prerequisites_ok=0
 			print_iface_selected
 			print_all_target_vars
 		;;
@@ -5422,6 +5509,7 @@ function initialize_menu_and_print_selections() {
 			print_all_target_vars
 		;;
 		"beef_pre_menu")
+			et_attack_adapter_prerequisites_ok=0
 			print_iface_selected
 			print_all_target_vars_et
 		;;
@@ -5859,9 +5947,20 @@ function enterprise_attacks_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					if custom_certificates_integration; then
-						enterprise_mode="smooth"
-						et_dos_menu "enterprise"
+					if [ "${card_vif_support}" -eq 0 ]; then
+						ask_yesno 696 "no"
+						if [ "${yesno}" = "y" ]; then
+							et_enterprise_attack_adapter_prerequisites_ok=1
+						fi
+					else
+						et_enterprise_attack_adapter_prerequisites_ok=1
+					fi
+
+					if [ "${et_enterprise_attack_adapter_prerequisites_ok}" -eq 1 ]; then
+						if custom_certificates_integration; then
+							enterprise_mode="smooth"
+							et_dos_menu "enterprise"
+						fi
 					fi
 				else
 					echo
@@ -5876,9 +5975,20 @@ function enterprise_attacks_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					if custom_certificates_integration; then
-						enterprise_mode="noisy"
-						et_dos_menu "enterprise"
+					if [ "${card_vif_support}" -eq 0 ]; then
+						ask_yesno 696 "no"
+						if [ "${yesno}" = "y" ]; then
+							et_enterprise_attack_adapter_prerequisites_ok=1
+						fi
+					else
+						et_enterprise_attack_adapter_prerequisites_ok=1
+					fi
+
+					if [ "${et_enterprise_attack_adapter_prerequisites_ok}" -eq 1 ]; then
+						if custom_certificates_integration; then
+							enterprise_mode="noisy"
+							et_dos_menu "enterprise"
+						fi
 					fi
 				else
 					echo
@@ -5945,8 +6055,26 @@ function evil_twin_attacks_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					et_mode="et_onlyap"
-					et_dos_menu
+					if [ "${card_vif_support}" -eq 0 ]; then
+						ask_yesno 696 "no"
+						if [ "${yesno}" = "y" ]; then
+							et_attack_adapter_prerequisites_ok=1
+						fi
+					else
+						et_attack_adapter_prerequisites_ok=1
+					fi
+
+					if [ "${et_attack_adapter_prerequisites_ok}" -eq 1 ]; then
+
+						declare -gA ports_needed
+						ports_needed["tcp"]=""
+						ports_needed["udp"]="${dhcp_port}"
+						if check_busy_ports; then
+
+							et_mode="et_onlyap"
+							et_dos_menu
+						fi
+					fi
 				else
 					echo
 					language_strings "${language}" 281 "red"
@@ -5960,8 +6088,26 @@ function evil_twin_attacks_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					et_mode="et_sniffing"
-					et_dos_menu
+					if [ "${card_vif_support}" -eq 0 ]; then
+						ask_yesno 696 "no"
+						if [ "${yesno}" = "y" ]; then
+							et_attack_adapter_prerequisites_ok=1
+						fi
+					else
+						et_attack_adapter_prerequisites_ok=1
+					fi
+
+					if [ "${et_attack_adapter_prerequisites_ok}" -eq 1 ]; then
+
+						declare -gA ports_needed
+						ports_needed["tcp"]=""
+						ports_needed["udp"]="${dhcp_port}"
+						if check_busy_ports; then
+
+							et_mode="et_sniffing"
+							et_dos_menu
+						fi
+					fi
 				else
 					echo
 					language_strings "${language}" 281 "red"
@@ -5975,14 +6121,32 @@ function evil_twin_attacks_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					et_mode="et_sniffing_sslstrip2"
 					get_bettercap_version
 					if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}" && ! compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_sslstrip_working_version}"; then
 						echo
 						language_strings "${language}" 174 "red"
 						language_strings "${language}" 115 "read"
 					else
-						et_dos_menu
+						if [ "${card_vif_support}" -eq 0 ]; then
+							ask_yesno 696 "no"
+							if [ "${yesno}" = "y" ]; then
+								et_attack_adapter_prerequisites_ok=1
+							fi
+						else
+							et_attack_adapter_prerequisites_ok=1
+						fi
+
+						if [ "${et_attack_adapter_prerequisites_ok}" -eq 1 ]; then
+
+							declare -gA ports_needed
+							ports_needed["tcp"]="${bettercap_proxy_port}"
+							ports_needed["udp"]="${dhcp_port} ${bettercap_dns_port}"
+							if check_busy_ports; then
+
+								et_mode="et_sniffing_sslstrip2"
+								et_dos_menu
+							fi
+						fi
 					fi
 				else
 					echo
@@ -6000,13 +6164,31 @@ function evil_twin_attacks_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					et_mode="et_captive_portal"
-					echo
-					language_strings "${language}" 316 "yellow"
-					language_strings "${language}" 115 "read"
+					if [ "${card_vif_support}" -eq 0 ]; then
+						ask_yesno 696 "no"
+						if [ "${yesno}" = "y" ]; then
+							et_attack_adapter_prerequisites_ok=1
+						fi
+					else
+						et_attack_adapter_prerequisites_ok=1
+					fi
 
-					if explore_for_targets_option "WPA"; then
-						et_dos_menu
+					if [ "${et_attack_adapter_prerequisites_ok}" -eq 1 ]; then
+
+						declare -gA ports_needed
+						ports_needed["tcp"]="${dns_port} ${www_port}"
+						ports_needed["udp"]="${dns_port} ${dhcp_port}"
+						if check_busy_ports; then
+
+							et_mode="et_captive_portal"
+							echo
+							language_strings "${language}" 316 "yellow"
+							language_strings "${language}" 115 "read"
+
+							if explore_for_targets_option "WPA"; then
+								et_dos_menu
+							fi
+						fi
 					fi
 				else
 					echo
@@ -6070,7 +6252,6 @@ function beef_pre_menu() {
 			else
 				current_iface_on_messages="${interface}"
 				if check_interface_wifi "${interface}"; then
-					et_mode="et_sniffing_sslstrip2_beef"
 					get_bettercap_version
 					if compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_version}" && ! compare_floats_greater_or_equal "${bettercap_version}" "${bettercap2_sslstrip_working_version}"; then
 						echo
@@ -6078,7 +6259,29 @@ function beef_pre_menu() {
 						language_strings "${language}" 115 "read"
 						return
 					fi
-					et_dos_menu
+
+					if [ "${card_vif_support}" -eq 0 ]; then
+						ask_yesno 696 "no"
+						if [ "${yesno}" = "y" ]; then
+							et_attack_adapter_prerequisites_ok=1
+						else
+							return_to_et_main_menu_from_beef=1
+						fi
+					else
+						et_attack_adapter_prerequisites_ok=1
+					fi
+
+					if [ "${et_attack_adapter_prerequisites_ok}" -eq 1 ]; then
+
+						declare -gA ports_needed
+						ports_needed["tcp"]="2000 ${beef_port} 6789 ${bettercap_proxy_port}"
+						ports_needed["udp"]="${dns_port} ${dhcp_port} ${bettercap_dns_port}"
+						if check_busy_ports; then
+
+							et_mode="et_sniffing_sslstrip2_beef"
+							et_dos_menu
+						fi
+					fi
 				else
 					echo
 					language_strings "${language}" 281 "red"
@@ -9241,21 +9444,21 @@ function set_std_internet_routing_rules() {
 
 	if [ "${et_mode}" = "et_captive_portal" ]; then
 		if [ "${iptables_nftables}" -eq 1 ]; then
-			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 80 counter dnat to ${et_ip_router}:80
-			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport 443 counter dnat to ${et_ip_router}:80
-			"${iptables_cmd}" add rule ip filter INPUT tcp dport 80 counter accept
-			"${iptables_cmd}" add rule ip filter INPUT tcp dport 443 counter accept
+			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport ${www_port} counter dnat to ${et_ip_router}:${www_port}
+			"${iptables_cmd}" add rule ip nat PREROUTING tcp dport ${https_port} counter dnat to ${et_ip_router}:${www_port}
+			"${iptables_cmd}" add rule ip filter INPUT tcp dport ${www_port} counter accept
+			"${iptables_cmd}" add rule ip filter INPUT tcp dport ${https_port} counter accept
 		else
-			"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination ${et_ip_router}:80
-			"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to-destination ${et_ip_router}:80
-			"${iptables_cmd}" -A INPUT -p tcp --destination-port 80 -j ACCEPT
-			"${iptables_cmd}" -A INPUT -p tcp --destination-port 443 -j ACCEPT
+			"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport ${www_port} -j DNAT --to-destination ${et_ip_router}:${www_port}
+			"${iptables_cmd}" -t nat -A PREROUTING -p tcp --dport ${https_port} -j DNAT --to-destination ${et_ip_router}:${www_port}
+			"${iptables_cmd}" -A INPUT -p tcp --destination-port ${www_port} -j ACCEPT
+			"${iptables_cmd}" -A INPUT -p tcp --destination-port ${https_port} -j ACCEPT
 		fi
 
 		if [ "${iptables_nftables}" -eq 1 ]; then
-			"${iptables_cmd}" add rule ip filter INPUT udp dport 53 counter accept
+			"${iptables_cmd}" add rule ip filter INPUT udp dport ${dns_port} counter accept
 		else
-			"${iptables_cmd}" -A INPUT -p udp --destination-port 53 -j ACCEPT
+			"${iptables_cmd}" -A INPUT -p udp --destination-port ${dns_port} -j ACCEPT
 		fi
 	elif [ "${et_mode}" = "et_sniffing_sslstrip2" ]; then
 		if [ "${iptables_nftables}" -eq 1 ]; then
@@ -10468,7 +10671,7 @@ function set_webserver_config() {
 	echo -e "server.modules = ("
 	echo -e "\"mod_cgi\""
 	echo -e ")\n"
-	echo -e "server.port = 80\n"
+	echo -e "server.port = ${www_port}\n"
 	echo -e "index-file.names = ( \"${indexfile}\" )\n"
 	echo -e "server.error-handler-404 = \"/\"\n"
 	echo -e "mimetype.assign = ("
@@ -10783,7 +10986,7 @@ function set_beef_config() {
 	echo -e "        host: \"${any_ip}\""
 	echo -e "        port: \"${beef_port}\""
 	echo -e "        dns_host: \"localhost\""
-	echo -e "        dns_port: 53"
+	echo -e "        dns_port: ${dns_port}"
 	echo -e "        web_ui_basepath: \"/ui\""
 	echo -e "        hook_file: \"/${jshookfile}\""
 	echo -e "        hook_session_name: \"BEEFHOOK\""
@@ -11265,6 +11468,7 @@ function kill_et_windows() {
 		kill "${et_process_control_window}" &> /dev/null
 		kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
 		kill "$(ps -C dnsmasq --no-headers -o pid | tr -d ' ')" &> /dev/null
+		kill "$(ps -C lighttpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 	fi
 
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
@@ -12856,9 +13060,11 @@ function et_prerequisites() {
 		fi
 	fi
 
-	ask_yesno 419 "no"
-	if [ "${yesno}" = "y" ]; then
-		mac_spoofing_desired=1
+	if [[ -z "${mac_spoofing_desired}" ]] || [[ ${mac_spoofing_desired} -eq 0 ]]; then
+		ask_yesno 419 "no"
+		if [ "${yesno}" = "y" ]; then
+			mac_spoofing_desired=1
+		fi
 	fi
 
 	if [ "${et_mode}" = "et_captive_portal" ]; then
@@ -13614,6 +13820,7 @@ function get_bully_version() {
 
 	bully_version=$(bully -V 2> /dev/null)
 	bully_version=${bully_version#"v"}
+	bully_version=${bully_version%"-"*}
 }
 
 #Determine reaver version
@@ -14586,6 +14793,7 @@ function initialize_script_settings() {
 	custom_certificates_organization=""
 	custom_certificates_email=""
 	custom_certificates_cn=""
+	card_vif_support=0
 }
 
 #Detect if there is a working X window system excepting for docker container and wayland
@@ -15637,7 +15845,7 @@ function detect_rtl_language() {
 	for item in "${rtl_languages[@]}"; do
 		if [ "${language}" = "${item}" ]; then
 			is_rtl_language=1
-			printf "\e[8l"
+			printf "\e[8h"
 			break
 		else
 			is_rtl_language=0
