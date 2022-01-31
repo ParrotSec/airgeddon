@@ -5,8 +5,7 @@
 #Bash Version.: 4.2 or later
 
 #Set PIN database. Keys are the first 6 bssid digits and are ordered
-#shellcheck disable=SC2080
-#shellcheck disable=SC2034
+#shellcheck disable=SC2080,SC2034
 function set_pin_database() {
 
 	declare -gA PINDB

@@ -106,7 +106,7 @@ All the needed info about how to "install | use | enjoy" `airgeddon` is present 
 [Hat Tip To]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Hat%20Tip%20To
 [Inspiration]: https://github.com/v1s1t0r1sh3r3/airgeddon/wiki/Inspiration
 
-[Version-shield]: https://img.shields.io/badge/version-10.42-blue.svg?style=flat-square&colorA=273133&colorB=0093ee "Latest version"
+[Version-shield]: https://img.shields.io/badge/version-11.0-blue.svg?style=flat-square&colorA=273133&colorB=0093ee "Latest version"
 [Bash4.2-shield]: https://img.shields.io/badge/bash-4.2%2B-blue.svg?style=flat-square&colorA=273133&colorB=00db00 "Bash 4.2 or later"
 [License-shield]: https://img.shields.io/badge/license-GPL%20v3%2B-blue.svg?style=flat-square&colorA=273133&colorB=bd0000 "GPL v3+"
 [Docker-shield]: https://img.shields.io/docker/cloud/automated/v1s1t0r1sh3r3/airgeddon.svg?style=flat-square&colorA=273133&colorB=a9a9a9 "Docker rules!"

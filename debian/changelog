@@ -1,3 +1,13 @@
+airgeddon (11.0+parrot0) testing; urgency=medium
+ * Improvements in plugins system
+ * GPU support for hashcat
+ * Keep compatibility for hashcat -m 2500 on new hashcat versions
+ * Improvement for busy ports checkings on Evil Twin attacks, now show conflicting process
+ * Fixed error on captive portal trophy file path when only dir (no file) specified
+ * Added CI files to be used in Github actions for Docker automated building
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Mon, 01 Feb 2022 00:49:24 +0400
+
 airgeddon (10.42+parrot0) testing; urgency=medium
  * Changed airmon compatibility check to fit same method used by airmon
  * VIF support check added before launching Evil Twin attacks

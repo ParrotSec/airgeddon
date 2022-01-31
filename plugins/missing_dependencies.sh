@@ -14,7 +14,7 @@ plugin_maximum_ag_affected_version=""
 plugin_distros_supported=("Kali" "Parrot" "BlackArch")
 
 #Custom function. Create the correspondence between commands and packages for each supported distro
-#shellcheck disable=SC2154
+#shellcheck disable=SC2154,SC2295
 function commands_to_packages() {
 
 	local missing_commands_string_clean

@@ -2,13 +2,12 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 10.42
+#Version......: 11.0
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
 #Global shellcheck disabled warnings
-#shellcheck disable=SC2154
-#shellcheck disable=SC2034
+#shellcheck disable=SC2154,SC2034
 
 #Language vars
 #Change this line to select another default language. Select one from available values in array
@@ -131,8 +130,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="10.42"
-language_strings_expected_version="10.42-1"
+airgeddon_version="11.0"
+language_strings_expected_version="11.0-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
@@ -172,6 +171,7 @@ hashcat3_version="3.0"
 hashcat4_version="4.0.0"
 hashcat_hccapx_version="3.40"
 minimum_hashcat_pmkid_version="6.0.0"
+hashcat_2500_deprecated_version="6.2.4"
 hashcat_tmp_simple_name_file="hctmp"
 hashcat_tmp_file="${hashcat_tmp_simple_name_file}.hccap"
 hashcat_pot_tmp="${hashcat_tmp_simple_name_file}.pot"
@@ -350,22 +350,22 @@ known_arm_compatible_distros=(
 							)
 
 #Hint vars
-declare main_hints=(128 134 163 437 438 442 445 516 590 626 660 697)
-declare dos_hints=(129 131 133 697)
-declare handshake_pmkid_hints=(127 130 132 664 665 697)
-declare dos_handshake_hints=(142 697)
-declare decrypt_hints=(171 179 208 244 163 697)
-declare personal_decrypt_hints=(171 178 179 208 244 163 697)
-declare enterprise_decrypt_hints=(171 179 208 244 163 610 697)
-declare select_interface_hints=(246 697)
+declare main_hints=(128 134 163 437 438 442 445 516 590 626 660 697 699)
+declare dos_hints=(129 131 133 697 699)
+declare handshake_pmkid_hints=(127 130 132 664 665 697 699)
+declare dos_handshake_hints=(142 697 699)
+declare decrypt_hints=(171 179 208 244 163 697 699)
+declare personal_decrypt_hints=(171 178 179 208 244 163 697 699)
+declare enterprise_decrypt_hints=(171 179 208 244 163 610 697 699)
+declare select_interface_hints=(246 697 699)
 declare language_hints=(250 438)
-declare option_hints=(445 250 448 477 591 626 697)
-declare evil_twin_hints=(254 258 264 269 309 328 400 509 697)
-declare evil_twin_dos_hints=(267 268 509 697)
+declare option_hints=(445 250 448 477 591 626 697 699)
+declare evil_twin_hints=(254 258 264 269 309 328 400 509 697 699)
+declare evil_twin_dos_hints=(267 268 509 697 699)
 declare beef_hints=(408)
-declare wps_hints=(342 343 344 356 369 390 490 625 697)
-declare wep_hints=(431 429 428 432 433 697)
-declare enterprise_hints=(112 332 483 518 629 301 697)
+declare wps_hints=(342 343 344 356 369 390 490 625 697 699)
+declare wep_hints=(431 429 428 432 433 697 699)
+declare enterprise_hints=(112 332 483 518 629 301 697 699)
 
 #Charset vars
 crunch_lowercasecharset="abcdefghijklmnopqrstuvwxyz"
@@ -544,7 +544,7 @@ function language_strings_handling_messages() {
 	language_strings_failed_downloading["POLISH"]="Nie można pobrać pliku tłumaczenia. Sprawdź połączenie internetowe lub pobierz go ręcznie z ${normal_color}${urlgithub}"
 	language_strings_failed_downloading["GERMAN"]="Die Übersetzungsdatei konnte nicht heruntergeladen werden. Überprüfen Sie Ihre Internetverbindung oder laden Sie sie manuell von ${normal_color}${urlgithub} runter"
 	language_strings_failed_downloading["TURKISH"]="Çeviri dosyası indirilemedi. İnternet bağlantınızı kontrol edin veya manuel olarak indirin ${normal_color}${urlgithub}"
-	language_strings_failed_downloading["ARABIC"]="لا يمكن تنزيل ملف اللغة. تحقق من اتصالك بالإنترنت أو قم بتنزيله يدويًا من ${normal_color}${urlgithub}"
+	language_strings_failed_downloading["ARABIC"]="${normal_color}${urlgithub}${red_color} لا يمكن تنزيل ملف اللغة. تحقق من اتصالك بالإنترنت أو قم بتنزيله يدويًا من"
 
 	declare -gA language_strings_first_time
 	language_strings_first_time["ENGLISH"]="If you are seeing this message after an automatic update, don't be scared! It's probably because airgeddon has different file structure since version 6.1. It will be automatically fixed"
@@ -1292,6 +1292,7 @@ function check_busy_ports() {
 		for tcp_port in "${tcp_ports[@]}"; do
 			if ! check_tcp_udp_port "${tcp_port}" "${port_type}"; then
 				busy_port="${tcp_port}"
+				find_process_name_by_port "${tcp_port}" "${port_type}"
 				echo
 				language_strings "${language}" 698 "red"
 				language_strings "${language}" 115 "read"
@@ -1305,6 +1306,7 @@ function check_busy_ports() {
 		for udp_port in "${udp_ports[@]}"; do
 			if ! check_tcp_udp_port "${udp_port}" "${port_type}"; then
 				busy_port="${udp_port}"
+				find_process_name_by_port "${udp_port}" "${port_type}"
 				echo
 				language_strings "${language}" 698 "red"
 				language_strings "${language}" 115 "read"
@@ -1327,7 +1329,7 @@ function check_tcp_udp_port() {
 	port=$(printf "%04x" "${1}")
 	port_type="${2}"
 
-	declare -a busy_ports=($(grep -v "rem_address" --no-filename "/proc/net/${port_type}" | awk '{print $2}' | cut -d: -f2 | sort -u))
+	declare -a busy_ports=($(grep -v "local_address" --no-filename "/proc/net/${port_type}" "/proc/net/${port_type}6" | awk '{print $2}' | cut -d: -f2 | sort -u))
 	for hexport in "${busy_ports[@]}"; do
 		if [ "${hexport}" = "${port}" ]; then
 			return 1
@@ -1335,6 +1337,27 @@ function check_tcp_udp_port() {
 	done
 
 	return 0
+}
+
+#Find process name from a given port
+function find_process_name_by_port() {
+
+	debug_print
+
+	local port
+	port="${1}"
+	local port_type
+	port_type="${2}"
+
+	local regexp_part1
+	local regexp_part2
+	regexp_part1="${port_type}\h.*?[0-9\*]:${port}"
+	regexp_part2='\h.*?\busers:\(\("\K[^"]+(?=")'
+
+	local regexp
+	regexp="${regexp_part1}${regexp_part2}"
+
+	blocking_process_name=$(ss -tupln | grep -oP "${regexp}")
 }
 
 #Validate if a wireless card is supporting VIF (Virtual Interface)
@@ -3778,9 +3801,7 @@ function set_wep_script() {
 			fi
 		}
 
-		#shellcheck disable=SC1037
-		#shellcheck disable=SC2164
-		#shellcheck disable=SC2140
+		#shellcheck disable=SC1037,SC2164,SC2140
 		${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
 		mkdir "${tmpdir}${wepdir}" > /dev/null 2>&1
 		cd "${tmpdir}${wepdir}" > /dev/null 2>&1
@@ -8723,7 +8744,7 @@ function exec_hashcat_dictionary_attack() {
 	debug_print
 
 	if [ "${1}" = "personal_handshake" ]; then
-		hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix}${hashcat_cmd_fix2} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
@@ -8743,7 +8764,7 @@ function exec_hashcat_bruteforce_attack() {
 	debug_print
 
 	if [ "${1}" = "personal_handshake" ]; then
-		hashcat_cmd="hashcat -m 2500 -a 3 \"${tmpdir}${hashcat_tmp_file}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m 2500 -a 3 \"${tmpdir}${hashcat_tmp_file}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix}${hashcat_cmd_fix2} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
@@ -8763,7 +8784,7 @@ function exec_hashcat_rulebased_attack() {
 	debug_print
 
 	if [ "${1}" = "personal_handshake" ]; then
-		hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix}${hashcat_cmd_fix2} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
@@ -10435,12 +10456,12 @@ function set_et_control_script() {
 	EOF
 
 	cat >&7 <<-'EOF'
+				kill_et_windows
 				kill "$(ps -C hostapd --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill "$(ps -C dhcpd --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill "$(ps -C aireplay-ng --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill "$(ps -C dnsmasq --no-headers -o pid | tr -d ' ')" &> /dev/null
 				kill "$(ps -C lighttpd --no-headers -o pid | tr -d ' ')" &> /dev/null
-				kill_et_windows
 	EOF
 
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
@@ -11962,6 +11983,10 @@ function validate_path() {
 				et_handshake="${pathname}${standardhandshake_filename}"
 				suggested_filename="${standardhandshake_filename}"
 			;;
+			"et_captive_portallog")
+				suggested_filename="${default_et_captive_portallogfilename}"
+				et_captive_portal_logpath+="${default_et_captive_portallogfilename}"
+			;;
 			"wpspot")
 				suggested_filename="${wpspot_filename}"
 				wpspotenteredpath+="${wpspot_filename}"
@@ -12024,7 +12049,7 @@ function validate_path() {
 	return 0
 }
 
-#It checks the write permissions of a directory recursively
+#It checks for write permissions of a directory recursively
 function dir_permission_check() {
 
 	debug_print
@@ -13745,13 +13770,17 @@ function set_hashcat_parameters() {
 		hashcat_charset_fix_needed=1
 
 		if compare_floats_greater_or_equal "${hashcat_version}" "${hashcat4_version}"; then
-			hashcat_cmd_fix=" -D 1 --force"
+			hashcat_cmd_fix=" -D 2,1 --force"
 		else
-			hashcat_cmd_fix=" --weak-hash-threshold 0 -D 1 --force"
+			hashcat_cmd_fix=" --weak-hash-threshold 0 -D 2,1 --force"
 		fi
 
 		if compare_floats_greater_or_equal "${hashcat_version}" "${hashcat_hccapx_version}"; then
 			hccapx_needed=1
+		fi
+
+		if compare_floats_greater_or_equal "${hashcat_version}" "${hashcat_2500_deprecated_version}"; then
+			hashcat_cmd_fix2=" --deprecated-check-disable"
 		fi
 	fi
 }
@@ -15333,7 +15362,7 @@ function kill_tmux_windows() {
 	done
 }
 
-#Function to pause script execution on the main window until a process has finished executing or the user terminates it
+#Function to pause script execution in the main window until a process has finished executing or the user terminates it
 #shellcheck disable=SC2009
 function wait_for_process() {
 
@@ -15432,9 +15461,11 @@ function parse_plugins() {
 					plugin_short_name="${file##*/}"
 					plugin_short_name="${plugin_short_name%.sh*}"
 
-					#shellcheck source=./plugins/missing_dependencies.sh
-					source "${file}" "$@"
-					if [ "${plugin_enabled}" -eq 1 ]; then
+					if grep -q -E "^plugin_enabled=1$" "${file}"; then
+
+						#shellcheck source=./plugins/missing_dependencies.sh
+						source "${file}" "$@"
+
 						validate_plugin_requirements
 						plugin_validation_result=$?
 						if [ "${plugin_validation_result}" -eq 0 ]; then
@@ -15583,7 +15614,7 @@ function airmonzc_security_check() {
 	fi
 }
 
-#Compare if first float argument is greater than float second argument
+#Check if the first float argument is greater than the second
 function compare_floats_greater_than() {
 
 	debug_print
@@ -15591,7 +15622,7 @@ function compare_floats_greater_than() {
 	awk -v n1="${1}" -v n2="${2}" 'BEGIN{if (n1>n2) exit 0; exit 1}'
 }
 
-#Compare if first float argument is greater or equal than float second argument
+#Check if the first float argument is greater than or equal to the second float argument
 function compare_floats_greater_or_equal() {
 
 	debug_print
@@ -15719,7 +15750,7 @@ function check_internet_access() {
 	return 1
 }
 
-#Check for access to an url using curl
+#Check for access to a url using curl
 function check_url_curl() {
 
 	debug_print
@@ -15736,7 +15767,7 @@ function check_url_curl() {
 	return 1
 }
 
-#Check for access to an url using wget
+#Check for access to a url using wget
 function check_url_wget() {
 
 	debug_print
@@ -15753,7 +15784,7 @@ function check_url_wget() {
 	return 1
 }
 
-#Detect if there is a http proxy configured on system
+#Detect if there is an http proxy configured on the system
 function http_proxy_detect() {
 
 	debug_print
@@ -15776,7 +15807,7 @@ function check_default_route() {
 	return $?
 }
 
-#Update the script if your version is lower than the cloud version
+#Update the script if your version is outdated
 function autoupdate_check() {
 
 	debug_print
@@ -15821,7 +15852,7 @@ function autoupdate_check() {
 	language_strings "${language}" 115 "read"
 }
 
-#Change script language automatically if OS language is supported by the script and different from current language
+#Change script language automatically if OS language is supported by the script and different from the current language
 function autodetect_language() {
 
 	debug_print
@@ -15837,7 +15868,7 @@ function autodetect_language() {
 	done
 }
 
-#Detect if current language is a supported RTL (Right To Left) language
+#Detect if the current language is a supported RTL (Right To Left) language
 function detect_rtl_language() {
 
 	debug_print
@@ -15853,7 +15884,7 @@ function detect_rtl_language() {
 	done
 }
 
-#Clean some known and controlled warnings for shellcheck tool
+#Clean some known and controlled warnings for ShellCheck
 function remove_warnings() {
 
 	debug_print
@@ -16143,7 +16174,7 @@ function main() {
 	main_menu
 }
 
-#Script starts to executing stuff from this point, traps and then main function
+#Script starts to execute stuff from this point, traps and then the main function
 for f in SIGINT SIGHUP INT SIGTSTP; do
 	trap_cmd="trap \"capture_traps ${f}\" \"${f}\""
 	eval "${trap_cmd}"

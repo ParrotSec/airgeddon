@@ -1,3 +1,11 @@
+### 11.0
+ - Improvements in plugins system
+ - GPU support for hashcat
+ - Keep compatibility for hashcat -m 2500 on new hashcat versions
+ - Improvement for busy ports checkings on Evil Twin attacks, now show conflicting process
+ - Fixed error on captive portal trophy file path when only dir (no file) specified
+ - Added CI files to be used in Github actions for Docker automated building
+
 ### 10.42
  - Changed airmon compatibility check to fit same method used by airmon
  - VIF support check added before launching Evil Twin attacks
