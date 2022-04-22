@@ -1,3 +1,13 @@
+airgeddon (11.01+parrot0) testing; urgency=medium
+ * Fixed busy ports checks
+ * Added PIN to WPS trophy file
+ * Fixed Evil Twin route problems for modern mobile devices (Android, Kali Nethunter, etc.)
+ * Improvement in missing dependencies plugin to be able to check output when errors occur
+ * Adapted WPA/WPA2 attacks (handshake capture, PMKID and Evil Twin captive portal) to work with WPA2/WPA3 mixed networks
+ * Fix error launching sslstrip2 using old Bettercap 1.x
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Fri, 22 Apr 2022 18:50:31 +0100
+
 airgeddon (11.0+parrot0) testing; urgency=medium
  * Improvements in plugins system
  * GPU support for hashcat

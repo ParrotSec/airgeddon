@@ -1,8 +1,16 @@
+### 11.01
+ - Fixed busy ports checks
+ - Added PIN to WPS trophy file
+ - Fixed Evil Twin route problems for modern mobile devices (Android, Kali Nethunter, etc.)
+ - Improvement in missing dependencies plugin to be able to check output when errors occur
+ - Adapted WPA/WPA2 attacks (handshake capture, PMKID and Evil Twin captive portal) to work with WPA2/WPA3 mixed networks
+ - Fix error launching sslstrip2 using old Bettercap 1.x
+
 ### 11.0
  - Improvements in plugins system
  - GPU support for hashcat
  - Keep compatibility for hashcat -m 2500 on new hashcat versions
- - Improvement for busy ports checkings on Evil Twin attacks, now show conflicting process
+ - Improvement for busy ports checks on Evil Twin attacks, now show conflicting process
  - Fixed error on captive portal trophy file path when only dir (no file) specified
  - Added CI files to be used in Github actions for Docker automated building
 
@@ -12,7 +20,7 @@
  - airgeddon version shown in title at main menu
  - Fixed arabic scrambled strings and added missing arabic strings to missing dependencies plugin
  - Fixed debug mode malfunction
- - Added busy ports checkings on Evil Twin attacks
+ - Added busy ports checks on Evil Twin attacks
  - Dockerfile rollback to Arch (ArchStrike image as base) due to Parrot repos problems
 
 ### 10.41

@@ -12,7 +12,7 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
 ## Issue Creation Policy
 
 1. Please, consider to contact us on [IRC] or [Discord] channel before opening an issue. More info at [Wiki Contact Section]
-2. Filling the issue template with *ALL* the requested info is mandatory. Otherwise the issue can be marked as "invalid" and closed immediately.
+2. Filling the issue template with *ALL* the requested info is mandatory. Otherwise, the issue can be marked as "invalid" and closed immediately.
 3. Issues must be opened in English.
 4. If an issue is opened and more info is needed, `airgeddon` staff will request it. If there is no answer in 7 days or the OP is not collaborating, the issue will be closed.
 5. If the issue is not related to airgeddon or the root cause is out of scope, it will be closed. `airgeddon` staff is not a helpdesk support service.
@@ -22,18 +22,17 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
 ## Collaborating Translators
 
 1. Ask ALWAYS before start a translation to add a new language (by mail at [v1s1t0r.1s.h3r3@gmail.com], by Twitter at [@OscarAkaElvis], by [IRC] or [Discord] channel). Contact to the development team in order to know what are you going to do. You'll be informed about how to proceed.
-2. Once new language is approved or if you are going to update an existing one, update the date under shebang on every commit.
-3. Translate the strings located in `language_strings.sh` and the existing phrases _language_strings_handling_messages function_ in `airgeddon.sh`.
-4. If you want to create a pull request with a new language to be added, at least the 80% of the phrases must be translated and the rest must be done with at least _an automatic-translation_ system and marked with PoT (Pending of Translation) mark.
-5. Remember that pull requests done over master branch will be rejected. Read the git workflow policy first.
-6. After verification of and acceptation of the pull request, you can be added as a collaborator on the project to push directly on the repository instead of submitting pull requests.
-7. Knowledge about `git` is mandatory (at least basic commands) to push directly into the project repository.
+2. Translate the strings located in `language_strings.sh`, the existing strings of _language_strings_handling_messages_ function in `airgeddon.sh` and the strings of _missing_dependencies_text_ function in `missing_dependencies.sh` (this last file is in plugins dir).
+3. If you want to create a pull request with a new language to be added, at least the 80% of the phrases must be translated and the rest must be done with at least _an automatic-translation_ system and marked with PoT (Pending of Translation) mark.
+4. Remember that pull requests done over master branch will be rejected. Read the git workflow policy first.
+5. After verification of and acceptation of the pull request, you can be added as a collaborator on the project to push directly on the repository instead of submitting pull requests.
+6. Knowledge about `git` is mandatory (at least basic commands) to push directly into the project repository.
 
 ## Collaborating Developers and Plugins Development
 
 #### For direct interaction with the repository (plugins development excluded):
 
-1. First of all ask ALWAYS before performing a development. Ask to the developement team to set what is going to be
+1. First ask ALWAYS before performing a development. Ask the developement team to set what is going to be.
 2. Tweak *"AIRGEDDON_DEVELOPMENT_MODE"* variable to "true" for faster development skipping intro and initial checks or change *"AIRGEDDON_DEBUG_MODE"* variable for verbosity.
 3. Respect the **4 width tab indentation**, code style and the **UTF-8 encoding**.
 4. Use **LF** (Unix) line break type (not CR or CRLF).
@@ -56,15 +55,15 @@ Please note we have a [Code of Conduct], please follow it in all your interactio
 4. If you want to add your plugin to [Wiki Plugins Hall of Fame Section], follow the instructions explained there. Don't open an issue.
 
 We also have a private Telegram group for *trusted collaborators* for more agile discussion about developments, improvements, etc. 
-To be added on it you must prove first you are a *trusted collaborator* with your contributions.
+To be added on it, you must prove first you are a *trusted collaborator* with your contributions.
 Anything can be also discussed on public [IRC] or [Discord] channel. More info at [Wiki Contact Section].
 
 ## WPS PIN Database Collaborators
 
-1. Send MAC of the BSSID and the default PIN to [v1s1t0r.1s.h3r3@gmail.com]. If you are going to push directly into the repository, keep reading the next points.
-2. Add PINs ordered by the key in the associative array located in the `known_pins.db` file. (Keys are the first 6 BSSID digits).
-3. Update the `pindb_checksum.txt` file with the calculated checksum of the already modified database file using `md5sum` tool.
-4. Update the date under shebang.
+1. Send MAC of the BSSID and the default PIN to [v1s1t0r.1s.h3r3@gmail.com]. If you are going to push directly into the repository, keep reading the next points and remember about the git workflow policy.
+2. Remember that all PINs must be 8 digits and must be working PINs (verified that they work).
+3. Add PINs ordered by the key in the associative array located in the `known_pins.db` file. (Keys are the first 6 BSSID digits).
+4. Update the `pindb_checksum.txt` file with the calculated checksum of the already modified database file using `md5sum` tool.
 
 *PINs should be from devices that generate generic ones.*
 
@@ -92,12 +91,12 @@ Another way to contribute is to use your Nitro Boosts on our [Discord] server. A
 
 ## Donate
 
-If you enjoyed the script, feel free to donate. Support the project through Paypal or sending a fraction any of these cryptocurrencies. Any amount, not matter how small (1, 2, 5 $/€) is welcome:
+If you enjoyed the script, feel free to donate. Support the project through PayPal or sending a fraction any of these cryptocurrencies. Any amount, not matter how small (1, 2, 5 $/€) is welcome:
 
 <table>
   <tr>
     <td>
-      <b>Paypal</b>: <em>v1s1t0r.1s.h3r3&#64;gmail.com</em> <br/>
+      <b>PayPal</b>: <em>v1s1t0r.1s.h3r3&#64;gmail.com</em> <br/>
       <b>Bitcoin</b>: <em>1NSzwqtBBdo4CrvynPZmd85xfbL7hw3Ptu</em> <br/>
       <b>Bitcoin Cash</b>: <em>1GyUesBgwHKZBeFvkT5nfteecPdH6bAEaL</em> <br/>
       <b>Dash</b>: <em>XgKL8GTsdKAL2fypiMRFFL8m4wWTm1Netn</em> <br/>
@@ -111,7 +110,7 @@ If you enjoyed the script, feel free to donate. Support the project through Payp
 <br/>
 
 <div align="center">
-    <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7ELM486P7XKKG"><img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/paypal_donate.png" alt="Paypal" title="Paypal"/></a>
+    <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7ELM486P7XKKG"><img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/paypal_donate.png" alt="PayPal" title="PayPal"/></a>
     <a href="https://www.buymeacoffee.com/v1s1t0r"><img src="https://raw.githubusercontent.com/v1s1t0r1sh3r3/airgeddon/master/imgs/banners/buymeacoffee.png" alt="Buy me a coffee" title="Buy me a coffee"/></a>
 </div>
 
@@ -186,4 +185,4 @@ If you enjoyed the script, feel free to donate. Support the project through Payp
 <!-- Other -->
 [@OscarAkaElvis]: https://twitter.com/OscarAkaElvis
 [Discord]: https://discord.gg/sQ9dgt9
-[IRC]: https://webchat.freenode.net/
+[IRC]: https://web.libera.chat/
