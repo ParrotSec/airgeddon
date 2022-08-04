@@ -1,3 +1,12 @@
+airgeddon (11.02+parrot0) testing; urgency=medium
+ * Fixed minor bug in minimum length setting while bruteforcing using hashcat
+ * Improvement hashcat use forcing it to use -m 22000 instead of old -m 2500 over handshakes cracking for hashcat modern versions
+ * Added WSL/WSL2 detection to force exit due to incompatibility
+ * Extended compatibility to use lspci 3.8 not accepting 0x
+ * Fixed error showing connected clients in Evil Twin captive portal attack
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Thu, 04 Aug 2022 12:19:16 +0200
+
 airgeddon (11.01+parrot0) testing; urgency=medium
  * Fixed busy ports checks
  * Added PIN to WPS trophy file

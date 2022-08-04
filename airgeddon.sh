@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 11.01
+#Version......: 11.02
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -130,8 +130,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="11.01"
-language_strings_expected_version="11.01-1"
+airgeddon_version="11.02"
+language_strings_expected_version="11.02-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
@@ -172,6 +172,9 @@ hashcat4_version="4.0.0"
 hashcat_hccapx_version="3.40"
 minimum_hashcat_pmkid_version="6.0.0"
 hashcat_2500_deprecated_version="6.2.4"
+hashcat_handshake_cracking_plugin="2500"
+hashcat_pmkid_cracking_plugin="22000"
+hashcat_enterprise_cracking_plugin="5500"
 hashcat_tmp_simple_name_file="hctmp"
 hashcat_tmp_file="${hashcat_tmp_simple_name_file}.hccap"
 hashcat_pot_tmp="${hashcat_tmp_simple_name_file}.pot"
@@ -341,6 +344,10 @@ known_compatible_distros=(
 							"OpenMandriva"
 							"Pentoo"
 							"Manjaro"
+						)
+
+known_incompatible_distros=(
+							"Microsoft"
 						)
 
 known_arm_compatible_distros=(
@@ -2368,7 +2375,7 @@ function set_chipset() {
 
 		elif [[ "${bus_type}" =~ pci|ssb|bcma|pcmcia ]]; then
 			if [[ -f /sys/class/net/${1}/device/vendor ]] && [[ -f /sys/class/net/${1}/device/device ]]; then
-				vendor_and_device=$(cat "/sys/class/net/${1}/device/vendor"):$(cat "/sys/class/net/${1}/device/device")
+		vendor_and_device=$(sed -e 's/0x//' "/sys/class/net/${1}/device/vendor"):$(sed -e 's/0x//' "/sys/class/net/${1}/device/device")
 				if [[ -n "${2}" ]] && [[ "${2}" = "read_only" ]]; then
 					requested_chipset=$(lspci -d "${vendor_and_device}" | head -n 1 | cut -f 3 -d ":" | sed -e "${sedruleall}")
 				else
@@ -4134,7 +4141,7 @@ function set_wep_script() {
 			wep_aircrack_pid_alive=$(ps uax | awk '{print $2}' | grep -E "^${wep_aircrack_pid}$" 2> /dev/null)
 			if [[ -z "${wep_aircrack_pid_alive}" ]] && [[ ${wep_aircrack_launched} -eq 1 ]]; then
 				break
-			elif [ -z "${wep_capture_pid_alive}" ]; then
+			elif [[ -z "${wep_capture_pid_alive}" ]]; then
 				break
 			fi
 		done
@@ -7601,7 +7608,7 @@ function aircrack_bruteforce_attack_option() {
 		return
 	fi
 
-	set_minlength_and_maxlength "personal"
+	set_minlength_and_maxlength "personal_handshake"
 
 	charset_option=0
 	while [[ ! ${charset_option} =~ ^[[:digit:]]+$ ]] || (( charset_option < 1 || charset_option > 11 )); do
@@ -8495,7 +8502,7 @@ function set_minlength() {
 	debug_print
 
 	local regexp
-	if [ "${1}" = "personal" ]; then
+	if [[ "${1}" = "personal_handshake" ]] || [[ "${1}" = "personal_pmkid" ]]; then
 		regexp="^[8-9]$|^[1-5][0-9]$|^6[0-3]$"
 		minlength_text=8
 	else
@@ -8517,7 +8524,7 @@ function set_maxlength() {
 	debug_print
 
 	local regexp
-	if [ "${1}" = "personal" ]; then
+	if [[ "${1}" = "personal_handshake" ]] || [[ "${1}" = "personal_pmkid" ]]; then
 		regexp="^[8-9]$|^[1-5][0-9]$|^6[0-3]$"
 	else
 		regexp="^[1-9]$|^[1-5][0-9]$|^6[0-3]$"
@@ -8761,15 +8768,15 @@ function exec_hashcat_dictionary_attack() {
 	debug_print
 
 	if [ "${1}" = "personal_handshake" ]; then
-		hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix}${hashcat_cmd_fix2} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_handshake_cracking_plugin} -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 22000 -a 0 \"${hashcatpmkidenteredpath}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_pmkid_cracking_plugin} -a 0 \"${hashcatpmkidenteredpath}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	else
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 5500 -a 0 \"${hashcatenterpriseenteredpath}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_enterprise_cracking_plugin} -a 0 \"${hashcatenterpriseenteredpath}\" \"${DICTIONARY}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	fi
 	eval "${hashcat_cmd}"
 	language_strings "${language}" 115 "read"
@@ -8781,15 +8788,15 @@ function exec_hashcat_bruteforce_attack() {
 	debug_print
 
 	if [ "${1}" = "personal_handshake" ]; then
-		hashcat_cmd="hashcat -m 2500 -a 3 \"${tmpdir}${hashcat_tmp_file}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix}${hashcat_cmd_fix2} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_handshake_cracking_plugin} -a 3 \"${tmpdir}${hashcat_tmp_file}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 22000 -a 3 \"${hashcatpmkidenteredpath}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_pmkid_cracking_plugin} -a 3 \"${hashcatpmkidenteredpath}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	else
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 5500 -a 3 \"${hashcatenterpriseenteredpath}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_enterprise_cracking_plugin} -a 3 \"${hashcatenterpriseenteredpath}\" ${charset} --increment --increment-min=${minlength} --increment-max=${maxlength} --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	fi
 	eval "${hashcat_cmd}"
 	language_strings "${language}" 115 "read"
@@ -8801,15 +8808,15 @@ function exec_hashcat_rulebased_attack() {
 	debug_print
 
 	if [ "${1}" = "personal_handshake" ]; then
-		hashcat_cmd="hashcat -m 2500 -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix}${hashcat_cmd_fix2} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_handshake_cracking_plugin} -a 0 \"${tmpdir}${hashcat_tmp_file}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	elif [ "${1}" = "personal_pmkid" ]; then
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 22000 -a 0 \"${hashcatpmkidenteredpath}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_pmkid_cracking_plugin} -a 0 \"${hashcatpmkidenteredpath}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	else
 		tmpfiles_toclean=1
 		rm -rf "${tmpdir}hctmp"* > /dev/null 2>&1
-		hashcat_cmd="hashcat -m 5500 -a 0 \"${hashcatenterpriseenteredpath}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
+		hashcat_cmd="hashcat -m ${hashcat_enterprise_cracking_plugin} -a 0 \"${hashcatenterpriseenteredpath}\" \"${DICTIONARY}\" -r \"${RULES}\" --potfile-disable -o \"${tmpdir}${hashcat_pot_tmp}\"${hashcat_cmd_fix} | tee \"${tmpdir}${hashcat_output_file}\" ${colorize}"
 	fi
 	eval "${hashcat_cmd}"
 	language_strings "${language}" 115 "read"
@@ -10590,7 +10597,7 @@ function set_et_control_script() {
 	EOF
 
 	cat >&7 <<-'EOF'
-			if [ -z "${DHCPCLIENTS[@]}" ]; then
+			if [[ -z "${DHCPCLIENTS[@]}" ]]; then
 	EOF
 
 	cat >&7 <<-EOF
@@ -10604,7 +10611,7 @@ function set_et_control_script() {
 					if [[ " ${client_ips[*]} " != *" ${client_ip} "* ]]; then
 						client_hostname=""
 						[[ ${client} =~ .*(\(.+\)).* ]] && client_hostname="${BASH_REMATCH[1]}"
-						if [ -z "${client_hostname}" ]; then
+						if [[ -z "${client_hostname}" ]]; then
 							echo -e "\t${client_ip} ${client_mac}"
 						else
 							echo -e "\t${client_ip} ${client_mac} ${client_hostname}"
@@ -12632,11 +12639,10 @@ function explore_for_targets_option() {
 	recalculate_windows_sizes
 	manage_output "+j -bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g1_topright_window} -T \"Exploring for targets\"" "airodump-ng -w ${tmpdir}nws${cypher_cmd}${interface} --band ${airodump_band_modifier}" "Exploring for targets" "active"
 	wait_for_process "airodump-ng -w ${tmpdir}nws${cypher_cmd}${interface} --band ${airodump_band_modifier}" "Exploring for targets"
-	targetline=$(awk '/(^Station[s]?|^Client[es]?)/{print NR}' < "${tmpdir}nws-01.csv")
+	targetline=$(awk '/(^Station[s]?|^Client[es]?)/{print NR}' "${tmpdir}nws-01.csv" 2> /dev/null)
 	targetline=$((targetline - 1))
-
-	head -n "${targetline}" "${tmpdir}nws-01.csv" &> "${tmpdir}nws.csv"
-	tail -n +"${targetline}" "${tmpdir}nws-01.csv" &> "${tmpdir}clts.csv"
+	head -n "${targetline}" "${tmpdir}nws-01.csv" 2> /dev/null &> "${tmpdir}nws.csv"
+	tail -n +"${targetline}" "${tmpdir}nws-01.csv" 2> /dev/null &> "${tmpdir}clts.csv"
 
 	csvline=$(wc -l "${tmpdir}nws.csv" 2> /dev/null | awk '{print $1}')
 	if [ "${csvline}" -le 3 ]; then
@@ -13879,7 +13885,7 @@ function set_hashcat_parameters() {
 		fi
 
 		if compare_floats_greater_or_equal "${hashcat_version}" "${hashcat_2500_deprecated_version}"; then
-			hashcat_cmd_fix2=" --deprecated-check-disable"
+			hashcat_handshake_cracking_plugin="22000"
 		fi
 	fi
 }
@@ -14289,6 +14295,13 @@ function detect_distro_phase1() {
 			break
 		fi
 	done
+
+	for i in "${known_incompatible_distros[@]}"; do
+		if uname -a | grep "${i}" -i > /dev/null; then
+			distro="${i^}"
+			break
+		fi
+	done
 }
 
 #Second phase of Linux distro detection based on architecture and version file
@@ -14562,6 +14575,20 @@ function general_checkings() {
 
 	exit_code=1
 	exit_script_option
+}
+
+#Check if system is running under Windows Subsystem for Linux
+check_wsl() {
+
+	debug_print
+
+	if [ "${distro}" = "Microsoft" ]; then
+		echo
+		language_strings "${language}" 701 "red"
+		language_strings "${language}" 115 "read"
+		exit_code=1
+		exit_script_option
+	fi
 }
 
 #Check if the user is root
@@ -16234,6 +16261,7 @@ function main() {
 
 		check_bash_version
 		check_root_permissions
+		check_wsl
 
 		if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "xterm" ]; then
 			echo

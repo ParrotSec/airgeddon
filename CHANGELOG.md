@@ -1,3 +1,10 @@
+### 11.02
+ - Fixed minor bug in minimum length setting while bruteforcing using hashcat
+ - Improvement hashcat use forcing it to use -m 22000 instead of old -m 2500 over handshakes cracking for hashcat modern versions
+ - Added WSL/WSL2 detection to force exit due to incompatibility
+ - Extended compatibility to use lspci 3.8 not accepting 0x
+ - Fixed error showing connected clients in Evil Twin captive portal attack
+
 ### 11.01
  - Fixed busy ports checks
  - Added PIN to WPS trophy file

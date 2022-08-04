@@ -10,7 +10,7 @@ function set_language_strings_version() {
 
 	debug_print
 
-	language_strings_version="11.01-1"
+	language_strings_version="11.02-1"
 }
 
 #Set different language text strings
@@ -10075,6 +10075,19 @@ function initialize_language_strings() {
 	arr["GERMAN",700]="Es scheint, dass der erfasste Handshake nicht ein WPA2-Handshake ist, daher ist es ungültig. Das Netzwerk befindet sich wahrscheinlich im WPA2/WPA3 \"Mixed mode\" und der Client hat WPA3 verwendet. Bitte versuchen Sie es erneut oder warten Sie, bis Clients, die WPA2 verwenden, erscheinen"
 	arr["TURKISH",700]="Yakalanan Handshake WPA2 olmadığı ve dolayısıyla geçersiz olduğu görülüyor. Ağ muhtemelen WPA2/WPA3 \"Mixed mode\" da ve istemci WPA3 kullanıyordu. Lütfen tekrar deneyin veya WPA2 kullanan istemciler olana kadar bekleyin"
 	arr["ARABIC",700]="WPA2 يرجى المحاولة مرة أخرى أو الانتظار حتى يتوفر عملاء يستخدمون .WPA3 و كان العميل يستخدم WPA2/WPA3 \"Mixed mode\" و لهذى هي ليست صالحة للاستخدام. ربما تكون الشبكة في WPA2 يبدو ان المصافحة ليست مصافحة "
+
+	arr["ENGLISH",701]="It has been detected that you are using a version of Linux under Windows (WSL Windows Subsystem for Linux), but airgeddon does not support this type of system"
+	arr["SPANISH",701]="Se ha detectado que estás utilizando una versión de Linux en Windows (WSL Windows Subsystem for Linux), pero airgeddon no es compatible con este tipo de sistema"
+	arr["FRENCH",701]="\${pending_of_translation} Il a été détecté que vous utilisez une version de Linux sur Windows (WSL Windows Subsystem for Linux), mais airgeddon ne prend pas en charge ce type de système"
+	arr["CATALAN",701]="\${pending_of_translation} S'ha detectat que utilitzeu una versió de Linux al Windows (WSL Windows Subsystem for Linux), però airgeddon no és compatible amb aquest tipus de sistema"
+	arr["PORTUGUESE",701]="\${pending_of_translation} Foi detectado que você está usando uma versão do Linux no Windows (WSL Windows Subsystem for Linux), mas o airgeddon não suporta esse tipo de sistema"
+	arr["RUSSIAN",701]="\${pending_of_translation} Было обнаружено, что вы используете версию Linux для Windows (WSL Windows Subsystem for Linux), но airgeddon не поддерживает этот тип системы."
+	arr["GREEK",701]="\${pending_of_translation} Έχει εντοπιστεί ότι χρησιμοποιείτε μια έκδοση του Linux σε Windows (WSL Windows Subsystem for Linux), αλλά το airgeddon δεν υποστηρίζει αυτόν τον τύπο συστήματος"
+	arr["ITALIAN",701]="\${pending_of_translation} È stato rilevato che stai utilizzando una versione di Linux su Windows (WSL Windows Subsystem for Linux), ma airgeddon non supporta questo tipo di sistema"
+	arr["POLISH",701]="\${pending_of_translation} Wykryto, że używasz wersji systemu Linux w systemie Windows (WSL Windows Subsystem for Linux), ale airgeddon nie obsługuje tego typu systemu"
+	arr["GERMAN",701]="\${pending_of_translation} Es wurde festgestellt, dass Sie eine Version von Linux unter Windows (WSL Windows Subsystem for Linux) verwenden, aber airgeddon unterstützt diesen Systemtyp nicht"
+	arr["TURKISH",701]="\${pending_of_translation} Windows'ta bir Linux sürümü (WSL Windows Subsystem for Linux) kullandığınız tespit edildi, ancak airgeddon bu tür bir sistemi desteklemiyor"
+	arr["ARABIC",701]="\${pending_of_translation} تم اكتشاف أنك تستخدم إصدارًا من Linux على Windows (WSL Windows Subsystem for Linux) ، لكن airgeddon لا يدعم هذا النوع من النظام"
 }
 
 #Expand escaped variables in language strings with their actual values
