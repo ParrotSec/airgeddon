@@ -1,3 +1,12 @@
+airgeddon (11.10+parrot0) testing; urgency=medium
+ * Fixed problem for latest BeEF
+ * Fixed broken dependency menu validation
+ * Added sponsorship mentions
+ * WPS attacks modified to avoid saved sessions messages
+ * Adapted conversion for hashcat modern versions
+
+ -- v1s1t0r <v1s1t0r.1s.h3r3@gmail.com>  Wed, 23 Nov 2022 10:41:35 +0700
+
 airgeddon (11.02+parrot0) testing; urgency=medium
  * Fixed minor bug in minimum length setting while bruteforcing using hashcat
  * Improvement hashcat use forcing it to use -m 22000 instead of old -m 2500 over handshakes cracking for hashcat modern versions

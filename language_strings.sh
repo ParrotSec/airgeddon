@@ -10,7 +10,7 @@ function set_language_strings_version() {
 
 	debug_print
 
-	language_strings_version="11.02-1"
+	language_strings_version="11.10-1"
 }
 
 #Set different language text strings
@@ -276,7 +276,7 @@ function initialize_language_strings() {
 	et_misc_texts["POLISH",9]="Sieć bezprzewodowa, ESSID:"
 	et_misc_texts["GERMAN",9]="WLAN, ESSID:"
 	et_misc_texts["TURKISH",9]="Kablosuz ağ, ESSID:"
-	et_misc_texts["ARABIC",9]=":شبكة لاسلكية، ESSID"
+	et_misc_texts["ARABIC",9]=":الشبكه اللاسلكية"
 
 	et_misc_texts["ENGLISH",10]="Enter your wireless network password to get internet access"
 	et_misc_texts["SPANISH",10]="Introduzca su contraseña de acceso a la red inalámbrica para poder acceder a internet"
@@ -1743,18 +1743,18 @@ function initialize_language_strings() {
 	arr["TURKISH",59]="0.  Ana menüye dön"
 	arr["ARABIC",59]="0.  العودة إلى القائمة الرئيسية"
 
-	arr["ENGLISH",60]="11. About & Credits"
-	arr["SPANISH",60]="11. Acerca de & Créditos"
-	arr["FRENCH",60]="11. A propos de & Crédits"
-	arr["CATALAN",60]="11. Sobre & Crédits"
-	arr["PORTUGUESE",60]="11. Sobre & Créditos"
-	arr["RUSSIAN",60]="11. О программе и Благодарности"
-	arr["GREEK",60]="11. Σχετικά με & Εύσημα"
-	arr["ITALIAN",60]="11. Informazioni & Credits"
-	arr["POLISH",60]="11. O programie & Podziękowania"
-	arr["GERMAN",60]="11. About & Credits"
-	arr["TURKISH",60]="11. Hakkında & Güven"
-	arr["ARABIC",60]="11. بشأن ومنسوبات"
+	arr["ENGLISH",60]="11. About & Credits / Sponsorship mentions"
+	arr["SPANISH",60]="11. Acerca de & Créditos / Menciones de patrocinadores"
+	arr["FRENCH",60]="11. À propos de & Crédits / Mentions du sponsors"
+	arr["CATALAN",60]="11. Sobre & Crédits / Mencions de sponsors"
+	arr["PORTUGUESE",60]="11. Sobre & Créditos / Nossos patrocinadores"
+	arr["RUSSIAN",60]="11. О программе и Благодарности / Спонсорские упоминания"
+	arr["GREEK",60]="11. Σχετικά με & Εύσημα / Αναφορές χορηγίας"
+	arr["ITALIAN",60]="11. Informazioni & Crediti / Menzioni di sponsorizzazione"
+	arr["POLISH",60]="\${pending_of_translation} 11. O programie & Podziękowania / Wzmianki sponsorskie"
+	arr["GERMAN",60]="\${pending_of_translation} 11. About & Credits / Sponsoring-Erwähnungen"
+	arr["TURKISH",60]="11. Krediler ve Sponsorluk Hakkında"
+	arr["ARABIC",60]="11. فريق العمل برعاية"
 
 	arr["ENGLISH",61]="0.  Exit script"
 	arr["SPANISH",61]="0.  Salir del script"
@@ -2848,7 +2848,7 @@ function initialize_language_strings() {
 	arr["TURKISH",144]="Herhangi bir pencereyi elle kapatmayın, yazılım gerektiğinde yapacaktır. Yaklaşık \${timeout} saniye içinde, Handshake'e sahip olup olmadığınızı bileceksiniz"
 	arr["ARABIC",144]="Handshake ثانية كحد أقصى ستعرف ما إذا كنت قد حصلت على \${timeout} لا تغلق أي نافذة يدويًا ، فسيقوم البرنامج بذلك عند الحاجة. في غضون"
 
-	arr["ENGLISH",145]="\${blue_color}Your wifi card supports the 5Ghz band but your \"wash\" version included in reaver package (v\${reaver_version}) is not able to scan both bands at once. To use dual band scan feature you must have at least version v\${minimum_wash_dualscan_version} so you have to make a choice. \${green_color}Do you want to scan the 5Ghz band? \${pink_color}(If you answer no (\"n\"), 2.4Ghz band will be scanned) \${normal_color}\${visual_choice}"
+	arr["ENGLISH",145]="\${blue_color}Your wifi card supports the 5Ghz band but your \"wash\" version included in reaver package (v\${reaver_version}) is not able to scan both bands at once. To use dual-band scan feature you must have at least version v\${minimum_wash_dualscan_version} so you have to make a choice. \${green_color}Do you want to scan the 5Ghz band? \${pink_color}(If you answer no (\"n\"), 2.4Ghz band will be scanned) \${normal_color}\${visual_choice}"
 	arr["SPANISH",145]="\${blue_color}Tu tarjeta wifi soporta la banda de los 5Ghz pero tu versión de \"wash\" incluido en el paquete reaver (v\${reaver_version}) no es capaz de escanear ambas bandas a la vez. Para utilizar el escaneo dual debes tener al menos la versión v\${minimum_wash_dualscan_version} por lo que has de elegir. \${green_color}¿Deseas escanear en la banda de los 5Ghz? \${pink_color}(Si respondes que no (\"n\"), se escaneará la banda de 2.4Ghz) \${normal_color}\${visual_choice}"
 	arr["FRENCH",145]="\${blue_color}Votre carte wifi supporte la bande 5Ghz mais votre version du \"wash\" incluse dans le paquet reaver (v\${reaver_version}) n'est pas capable de balayer les deux bandes en même temps. Pour utiliser l'analyse dual, vous devez avoir au moins la version v\${minimum_wash_dualscan_version} vous devez donc choisir. \${green_color}Voulez-vous scanner dans la bande 5Ghz? \${pink_color}(Si vous répondez non (\"n\"), la bande 2.4Ghz sera analysée) \${normal_color}\${visual_choice}"
 	arr["CATALAN",145]="\${blue_color}La teva targeta wifi suporta la banda dels 5Ghz però la teva versió del \"wash\" inclòs en el paquet reaver (v\${reaver_version}) no és capaç d'escanejar les dues bandes alhora. Per utilitzar l'escaneig dual has de tenir almenys la versió v\${minimum_wash_dualscan_version} pel que has de triar. \${green_color}¿Voleu escanejar a la banda dels 5Ghz? \${pink_color}(Si respons que no (\"n\"), es escanejarà la banda de 2.4Ghz) \${normal_color}\${visual_choice}"
@@ -4171,7 +4171,7 @@ function initialize_language_strings() {
 	arr["ITALIAN",246]="Ogni volta che vedi un testo con il prefisso \${cyan_color}\${pending_of_translation}\${pink_color} acronimo di \"Pending of Translation\" significa che la traduzione è stata generata automaticamente ed è ancora in attesa di revisione"
 	arr["POLISH",246]="Za każdym razem, gdy zobaczysz tekst z symbolem \${cyan_color}\${pending_of_translation}\${pink_color} dla \"Pending of Translation\", to tłumaczenie zostało wygenerowane automatycznie i nadal oczekuje na ręczną korektę"
 	arr["GERMAN",246]="Jedes Mal, wenn Sie einen Text mit dem Präfix \${cyan_color}\${pending_of_translation}\${pink_color} Akronym für \"Pending of Translation\" sehen, bedeutet dies, dass Ihre Übersetzung automatisch erstellt wurde"
-	arr["TURKISH",246]="Every time you see a text with the prefix \${cyan_color}\${pending_of_translation}\${pink_color} acronym for \"Pending of Translation\", means the translation has been automatically generated and is still pending of review"
+	arr["TURKISH",246]="Yazılarda önek olarak \${cyan_color}\${pending_of_translation}\${pink_color} \"Pending of Translation\" görüyorsanız bunun anlamı; o yazı otomatik olarak çevirilmiş ve kontrol edilmeyi beklemektedir."
 	arr["ARABIC",246]="يعني أن الترجمة قد تم إنشاؤها تلقائيا، وهو لا يزال في انتظار المراجعة \"Pending of Translation\" اختصار \${cyan_color}\${pending_of_translation}\${pink_color} في كل مرة ترى نصًا بالبادئة"
 
 	arr["ENGLISH",247]="Despite having all essential tools installed, your system uses airmon-zc instead of airmon-ng. In order to work properly you need to install ethtool and you don't have it right now. Please, install it and launch the script again"
@@ -4863,7 +4863,7 @@ function initialize_language_strings() {
 	arr["TURKISH",299]="Arayüz onarılıyor..."
 	arr["ARABIC",299]="...إعادة تعيين الواجهة"
 
-	arr["ENGLISH",300]="If the xdpyinfo command works, the script will be able to calculate your screen resolution and display the windows in a better way. Depending of the system, the package name containing it could be x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
+	arr["ENGLISH",300]="If the xdpyinfo command works, the script will be able to calculate your screen resolution and display the windows in a better way. Depending on the system, the package name containing it could be x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
 	arr["SPANISH",300]="Si haces que funcione en tu sistema el comando xdpyinfo, el script podrá calcular tu resolución de pantalla y mostrarte las ventanas de forma más optimizada. Dependiendo del sistema el paquete que lo contiene puede llamarse x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
 	arr["FRENCH",300]="Si la commande xdpyinfo est installée dans vôtre système le script pourra calculer votre résolution d'écran et optimiser l'affichage en conséquence. Le paquet à installer pour avoir cette commande s'appelle (selon la distribution) x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
 	arr["CATALAN",300]="Si fas que funcioni en el teu sistema l'ordre xdpyinfo, el script podrà calcular la teua resolució de pantalla i mostrar-te les finestres de forma més optimitzada. Depenent del sistema el paquet que el conté pot dir-se x11-utils, xdpyinfo, xorg-xdpyinfo, etc."
@@ -4928,7 +4928,7 @@ function initialize_language_strings() {
 	arr["TURKISH",304]="Sniffer logu ayrıştırılıyor..."
 	arr["ARABIC",304]="...تحليل سجل الشم"
 
-	arr["ENGLISH",305]="No passwords detected on sniffers's log. File will not be saved"
+	arr["ENGLISH",305]="No passwords detected on sniffers' log. File will not be saved"
 	arr["SPANISH",305]="No se ha encontrado ninguna contraseña en el log del sniffer. No se guardará el fichero"
 	arr["FRENCH",305]="Aucun mot de passe n'a été détecté. Le fichier ne sera pas sauvegardé"
 	arr["CATALAN",305]="No s'ha trobat cap contrasenya en el log del sniffer. No es guarda el fitxer"
@@ -7671,7 +7671,7 @@ function initialize_language_strings() {
 	arr["TURKISH",515]="5Ghz bant kanalı seçtiniz, ancak wifi kartınız 5Ghz'yi desteklemiyor veya devre dışı bırakılmış. İşlem gerçekleştirilemiyor"
 	arr["ARABIC",515]="الخاصة بك لا تدعم 5 جيجاهرتز أو تم تعطيلها. لا يمكن إجراء العملية wifi لقد حددت قناة نطاق 5 جيجاهرتز ولكن بطاقة"
 
-	arr["ENGLISH",516]="It is known that the software used in the 5Ghz band still presents some problems sometimes. For example airodump, that when scanning networks can show a value \"-1\" on channel depending of the card chipset and the driver. It is also known that Ralink chipsets sometimes are getting errors on high channels \""
+	arr["ENGLISH",516]="It is known that the software used in the 5Ghz band still presents some problems sometimes. For example airodump, that when scanning networks can show a value \"-1\" on channel depending on the card chipset and the driver. It is also known that Ralink chipsets sometimes are getting errors on high channels \""
 	arr["SPANISH",516]="Es conocido que el software utilizado en la banda de 5Ghz aún presenta algunos problemas a veces. Como por ejemplo airodump, que al escanear redes puede mostrar un valor \"-1\" en el canal dependiendo del chipset de tu tarjeta y del driver. También es conocido que los chipsets Ralink a veces dan fallos en los canales altos \""
 	arr["FRENCH",516]="Il est connu que les logiciels utilisés dans la bande 5Ghz présente toujours quelques problèmes. Comme par exemple airodump, lors du scan des réseaux, peut montrer une valeur \"-1\" dans le canal en fonction du chipset de votre carte et le pilote. Il est également connu que les chipsets Ralink donnent parfois des échecs dans les canaux élevés \""
 	arr["CATALAN",516]="És conegut que el programari utilitzat en la banda de 5Ghz encara presenta alguns problemes de vegades. Com per exemple airodump, que al escanejar xarxes pot mostrar un valor \"-1\" al canal depenent del chipset de la targeta i del driver. També és conegut que els chipsets Ralink de vegades donen fallades en els canals alts \""
@@ -9036,7 +9036,7 @@ function initialize_language_strings() {
 	arr["TURKISH",620]="Yapılandırma dosyasında bu seçenek değiştirildi. Değişikliklerin etkili olması için script'i yeniden başlatın"
 	arr["ARABIC",620]="تم تعديل الخيار في ملف التكوين. أعد تشغيل البرنامج لجعل التغييرات سارية المفعول"
 
-	arr["ENGLISH",621]="It's not possible to run airgeddon in the current tmux session. This session will be send to background and a new tmux session will be created for launching airgeddon"
+	arr["ENGLISH",621]="It's not possible to run airgeddon in the current tmux session. This session will be sent to background and a new tmux session will be created for launching airgeddon"
 	arr["SPANISH",621]="No es posible ejecutar airgeddon en la sesión tmux actual. Esta sesión será enviada a segundo plano y se creará una nueva sesión tmux donde airgeddon será lanzado"
 	arr["FRENCH",621]="Il n'est pas possible de lancer airgeddon dans la session de tmux en cours. Cette session sera envoyée à l’arrière-plan et une nouvelle session tmux sera crée pour lancer airgeddon"
 	arr["CATALAN",621]="No és possible executar airgeddon en la sessió tmux actual. Aquesta sessió serà enviada a segon pla i es crearà una nova sessió tmux on airgeddon serà llançat"
@@ -10037,7 +10037,7 @@ function initialize_language_strings() {
 	arr["TURKISH",697]="Herhangi bir şüpheniz veya sorununuz varsa, Wiki'nin SSS bölümüne göz atabilir (\${normal_color}\${urlgithub_wiki}/FAQ%20&%20Troubleshooting\${pink_color}) veya Discord kanalımızda sorabilirsiniz: \${normal_color}https://discord.gg/sQ9dgt9"
 	arr["ARABIC",697]="\${normal_color}https://discord.gg/sQ9dgt9 \${pink_color}:الخاصة بنا . رابط الدعو Discord أو طرحها على قناة ال (\${normal_color}\${urlgithub_wiki}/FAQ%20&%20Troubleshooting\${pink_color}) إذا كانت لديك أي أسئلة أو مشاكل ، يمكنك الرجوع إلى قسم الأسئلة الشائعة"
 
-	arr["ENGLISH",698]="The port \${normal_color}\${busy_port}/\${port_type}\${red_color} is being used by some program or process different than airgeddon (probably \${normal_color}\${blocking_process_name}\${red_color}). The attack will not be able to be carried out because airgeddon needs that port to perform it. Please release the port by terminating the process that is causing the conflict in order to be able to perform this attack"
+	arr["ENGLISH",698]="The port \${normal_color}\${busy_port}/\${port_type}\${red_color} is being used by some program or process different from airgeddon (probably \${normal_color}\${blocking_process_name}\${red_color}). The attack will not be able to be carried out because airgeddon needs that port to perform it. Please release the port by terminating the process that is causing the conflict in order to be able to perform this attack"
 	arr["SPANISH",698]="El puerto \${normal_color}\${busy_port}/\${port_type}\${red_color} está siendo utilizado por algún programa o proceso ajeno a airgeddon (probablemente \${normal_color}\${blocking_process_name}\${red_color}). El ataque no se podrá llevar a cabo debido a que airgeddon necesita ese puerto para llevarlo acabo. Por favor, libera el puerto terminando el proceso que está causando el conflicto para que se pueda realizar este ataque"
 	arr["FRENCH",698]="Le port \${normal_color}\${busy_port}/\${port_type}\${red_color} est utilisé par un programme ou processus autre que airgeddon (probablement \${normal_color}\${blocking_process_name}\${red_color}). L'attaque ne peut pas être exécutée car airgeddon a besoin de ce port pour le faire correctement. Veuillez libérer le port en finissant le processus afin que cette attaque puisse être effectuée"
 	arr["CATALAN",698]="El port \${normal_color}\${busy_port}/\${port_type}\${red_color} està sent utilitzat per algun programa o procés aliè a airgeddon (probablement \${normal_color}\${blocking_process_name}\${red_color}). L'atac no es podrà dur a terme a causa de que airgeddon necessita aquest port per portar-ho a terme. Si us plau, allibera el port acabant el procés que està causant el conflicte perquè es pugui realitzar aquest atac"
@@ -10078,16 +10078,42 @@ function initialize_language_strings() {
 
 	arr["ENGLISH",701]="It has been detected that you are using a version of Linux under Windows (WSL Windows Subsystem for Linux), but airgeddon does not support this type of system"
 	arr["SPANISH",701]="Se ha detectado que estás utilizando una versión de Linux en Windows (WSL Windows Subsystem for Linux), pero airgeddon no es compatible con este tipo de sistema"
-	arr["FRENCH",701]="\${pending_of_translation} Il a été détecté que vous utilisez une version de Linux sur Windows (WSL Windows Subsystem for Linux), mais airgeddon ne prend pas en charge ce type de système"
-	arr["CATALAN",701]="\${pending_of_translation} S'ha detectat que utilitzeu una versió de Linux al Windows (WSL Windows Subsystem for Linux), però airgeddon no és compatible amb aquest tipus de sistema"
-	arr["PORTUGUESE",701]="\${pending_of_translation} Foi detectado que você está usando uma versão do Linux no Windows (WSL Windows Subsystem for Linux), mas o airgeddon não suporta esse tipo de sistema"
-	arr["RUSSIAN",701]="\${pending_of_translation} Было обнаружено, что вы используете версию Linux для Windows (WSL Windows Subsystem for Linux), но airgeddon не поддерживает этот тип системы."
-	arr["GREEK",701]="\${pending_of_translation} Έχει εντοπιστεί ότι χρησιμοποιείτε μια έκδοση του Linux σε Windows (WSL Windows Subsystem for Linux), αλλά το airgeddon δεν υποστηρίζει αυτόν τον τύπο συστήματος"
-	arr["ITALIAN",701]="\${pending_of_translation} È stato rilevato che stai utilizzando una versione di Linux su Windows (WSL Windows Subsystem for Linux), ma airgeddon non supporta questo tipo di sistema"
+	arr["FRENCH",701]="Il a été détecté que vous utilisez une version de Linux sur Windows (WSL Windows Subsystem for Linux), mais airgeddon n'est pas compatible avec ce type de système"
+	arr["CATALAN",701]="S'ha detectat que utilitzeu una versió de Linux al Windows (WSL Windows Subsystem for Linux), però airgeddon no és compatible amb aquest tipus de sistema"
+	arr["PORTUGUESE",701]="Foi detectado que você está usando uma versão do Linux no Windows (WSL Windows Subsystem for Linux). O airgeddon não é compatível esse tipo de sistema"
+	arr["RUSSIAN",701]="Было обнаружено, что вы используете версию Linux для Windows (WSL Windows Subsystem for Linux), но airgeddon не поддерживает этот тип системы."
+	arr["GREEK",701]="Έχει εντοπιστεί ότι χρησιμοποιείτε μια έκδοση του Linux σε Windows (WSL Windows Subsystem for Linux), αλλά το airgeddon δεν υποστηρίζει αυτόν τον τύπο συστήματος"
+	arr["ITALIAN",701]="È stato rilevato che stai utilizzando una versione di Linux su Windows (WSL Windows Subsystem for Linux), peró airgeddon non supporta questo tipo di sistema"
 	arr["POLISH",701]="\${pending_of_translation} Wykryto, że używasz wersji systemu Linux w systemie Windows (WSL Windows Subsystem for Linux), ale airgeddon nie obsługuje tego typu systemu"
 	arr["GERMAN",701]="\${pending_of_translation} Es wurde festgestellt, dass Sie eine Version von Linux unter Windows (WSL Windows Subsystem for Linux) verwenden, aber airgeddon unterstützt diesen Systemtyp nicht"
-	arr["TURKISH",701]="\${pending_of_translation} Windows'ta bir Linux sürümü (WSL Windows Subsystem for Linux) kullandığınız tespit edildi, ancak airgeddon bu tür bir sistemi desteklemiyor"
-	arr["ARABIC",701]="\${pending_of_translation} تم اكتشاف أنك تستخدم إصدارًا من Linux على Windows (WSL Windows Subsystem for Linux) ، لكن airgeddon لا يدعم هذا النوع من النظام"
+	arr["TURKISH",701]="Windows'ta bir Linux sürümü (WSL Windows Subsystem for Linux) kullandığınız tespit edildi, ancak airgeddon bu tür bir sistemi desteklemiyor"
+	arr["ARABIC",701]="لا يدعم هذا النوع من النظام airgeddon لكن ،Windows (WSL Windows Subsystem for Linux) علي Linux تم اكتشاف أنك تستخدم إصدارًا من"
+
+	arr["ENGLISH",702]="Thanks to our sponsors for their support:"
+	arr["SPANISH",702]="Gracias a nuestros patrocinadores por su apoyo:"
+	arr["FRENCH",702]="Merci à nos sponsors pour leur soutien:"
+	arr["CATALAN",702]="Gràcies als nostres sponsors pel seu suport:"
+	arr["PORTUGUESE",702]="Um obrigado pelo apoio dos nossos patrocinadores:"
+	arr["RUSSIAN",702]="Спасибо нашим спонсорам за поддержку:"
+	arr["GREEK",702]="Ευχαριστούμε τους χορηγούς μας για την υποστήριξή τους:"
+	arr["ITALIAN",702]="Grazie ai nostri sponsor per il loro supporto:"
+	arr["POLISH",702]="\${pending_of_translation} Dziękujemy naszym sponsorom za wsparcie:"
+	arr["GERMAN",702]="\${pending_of_translation} Danke an unsere Sponsoren für ihre Unterstützung:"
+	arr["TURKISH",702]="Destekleri için sponsorlarımıza teşekkür ederiz:"
+	arr["ARABIC",702]=":شكرا لرعايتكم"
+
+	arr["ENGLISH",703]="The hashcat version you have installed (\${hashcat_version}) is greater or equal than \${hashcat_hcx_conversion_version} so you need to convert the capture files, airgeddon will do this automatically. To do this you need a converter that is not present on your system (hcxpcapngtool command from hcxtools package), install it to be able to perform this attack"
+	arr["SPANISH",703]="La versión hashcat que tienes instalada (\${hashcat_version}) es igual o superior a la \${hashcat_hcx_conversion_version}por lo que es necesario convertir los ficheros de captura, airgeddon lo hará automáticamente. Pero para ello hace falta un conversor que no está presente en tu sistema (comando hcxpcapngtool del paquete hcxtools), instálalo para poder realizar este ataque"
+	arr["FRENCH",703]="La version de hashcat que vous avez installée (\${hashcat_version}) est supérieure ou égale à \${hashcat_hcx_conversion_version}. Donc, vous devez convertir les fichiers de capture mais airgeddon le fera automatiquement. Pour cet affaire, vous avez besoin d'un convertisseur qui n'est pas présent sur votre système (commande hcxpcapngtool du package hcxtools), installez-le pour pouvoir effectuer cette attaque"
+	arr["CATALAN",703]="La versió hashcat que tens instal·lada (\${hashcat_version}) és major o igual que \${hashcat_hcx_conversion_version}, de manera que heu de convertir els fitxers de captura, airgeddon ho farà automàticament. Però per això cal un convertidor que no és present al teu sistema (ordre hcxpcapngtool del paquet hcxtools), instal·leu-lo per poder realitzar aquest atac."
+	arr["PORTUGUESE",703]="A versão do hashcat que você instalou (\${hashcat_version}) é maior ou igual a \${hashcat_hcx_conversion_version}, por esse motivo você precisa converter os arquivos de captura, o airgeddon fará isso automaticamente. Para fazer isso você precisa de um conversor que não esteja presente em seu sistema (comando hcxpcapngtool do pacote hcxtools), instale-o para poder realizar este ataque"
+	arr["RUSSIAN",703]="Установленная вами версия hashcat (\${hashcat_version}) больше или равна \${hashcat_hcx_conversion_version}, поэтому вам необходимо преобразовать файлы захвата, airgeddon сделает это автоматически. Для этого вам нужен конвертер, которого нет в вашей системе (команда hcxpcapngtool из пакета hcxtools), установите его, чтобы иметь возможность выполнить эту атаку"
+	arr["GREEK",703]="Η έκδοση hashcat που έχετε εγκαταστήσει (\${hashcat_version}) είναι μεγαλύτερη ή ίση από την \${hashcat_hcx_conversion_version}, επομένως πρέπει να μετατρέψετε τα αρχεία καταγραφής, το airgeddon θα το κάνει αυτόματα. Για να το κάνετε αυτό χρειάζεστε έναν μετατροπέα που δεν υπάρχει στο σύστημά σας (εντολή hcxpcapngtool από το πακέτο hcxtools), εγκαταστήστε τον για να μπορέσετε να εκτελέσετε αυτήν την επίθεση"
+	arr["ITALIAN",703]="La versione di hashcat che hai installato (\${hashcat_version}) è maggiore o uguale a \${hashcat_hcx_conversion_version} quindi devi convertire i files di cattura, airgeddon lo farà automaticamente. Per fare ciò è necessario un convertitore che non è presente sul tuo sistema (comando hcxpcapngtool dal pacchetto hcxtools), installalo per poter eseguire questo attacco"
+	arr["POLISH",703]="\${pending_of_translation} Zainstalowana wersja hashcat (\${hashcat_version}) jest większa lub równa \${hashcat_hcx_conversion_version}, więc musisz przekonwertować pliki przechwytywania, airgeddon zrobi to automatycznie. Aby to zrobić potrzebujesz konwertera, którego nie ma w Twoim systemie (komenda hcxpcapngtool z pakietu hcxtools), zainstaluj go, aby móc wykonać ten atak"
+	arr["GERMAN",703]="\${pending_of_translation} Die von Ihnen installierte Hashcat-Version (\${hashcat_version}) ist größer oder gleich \${hashcat_hcx_conversion_version}, daher müssen Sie die Capture-Dateien konvertieren, airgeddon wird dies automatisch tun. Dazu benötigen Sie einen Konverter, der auf Ihrem System nicht vorhanden ist (Befehl hcxpcapngtool aus dem hcxtools-Paket). Installieren Sie ihn, um diesen Angriff ausführen zu können"
+	arr["TURKISH",703]="Yüklü olan hashcat sürümü (\${hashcat_version}) \${hashcat_hcx_conversion_version} değerinden büyük veya eşittir, bu nedenle yakalama dosyalarını dönüştürmeniz gerekir, airgeddon bunu otomatik olarak yapacaktır. Bunu yapmak için sisteminizde olmayan bir dönüştürücüye ihtiyacınız var (hcxtools paketinden hcxpcapngtool komutu), bu saldırıyı yapabilmek için onu yükleyin"
+	arr["ARABIC",703]="قم بتثبيته لتتمكن من تنفيذ هذا الهجوم ،(hcxtools من حزمة hcxpcapngtool) للقيام بذلك ، تحتاج إلى محول غير موجود على نظامك .سيقوم بذلك  تلقائيًا airgeddon ،لذلك تحتاج إلى تحويل الملفات الملتقاطة  \${hashcat_hcx_conversion_version} احدث من او مساوية ل (\${hashcat_version}) التي قمت بتثبيته Hashcat نسخة ال "
 }
 
 #Expand escaped variables in language strings with their actual values

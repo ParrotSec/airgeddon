@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 11.02
+#Version......: 11.10
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -130,8 +130,8 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="11.02"
-language_strings_expected_version="11.02-1"
+airgeddon_version="11.10"
+language_strings_expected_version="11.10-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
@@ -170,6 +170,7 @@ aircrack_pmkid_version="1.4"
 hashcat3_version="3.0"
 hashcat4_version="4.0.0"
 hashcat_hccapx_version="3.40"
+hashcat_hcx_conversion_version="6.2.0"
 minimum_hashcat_pmkid_version="6.0.0"
 hashcat_2500_deprecated_version="6.2.4"
 hashcat_handshake_cracking_plugin="2500"
@@ -355,6 +356,13 @@ known_arm_compatible_distros=(
 								"Parrot arm"
 								"Kali arm"
 							)
+
+#Sponsors
+sponsors=(
+		"Raleigh2016"
+		"hmmlopl"
+		"codythebeast89"
+		)
 
 #Hint vars
 declare main_hints=(128 134 163 437 438 442 445 516 590 626 660 697 699)
@@ -5397,7 +5405,7 @@ function initialize_menu_options_dependencies() {
 	pmkid_dependencies=("${optional_tools_names[23]}" "${optional_tools_names[24]}")
 }
 
-#Set possible changes for some commands that can be found in different ways depending of the O.S.
+#Set possible changes for some commands that can be found in different ways depending on the O.S.
 #shellcheck disable=SC2206
 function set_possible_aliases() {
 
@@ -5452,7 +5460,7 @@ function initialize_optional_tools_values() {
 	done
 }
 
-#Set some vars depending of the menu and invoke the printing of target vars
+#Set some vars depending on the menu and invoke the printing of target vars
 function initialize_menu_and_print_selections() {
 
 	debug_print
@@ -5721,7 +5729,7 @@ contains_element() {
 	return 1
 }
 
-#Print hints from the different hint pools depending of the menu
+#Print hints from the different hint pools depending on the menu
 function print_hint() {
 
 	debug_print
@@ -9699,6 +9707,7 @@ function set_wps_attack_script() {
 		script_wps_channel="${wps_channel}"
 		script_bully_reaver_band_modifier="${bully_reaver_band_modifier}"
 		colorize="${colorize}"
+		user_homedir="${user_homedir}"
 	EOF
 
 	cat >&7 <<-'EOF'
@@ -9737,6 +9746,16 @@ function set_wps_attack_script() {
 	EOF
 
 	cat >&7 <<-'EOF'
+		function clear_bully_session_files() {
+			rm -rf ${user_homedir}.bully/*.run /dev/null 2>&1
+		}
+
+		function clear_reaver_session_files() {
+			rm -rf /var/lib/reaver/*.wpc /dev/null 2>&1
+			rm -rf /var/lib/lib/reaver/*.wpc /dev/null 2>&1
+			rm -rf /etc/reaver/*.wpc /dev/null 2>&1
+		}
+
 		function manage_wps_pot() {
 			if [ -n "${2}" ]; then
 				trophy_pin="${2}"
@@ -9941,6 +9960,9 @@ function set_wps_attack_script() {
 					echo -e "${pin_header1}${current_pin}${pin_header2}${attack_pin_counter}/${#script_pins_found[@]}${pin_header3}"
 					if [ "${script_wps_attack_tool}" = "bully" ]; then
 						echo
+						clear_bully_session_files
+					else
+						clear_reaver_session_files
 					fi
 
 					this_pin_timeout=0
@@ -9984,6 +10006,9 @@ function set_wps_attack_script() {
 				echo -e "${pin_header1}${current_pin}${pin_header2}${attack_pin_counter}/1${pin_header3}"
 				if [ "${script_wps_attack_tool}" = "bully" ]; then
 					echo
+					clear_bully_session_files
+				else
+					clear_reaver_session_files
 				fi
 
 				(set -o pipefail && eval "${script_attack_cmd1}${current_pin}${script_attack_cmd2} ${colorize}")
@@ -10014,6 +10039,9 @@ function set_wps_attack_script() {
 				echo -e "${pin_header1}"
 				if [ "${script_wps_attack_tool}" = "bully" ]; then
 					echo
+					clear_bully_session_files
+				else
+					clear_reaver_session_files
 				fi
 
 				(set -o pipefail && eval "${script_attack_cmd1}${script_attack_cmd2} ${colorize}")
@@ -10027,6 +10055,9 @@ function set_wps_attack_script() {
 				echo -e "${pin_header1}"
 				if [ "${script_wps_attack_tool}" = "bully" ]; then
 					echo
+					clear_bully_session_files
+				else
+					clear_reaver_session_files
 				fi
 				eval "${script_attack_cmd1}${script_attack_cmd2} ${colorize}"
 				parse_output
@@ -10243,7 +10274,7 @@ function set_enterprise_control_script() {
 			done
 		}
 
-		#Get last captured user name
+		#Get last captured username
 		function get_last_username() {
 
 			line_with_last_user=$(grep -E "username:" "${wpe_logfile}" | tail -1)
@@ -11052,6 +11083,8 @@ function set_beef_config() {
 	echo -e "            type: \"apache\""
 	echo -e "            hook_404: false"
 	echo -e "            hook_root: false"
+	echo -e "        websocket:"
+	echo -e "            enable: false"
 	echo -e "    database:"
 	echo -e "        driver: \"sqlite\""
 	echo -e "        file: \"${beef_db_path}\""
@@ -11571,29 +11604,41 @@ function convert_cap_to_hashcat_format() {
 		echo "1" | timeout -s SIGTERM 3 aircrack-ng "${enteredpath}" -J "${tmpdir}${hashcat_tmp_simple_name_file}" -b "${bssid}" > /dev/null 2>&1
 		return 0
 	else
-		hccapx_converter_found=0
-		if hash ${hccapx_tool} 2> /dev/null; then
-			hccapx_converter_found=1
-			hccapx_converter_path="${hccapx_tool}"
+		if [ "${hcx_conversion_needed}" -eq 1 ]; then
+			if hash hcxpcapngtool 2> /dev/null; then
+				hcxpcapngtool -o "${tmpdir}${hashcat_tmp_file}" "${enteredpath}" > /dev/null 2>&1
+				return 0
+			else
+				echo
+				language_strings "${language}" 703 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
 		else
-			for item in "${possible_hccapx_converter_known_locations[@]}"; do
-				if [ -f "${item}" ]; then
-					hccapx_converter_found=1
-					hccapx_converter_path="${item}"
-					break
-				fi
-			done
-		fi
+			hccapx_converter_found=0
+			if hash ${hccapx_tool} 2> /dev/null; then
+				hccapx_converter_found=1
+				hccapx_converter_path="${hccapx_tool}"
+			else
+				for item in "${possible_hccapx_converter_known_locations[@]}"; do
+					if [ -f "${item}" ]; then
+						hccapx_converter_found=1
+						hccapx_converter_path="${item}"
+						break
+					fi
+				done
+			fi
 
-		if [ "${hccapx_converter_found}" -eq 1 ]; then
-			hashcat_tmp_file="${hashcat_tmp_simple_name_file}.hccapx"
-			"${hccapx_converter_path}" "${enteredpath}" "${tmpdir}${hashcat_tmp_file}" > /dev/null 2>&1
-			return 0
-		else
-			echo
-			language_strings "${language}" 436 "red"
-			language_strings "${language}" 115 "read"
-			return 1
+			if [ "${hccapx_converter_found}" -eq 1 ]; then
+				hashcat_tmp_file="${hashcat_tmp_simple_name_file}.hccapx"
+				"${hccapx_converter_path}" "${enteredpath}" "${tmpdir}${hashcat_tmp_file}" > /dev/null 2>&1
+				return 0
+			else
+				echo
+				language_strings "${language}" 436 "red"
+				language_strings "${language}" 115 "read"
+				return 1
+			fi
 		fi
 	fi
 }
@@ -11640,7 +11685,11 @@ function handshake_pmkid_tools_menu() {
 			explore_for_targets_option "WPA"
 		;;
 		5)
-			capture_pmkid_handshake "pmkid"
+			if contains_element "${handshake_option}" "${forbidden_options[@]}"; then
+				forbidden_menu_option
+			else
+				capture_pmkid_handshake "pmkid"
+			fi
 		;;
 		6)
 			capture_pmkid_handshake "handshake"
@@ -13566,6 +13615,12 @@ function credits_option() {
 	language_strings "${language}" 107 "pink"
 	language_strings "${language}" 421 "pink"
 	echo
+	language_strings "${language}" 702 "blue"
+	for i in "${sponsors[@]}"; do
+		echo -ne "${pink_color}\"${i}\" ${normal_color}"
+	done
+	echo
+	echo
 	language_strings "${language}" 115 "read"
 }
 
@@ -13882,6 +13937,10 @@ function set_hashcat_parameters() {
 
 		if compare_floats_greater_or_equal "${hashcat_version}" "${hashcat_hccapx_version}"; then
 			hccapx_needed=1
+		fi
+
+		if compare_floats_greater_or_equal "${hashcat_version}" "${hashcat_hcx_conversion_version}"; then
+			hcx_conversion_needed=1
 		fi
 
 		if compare_floats_greater_or_equal "${hashcat_version}" "${hashcat_2500_deprecated_version}"; then
@@ -14936,6 +14995,7 @@ function initialize_script_settings() {
 	set_script_paths
 	http_proxy_set=0
 	hccapx_needed=0
+	hcx_conversion_needed=0
 	xterm_ok=1
 	interface_airmon_compatible=1
 	secondary_interface_airmon_compatible=1
@@ -15027,7 +15087,7 @@ function set_windows_sizes() {
 	g5_bottomright_window="${xwindow}x${ywindowhalf}-0-0"
 }
 
-#Set sizes for x axis
+#Set sizes for x-axis
 function set_xsizes() {
 
 	debug_print
@@ -15067,7 +15127,7 @@ function set_ysizes() {
 	ywindowseventh=$((ytotal / 7 - ywindow_edge_lines))
 }
 
-#Set positions for y axis
+#Set positions for y-axis
 function set_ypositions() {
 
 	debug_print
@@ -15910,7 +15970,7 @@ function check_url_wget() {
 	return 1
 }
 
-#Detect if there is an http proxy configured on the system
+#Detect if there is a http proxy configured on the system
 function http_proxy_detect() {
 
 	debug_print
